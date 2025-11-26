@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <title>Unlimited Plan - eSimsData</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app-container">
+
+
+        <!-- Header -->
+        <header class="header">
+            <button class="back-btn" id="backBtn">
+                <svg class="back-icon" width="8" height="14" viewBox="0 0 8 14" fill="none">
+                    <path d="M7 1L1 7L7 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Back</span>
+            </button>
+            <div class="header-title">
+                <h1 class="app-title">eSimsData</h1>
+                <p class="app-subtitle">mini app</p>
+            </div>
+            <button class="menu-btn">⋯</button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="plans-content">
+            <!-- Region Info -->
+            <div class="country-info">
+                <div class="country-flag-large" id="regionIcon"></div>
+                <h2 class="country-name-large" id="regionName">Africa</h2>
+            </div>
+
+            <!-- Segmented Control -->
+            <div class="segmented-control plans-segmented">
+                <button class="segment-btn" data-plan-type="standard">Standard</button>
+                <button class="segment-btn active" data-plan-type="unlimited">Unlimited ∞</button>
+            </div>
+
+            <!-- Info Box (shown only for Unlimited) -->
+            <div class="info-box" id="infoBox">
+                <img src="icons/Iconallert.svg" alt="Alert" class="info-icon">
+                <p class="info-text">Unlimited plans include 1 GB high-speed data per day, then unlimited at 1.25 Mbps. Daily 1 GB resets every 24h.</p>
+            </div>
+
+            <!-- Plans List -->
+            <div class="plans-list" id="plansList">
+                <!-- Plans will be populated by JavaScript -->
+            </div>
+
+            <!-- Region Info Banner -->
+            <div class="region-info-banner" id="regionInfoBanner">
+                <img src="icons/Iconallert.svg" alt="Alert" class="region-info-icon">
+                <span class="region-info-text" id="regionInfoText">Supported in countries: 25</span>
+                <svg class="region-info-chevron" id="regionInfoChevron" width="8" height="6" viewBox="0 0 8 6" fill="none">
+                    <path d="M1 1L4 4L7 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+
+            <!-- Countries List (collapsible) -->
+            <div class="countries-list-container" id="countriesListContainer" style="display: none;">
+                <div class="countries-list" id="countriesList">
+                    <!-- Countries will be populated by JavaScript -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Next Button -->
+        <div class="bottom-button-container">
+            <button class="next-btn" id="nextBtn">Next</button>
+        </div>
+    </div>
+
+    <script src="region-unlimited.js"></script>
+</body>
+</html>
+

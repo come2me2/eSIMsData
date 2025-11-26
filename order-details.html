@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <title>Order Details - eSimsData</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app-container">
+
+
+        <!-- Header -->
+        <header class="header">
+            <button class="back-btn" id="backBtn">
+                <svg class="back-icon" width="8" height="14" viewBox="0 0 8 14" fill="none">
+                    <path d="M7 1L1 7L7 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Back</span>
+            </button>
+            <div class="header-title">
+                <h1 class="app-title">eSimsData</h1>
+                <p class="app-subtitle">mini app</p>
+
+            <button class="menu-btn">⋯</button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="order-details-content">
+            <!-- Order Info Card -->
+            <div class="order-details-card">
+                <h2 class="order-number" id="orderNumber">Order #99999</h2>
+                
+                <div class="order-plan-info" id="orderPlanInfo">1GB 7 Days Germany x1</div>
+                
+                <div class="order-details-info">
+                    <div class="order-detail-item">
+                        <span class="order-detail-label">iccid:</span>
+                        <span class="order-detail-value" id="iccid">8943108161005541531</span>
+
+                    <div class="order-detail-item">
+                        <span class="order-detail-label">matchingId:</span>
+                        <span class="order-detail-value" id="matchingId">JQ-1UAFOB-1B3U4SN</span>
+
+                    <div class="order-detail-item">
+                        <span class="order-detail-label">rspUrl:</span>
+                        <span class="order-detail-value" id="rspUrl">rsp.truphone.com</span>
+                
+                <div class="order-qr-code">
+                    <img src="icons/QR.png" alt="QR Code" class="qr-code-image" id="qrCodeImage">
+
+                
+                <div class="order-details-divider"></div>
+                
+                <div class="order-scan-text">Scan with your device to add eSIM</div>
+                
+                <div class="order-footer">
+                    <span class="order-price" id="orderPrice">$ 9.99</span>
+                    <span class="order-payment-provider">Cryptomus</span>
+            
+            <!-- Help Button -->
+            <div class="order-help-button" id="helpButton">
+                <span class="order-help-text">Help</span>
+                <svg class="order-help-chevron" width="8" height="14" viewBox="0 0 8 14" fill="none">
+                    <path d="M1 1L7 7L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+
+        </main>
+
+
+    <script src="order-details.js"></script>
+</body>
+</html>
+
