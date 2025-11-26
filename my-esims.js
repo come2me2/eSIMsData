@@ -202,7 +202,8 @@ function setupNavigation() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'account.html';
+            const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+            navigate('account.html');
         });
     }
     
@@ -213,7 +214,8 @@ function setupNavigation() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'index.html';
+            const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+            navigate('index.html');
         });
     }
     
@@ -224,7 +226,8 @@ function setupNavigation() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'help.html';
+            const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+            navigate('help.html');
         });
     }
 }

@@ -6,12 +6,12 @@
     <meta name="theme-color" content="#ffffff">
     <title>Current eSIM - eSimsData</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="prefetch" href="account.html">
+    <script src="preload.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="app-container">
-
-
         <!-- Header -->
         <header class="header">
             <button class="back-btn" id="backBtn">
@@ -23,7 +23,7 @@
             <div class="header-title">
                 <h1 class="app-title">eSimsData</h1>
                 <p class="app-subtitle">mini app</p>
-
+            </div>
             <button class="menu-btn">⋯</button>
         </header>
 
@@ -32,7 +32,7 @@
             <h2 class="current-esim-title">Current eSIM</h2>
             
             <!-- eSIM Details Card -->
-            <div class="current-esim-card" id="esimCard" style="display: none;">
+            <div class="current-esim-card" id="esimCard">
                 <div class="current-esim-plan" id="esimPlan">eSIM 1GB 7 Days Thailand</div>
                 
                 <div class="current-esim-order-info" id="orderInfo">Order: 20281. iccid: 8944422711105741667</div>
@@ -43,27 +43,31 @@
                 <div class="current-esim-section">
                     <h3 class="current-esim-section-title">Bundle Usage</h3>
                     <div class="current-esim-usage-info">
-                        <span class="current-esim-usage-text" id="usageText">29.3MB of 1GB used</span>
+                        <span class="current-esim-usage-text" id="usageText">29.3MB of 1024MB used</span>
                         <span class="current-esim-remaining" id="remainingText">970.7MB remaining</span>
-
+                    </div>
                     <div class="current-esim-progress-bar">
                         <div class="current-esim-progress-fill usage-progress" id="usageProgress"></div>
+                    </div>
+                </div>
                 
                 <!-- Bundle Expiration Section -->
                 <div class="current-esim-section">
                     <div class="current-esim-expiration-text" id="expirationText">7 day bundle expires in 6 days</div>
                     <div class="current-esim-progress-bar">
                         <div class="current-esim-progress-fill expiration-progress" id="expirationProgress"></div>
-
+                    </div>
                     <div class="current-esim-expires-date" id="expiresDate">Expires on 29/10/2025 07:59:52 +00:00</div>
+                </div>
+            </div>
             
             <!-- Extend Button -->
-            <button class="current-esim-extend-btn" id="extendBtn" style="display: none;">Extend</button>
+            <button class="current-esim-extend-btn" id="extendBtn">Extend</button>
             
             <!-- Empty State -->
-            <div class="current-esim-empty-state" id="emptyState">
+            <div class="current-esim-empty-state" id="emptyState" style="display: none;">
                 <p class="current-esim-empty-text">No active eSIMs</p>
-
+            </div>
         </main>
 
         <!-- Bottom Navigation -->
@@ -88,9 +92,8 @@
                 <span class="nav-label">Help</span>
             </button>
         </nav>
-
+    </div>
 
     <script src="current-esim.js"></script>
 </body>
 </html>
-

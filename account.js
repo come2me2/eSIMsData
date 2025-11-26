@@ -11,8 +11,15 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
 }
 
-// Initialize app
+// Optimized navigation helper
+function navigateTo(url) {
+    const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+    navigate(url);
+}
+
+// Initialize app with optimized loading
 document.addEventListener('DOMContentLoaded', () => {
+    // Critical operations - execute immediately
     setupCancelButton();
     setupAccountItems();
     setupNavigation();
@@ -42,7 +49,7 @@ function setupAccountItems() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'my-esims.html';
+            navigateTo('my-esims.html');
         });
     }
     
@@ -53,7 +60,7 @@ function setupAccountItems() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'current-esim.html';
+            navigateTo('current-esim.html');
         });
     }
     
@@ -64,7 +71,7 @@ function setupAccountItems() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'privacy-policy.html';
+            navigateTo('privacy-policy.html');
         });
     }
     
@@ -75,7 +82,7 @@ function setupAccountItems() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'terms-of-use.html';
+            navigateTo('terms-of-use.html');
         });
     }
     
@@ -86,7 +93,7 @@ function setupAccountItems() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'refund-policy.html';
+            navigateTo('refund-policy.html');
         });
     }
 }
@@ -102,7 +109,7 @@ function setupNavigation() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'account.html';
+            navigateTo('account.html');
         });
     }
     
@@ -113,7 +120,7 @@ function setupNavigation() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'index.html';
+            navigateTo('index.html');
         });
     }
     
@@ -124,7 +131,7 @@ function setupNavigation() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            window.location.href = 'help.html';
+            navigateTo('help.html');
         });
     }
 }

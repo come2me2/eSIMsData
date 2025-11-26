@@ -6,12 +6,13 @@
     <meta name="theme-color" content="#ffffff">
     <title>My eSIMs - eSimsData</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="prefetch" href="order-details.html">
+    <link rel="prefetch" href="account.html">
+    <script src="preload.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="app-container">
-
-
         <!-- Header -->
         <header class="header">
             <button class="back-btn" id="backBtn">
@@ -23,7 +24,7 @@
             <div class="header-title">
                 <h1 class="app-title">eSimsData</h1>
                 <p class="app-subtitle">mini app</p>
-
+            </div>
             <button class="menu-btn">⋯</button>
         </header>
 
@@ -34,12 +35,12 @@
             <!-- eSIM List -->
             <div class="esims-list" id="esimsList" style="display: none;">
                 <!-- eSIM entries will be populated by JavaScript -->
-
+            </div>
             
             <!-- Empty State -->
             <div class="my-esims-empty-state" id="emptyState" style="display: none;">
                 <p class="my-esims-empty-text">No Orders</p>
-
+            </div>
         </main>
 
         <!-- Bottom Navigation -->
@@ -64,10 +65,8 @@
                 <span class="nav-label">Help</span>
             </button>
         </nav>
-
+    </div>
 
     <script src="my-esims.js"></script>
 </body>
 </html>
-
-

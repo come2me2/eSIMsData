@@ -276,9 +276,9 @@ const regions = [
 const urlParams = new URLSearchParams(window.location.search);
 let currentSegment = urlParams.get('segment') || 'region';
 
-// Initialize app
+// Initialize app with optimized loading
 document.addEventListener('DOMContentLoaded', () => {
-    // Set active button based on current segment
+    // Critical operations - execute immediately
     const segmentButtons = document.querySelectorAll('.segment-btn');
     segmentButtons.forEach(btn => {
         if (btn.dataset.segment === currentSegment) {
@@ -290,8 +290,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     updateContent();
     setupSegmentedControl();
-    setupSearch();
     setupNavigation();
+    
+    // Non-critical operations - execute when idle
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+            setupSearch();
+        }, { timeout: 2000 });
+    } else {
+        // Fallback for browsers without requestIdleCallback
+        setTimeout(setupSearch, 100);
+    }
 });
 
 // Render country list
@@ -435,13 +444,14 @@ function renderRegions(filteredRegions = regions) {
     });
 }
 
-// Setup search functionality
+// Setup search functionality with debounce
 function setupSearch() {
     const searchInput = document.querySelector('.search-input');
     
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        
+    if (!searchInput) return;
+    
+    // Use debounce for better performance
+    const debouncedSearch = window.debounce ? window.debounce((query) => {
         if (query === '') {
             updateContent();
             return;
@@ -458,6 +468,28 @@ function setupSearch() {
             );
             renderCountries(filtered);
         }
+    }, 150) : (query) => {
+        if (query === '') {
+            updateContent();
+            return;
+        }
+        
+        if (currentSegment === 'region') {
+            const filtered = regions.filter(region => 
+                region.name.toLowerCase().includes(query)
+            );
+            renderRegions(filtered);
+        } else {
+            const filtered = countries.filter(country => 
+                country.name.toLowerCase().includes(query)
+            );
+            renderCountries(filtered);
+        }
+    };
+    
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        debouncedSearch(query);
     });
 }
 
@@ -509,14 +541,17 @@ function handleNavigationClick(section) {
         tg.HapticFeedback.impactOccurred('light');
     }
     
+    // Use optimized navigation if available
+    const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+    
     // Navigate to different sections
     if (section === 'Account') {
-        window.location.href = 'account.html';
+        navigate('account.html');
     } else if (section === 'Buy eSIM') {
         // Already on Buy eSIM page
         return;
     } else if (section === 'Help') {
-        window.location.href = 'help.html';
+        navigate('help.html');
     }
 }
 
