@@ -28,16 +28,16 @@ const orderData = {
     rspUrl: urlParams.get('rspUrl') || 'rsp.truphone.com'
 };
 
-// Function to get flag image URL from CDN
+// Function to get flag image URL from local flags folder
 function getFlagPath(countryCode) {
     if (!countryCode) {
         return null;
     }
-    // Use flagcdn.com CDN with SVG format for maximum quality and crispness
+    // Use local SVG flags from flags folder
     // SVG is vector-based, so it's always crisp at any size and resolution
-    // Format: https://flagcdn.com/{code}.svg (SVG scales perfectly)
+    // Format: flags/{code}.svg (SVG scales perfectly)
     const code = countryCode.toLowerCase();
-    return `https://flagcdn.com/${code}.svg`;
+    return `flags/${code}.svg`;
 }
 
 // Initialize app
@@ -89,7 +89,49 @@ function setupBackButton() {
 
 // Setup bottom navigation
 function setupNavigation() {
-    // Help button
+    // Account button
+    const accountNavBtn = document.getElementById('accountNavBtn');
+    if (accountNavBtn) {
+        accountNavBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+            navigate('account.html');
+        });
+    }
+    
+    // Buy eSIM button
+    const buyESimNavBtn = document.getElementById('buyESimNavBtn');
+    if (buyESimNavBtn) {
+        buyESimNavBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+            navigate('index.html');
+        });
+    }
+    
+    // Help button (in bottom nav)
+    const helpNavBtn = document.getElementById('helpNavBtn');
+    if (helpNavBtn) {
+        helpNavBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+            navigate('help.html');
+        });
+    }
+    
+    // Help button (in content)
     const helpButton = document.getElementById('helpButton');
     if (helpButton) {
         helpButton.addEventListener('click', () => {

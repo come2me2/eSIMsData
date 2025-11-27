@@ -199,6 +199,10 @@ function setupCountriesList() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
+            // Scroll to the banner to show the top of the countries list
+            setTimeout(() => {
+                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         } else {
             container.style.display = 'none';
             chevron.style.transform = 'rotate(0deg)';

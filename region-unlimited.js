@@ -11,14 +11,14 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
 }
 
-// Function to get flag image URL from CDN
+// Function to get flag image URL from local flags folder
 function getFlagPath(countryCode) {
     if (!countryCode) {
         return null;
     }
-    // Use flagcdn.com for high-quality SVG flags
+    // Use local SVG flags from flags folder
     const code = countryCode.toLowerCase();
-    return `https://flagcdn.com/${code}.svg`;
+    return `flags/${code}.svg`;
 }
 
 // Country name to ISO code mapping
@@ -293,6 +293,10 @@ function setupCountriesList() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
+            // Scroll to the banner to show the top of the countries list
+            setTimeout(() => {
+                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         } else {
             container.style.display = 'none';
             chevron.style.transform = 'rotate(0deg)';

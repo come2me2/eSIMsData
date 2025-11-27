@@ -9,6 +9,9 @@ if (tg) {
     // Set theme colors
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
+    
+    // Disable automatic scroll to top
+    tg.enableClosingConfirmation();
 }
 
 // Sample eSIM data
@@ -61,7 +64,93 @@ document.addEventListener('DOMContentLoaded', () => {
     setupBackButton();
     renderESimsList();
     setupNavigation();
+    setupScrollPreservation();
 });
+
+// Setup scroll position preservation
+function setupScrollPreservation() {
+    const mainContent = document.querySelector('.my-esims-content');
+    if (!mainContent) return;
+    
+    let scrollPosition = 0;
+    let isUserScrolling = false;
+    let scrollTimeout;
+    let isRestoringScroll = false;
+    
+    // Save scroll position when user scrolls
+    mainContent.addEventListener('scroll', () => {
+        if (!isRestoringScroll) {
+            isUserScrolling = true;
+            scrollPosition = mainContent.scrollTop;
+        }
+        
+        // Clear timeout
+        clearTimeout(scrollTimeout);
+        
+        // Set flag to false after scrolling stops
+        scrollTimeout = setTimeout(() => {
+            isUserScrolling = false;
+        }, 150);
+    });
+    
+    // Prevent automatic scroll to top on window focus or other events
+    window.addEventListener('focus', (e) => {
+        if (scrollPosition > 0 && !isUserScrolling) {
+            isRestoringScroll = true;
+            requestAnimationFrame(() => {
+                mainContent.scrollTop = scrollPosition;
+                isRestoringScroll = false;
+            });
+        }
+    });
+    
+    // Prevent automatic scroll to top on resize
+    window.addEventListener('resize', () => {
+        if (scrollPosition > 0 && !isUserScrolling) {
+            isRestoringScroll = true;
+            requestAnimationFrame(() => {
+                mainContent.scrollTop = scrollPosition;
+                isRestoringScroll = false;
+            });
+        }
+    });
+    
+    // Prevent automatic scroll to top
+    const observer = new MutationObserver(() => {
+        if (!isUserScrolling && scrollPosition > 0 && !isRestoringScroll) {
+            // Restore scroll position after DOM changes
+            isRestoringScroll = true;
+            requestAnimationFrame(() => {
+                mainContent.scrollTop = scrollPosition;
+                isRestoringScroll = false;
+            });
+        }
+    });
+    
+    // Observe changes in the content
+    observer.observe(mainContent, {
+        childList: true,
+        subtree: true
+    });
+    
+    // Prevent default scroll behavior on touch events that might reset scroll
+    mainContent.addEventListener('touchstart', (e) => {
+        scrollPosition = mainContent.scrollTop;
+    }, { passive: true });
+    
+    mainContent.addEventListener('touchmove', (e) => {
+        scrollPosition = mainContent.scrollTop;
+    }, { passive: true });
+    
+    // Prevent scroll reset on click events (but don't block navigation)
+    document.addEventListener('click', (e) => {
+        // Only save scroll position if clicking on esim-item (not navigation)
+        if (e.target.closest('.esim-item') && !e.target.closest('.nav-item')) {
+            // Save current scroll position before any potential navigation
+            scrollPosition = mainContent.scrollTop;
+        }
+    }, true);
+}
 
 // Setup back button
 function setupBackButton() {
@@ -194,11 +283,11 @@ function navigateToOrderDetails(esim) {
 // Setup bottom navigation
 function setupNavigation() {
     // Account button
-    const accountNavBtn = Array.from(document.querySelectorAll('.nav-item')).find(item => 
-        item.querySelector('.nav-label')?.textContent === 'Account'
-    );
+    const accountNavBtn = document.getElementById('accountNavBtn');
     if (accountNavBtn) {
-        accountNavBtn.addEventListener('click', () => {
+        accountNavBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
@@ -210,7 +299,9 @@ function setupNavigation() {
     // Buy eSIM button
     const buyESimNavBtn = document.getElementById('buyESimNavBtn');
     if (buyESimNavBtn) {
-        buyESimNavBtn.addEventListener('click', () => {
+        buyESimNavBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
@@ -222,7 +313,9 @@ function setupNavigation() {
     // Help button
     const helpNavBtn = document.getElementById('helpNavBtn');
     if (helpNavBtn) {
-        helpNavBtn.addEventListener('click', () => {
+        helpNavBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }

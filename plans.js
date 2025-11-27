@@ -46,17 +46,16 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNextButton();
 });
 
-// Function to get flag image URL from CDN
+// Function to get flag image URL from local flags folder
 // Using SVG format for maximum quality (vector, scales perfectly)
 function getFlagPath(countryCode) {
     if (!countryCode) {
         return null;
     }
-    // Use flagcdn.com for high-quality SVG flags
+    // Use local SVG flags from flags folder
     // SVG is vector-based, so it's always crisp at any size and resolution
     const code = countryCode.toLowerCase();
-    // Using flagcdn.com with SVG format (320x240 for large flags)
-    return `https://flagcdn.com/${code}.svg`;
+    return `flags/${code}.svg`;
 }
 
 // Setup country info

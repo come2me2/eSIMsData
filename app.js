@@ -11,17 +11,16 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
 }
 
-// Function to get flag image URL from CDN
+// Function to get flag image URL from local flags folder
 // Using SVG format for maximum quality (vector, scales perfectly)
 function getFlagPath(countryCode) {
     if (!countryCode) {
         return null;
     }
-    // Use flagcdn.com CDN with SVG format for maximum quality and crispness
-    // SVG is vector-based, so it's always crisp at any size and resolution
-    // Format: https://flagcdn.com/{code}.svg (SVG scales perfectly)
+    // Use local SVG flags from flags folder
+    // Format: flags/{code}.svg (SVG scales perfectly)
     const code = countryCode.toLowerCase();
-    return `https://flagcdn.com/${code}.svg`;
+    return `flags/${code}.svg`;
 }
 
 // Old mapping removed - using CDN now
@@ -228,16 +227,15 @@ const countryFlagMap = {
     'TH': 173, // Thailand (approximate position based on ISO order)
 };
 
-// Function to get flag image URL from CDN
+// Function to get flag image URL from local flags folder
 function getFlagPath(countryCode) {
     if (!countryCode) {
         return null;
     }
-    // Use flagcdn.com CDN with SVG format for maximum quality and crispness
-    // SVG is vector-based, so it's always crisp at any size and resolution
-    // Format: https://flagcdn.com/{code}.svg (SVG scales perfectly)
+    // Use local SVG flags from flags folder
+    // Format: flags/{code}.svg (SVG scales perfectly)
     const code = countryCode.toLowerCase();
-    return `https://flagcdn.com/${code}.svg`;
+    return `flags/${code}.svg`;
 }
 
 // Country data
@@ -373,9 +371,9 @@ function updateContent() {
     const countryList = document.getElementById('countryList');
     
     const headers = {
-        region: 'Region eSIM for multiple countries.',
-        local: 'Local eSIM for one country.',
-        global: 'Global eSIM for worldwide coverage.'
+        region: 'Region eSIM for multiple countries',
+        local: 'Local eSIM for one country',
+        global: 'Global eSIM for worldwide coverage'
     };
     
     if (sectionHeader) {

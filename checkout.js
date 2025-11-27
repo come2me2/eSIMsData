@@ -53,13 +53,13 @@ const regionIconMap = {
     'Oceania': 'Oceania.png'
 };
 
-// Function to get flag image URL from CDN
+// Function to get flag image URL from local flags folder
 function getFlagPath(countryCode) {
     if (!countryCode) {
         return null;
     }
     const code = countryCode.toLowerCase();
-    return `https://flagcdn.com/${code}.svg`;
+    return `flags/${code}.svg`;
 }
 
 // Initialize app
