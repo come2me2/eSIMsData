@@ -1185,7 +1185,7 @@ body {
 /* Order Details Page Styles */
 .order-details-content {
     flex: 1;
-    padding: 24px 16px 24px;
+    padding: 24px 16px calc(100px + env(safe-area-inset-bottom));
     overflow-y: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;
