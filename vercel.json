@@ -1,12 +1,5 @@
 {
   "version": 2,
-  "public": true,
-  "rewrites": [
-    {
-      "source": "/flags/:path*",
-      "destination": "/flags/:path*"
-    }
-  ],
   "headers": [
     {
       "source": "/flags/(.*)",
