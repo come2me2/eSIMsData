@@ -64,6 +64,17 @@ function getFlagPath(countryCode) {
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+    // Telegram Auth - проверка авторизации перед оформлением заказа
+    const auth = window.telegramAuth;
+    if (auth && auth.isAuthenticated()) {
+        const userId = auth.getUserId();
+        console.log('Checkout - User authenticated:', userId);
+        window.currentUserId = userId;
+    } else {
+        console.warn('Checkout - User not authenticated');
+        // Можно показать предупреждение или перенаправить
+    }
+    
     setupOrderDetails();
     setupBackButton();
     setupPromoCode();
@@ -231,20 +242,45 @@ function setupPromoCode() {
 // Setup purchase button
 function setupPurchaseButton() {
     document.getElementById('purchaseBtn').addEventListener('click', () => {
+        const auth = window.telegramAuth;
+        
+        // Проверка авторизации
+        if (!auth || !auth.isAuthenticated()) {
+            alert('Пожалуйста, авторизуйтесь через Telegram для оформления заказа');
+            if (tg) {
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+            return;
+        }
+        
         if (tg) {
             tg.HapticFeedback.impactOccurred('medium');
         }
         
-        // Here would be the payment processing logic
-        // For now, just log the order
-        console.log('Purchase order:', orderData);
+        // Создание заказа с данными пользователя
+        const orderWithUser = {
+            ...orderData,
+            telegram_user_id: auth.getUserId(),
+            telegram_username: auth.getUsername(),
+            user_name: auth.getUserName(),
+            created_at: new Date().toISOString()
+        };
+        
+        console.log('Purchase order with user data:', orderWithUser);
+        
+        // Когда будет сервер, отправка на сервер:
+        // fetch('/api/orders', {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(orderWithUser)
+        // });
         
         // In a real app, this would trigger Telegram Stars payment
         if (tg && tg.showConfirm) {
             tg.showConfirm('Confirm purchase?', (confirmed) => {
                 if (confirmed) {
                     // Process payment
-                    console.log('Payment confirmed');
+                    console.log('Payment confirmed for user:', auth.getUserId());
                 }
             });
         }

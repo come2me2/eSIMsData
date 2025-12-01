@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <title>Telegram Auth Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F2F2F7;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #000;
+        }
+        
+        .subtitle {
+            color: #8E8E93;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .status {
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #D1F2EB;
+            color: #00695C;
+            border: 1px solid #4CAF50;
+        }
+        
+        .status.error {
+            background: #FFEBEE;
+            color: #B71C1C;
+            border: 1px solid #F44336;
+        }
+        
+        .status.warning {
+            background: #FFF3E0;
+            color: #E65100;
+            border: 1px solid #FF9800;
+        }
+        
+        .section {
+            margin-bottom: 24px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #000;
+        }
+        
+        .data-item {
+            background: #F2F2F7;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .data-label {
+            color: #8E8E93;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        
+        .data-value {
+            color: #000;
+            font-weight: 500;
+            word-break: break-all;
+        }
+        
+        .button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 16px;
+        }
+        
+        .button:hover {
+            background: #0051D5;
+        }
+        
+        .button:active {
+            background: #0040A8;
+        }
+        
+        .json-view {
+            background: #1E1E1E;
+            color: #D4D4D4;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 16px;
+            color: #007AFF;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Назад</a>
+        <h1>🔐 Тест авторизации Telegram</h1>
+        <p class="subtitle">Проверка работы Telegram SDK и авторизации</p>
+        
+        <div id="statusContainer"></div>
+        
+        <div class="section">
+            <div class="section-title">Статус авторизации</div>
+            <div id="authStatus"></div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Данные пользователя</div>
+            <div id="userData"></div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Telegram WebApp данные</div>
+            <div id="webAppData"></div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Полные данные (JSON)</div>
+            <div id="jsonData" class="json-view"></div>
+        </div>
+        
+        <button class="button" onclick="refreshData()">🔄 Обновить данные</button>
+    </div>
+    
+    <script src="telegram-auth.js"></script>
+    <script>
+        function updateStatus() {
+            const auth = window.telegramAuth;
+            const statusContainer = document.getElementById('statusContainer');
+            const authStatus = document.getElementById('authStatus');
+            const userData = document.getElementById('userData');
+            const webAppData = document.getElementById('webAppData');
+            const jsonData = document.getElementById('jsonData');
+            
+            // Проверка SDK
+            const sdkAvailable = !!window.Telegram?.WebApp;
+            const authAvailable = !!auth;
+            const isAuthenticated = auth?.isAuthenticated() || false;
+            
+            // Статус
+            let statusHTML = '';
+            if (!sdkAvailable) {
+                statusHTML = '<div class="status error">❌ Telegram SDK не загружен. Откройте через Telegram!</div>';
+            } else if (!authAvailable) {
+                statusHTML = '<div class="status error">❌ telegram-auth.js не загружен</div>';
+            } else if (!isAuthenticated) {
+                statusHTML = '<div class="status warning">⚠️ Пользователь не авторизован. Откройте через Telegram WebApp!</div>';
+            } else {
+                statusHTML = '<div class="status success">✅ Авторизация успешна! Telegram ID получен.</div>';
+            }
+            statusContainer.innerHTML = statusHTML;
+            
+            // Статус авторизации
+            authStatus.innerHTML = `
+                <div class="data-item">
+                    <div class="data-label">SDK загружен</div>
+                    <div class="data-value">${sdkAvailable ? '✅ Да' : '❌ Нет'}</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">telegram-auth.js загружен</div>
+                    <div class="data-value">${authAvailable ? '✅ Да' : '❌ Нет'}</div>
+                </div>
+                <div class="data-item">
+                    <div class="data-label">Авторизован</div>
+                    <div class="data-value">${isAuthenticated ? '✅ Да' : '❌ Нет'}</div>
+                </div>
+            `;
+            
+            // Данные пользователя
+            if (auth && isAuthenticated) {
+                const user = auth.getUserData();
+                userData.innerHTML = `
+                    <div class="data-item">
+                        <div class="data-label">Telegram ID</div>
+                        <div class="data-value">${user.id || 'N/A'}</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Имя</div>
+                        <div class="data-value">${user.name || 'N/A'}</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Имя (first_name)</div>
+                        <div class="data-value">${user.first_name || 'N/A'}</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Фамилия (last_name)</div>
+                        <div class="data-value">${user.last_name || 'N/A'}</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Username</div>
+                        <div class="data-value">${user.username ? '@' + user.username : 'N/A'}</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Язык</div>
+                        <div class="data-value">${user.language || 'N/A'}</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Фото профиля</div>
+                        <div class="data-value">${user.photo ? '✅ Есть' : '❌ Нет'}</div>
+                    </div>
+                `;
+            } else {
+                userData.innerHTML = '<div class="data-item"><div class="data-value" style="color: #8E8E93;">Данные недоступны. Откройте через Telegram WebApp.</div></div>';
+            }
+            
+            // WebApp данные
+            if (window.Telegram?.WebApp) {
+                const tg = window.Telegram.WebApp;
+                webAppData.innerHTML = `
+                    <div class="data-item">
+                        <div class="data-label">Версия</div>
+                        <div class="data-value">${tg.version || 'N/A'}</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Платформа</div>
+                        <div class="data-value">${tg.platform || 'N/A'}</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">Тема</div>
+                        <div class="data-value">${tg.colorScheme || 'N/A'}</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">initData доступен</div>
+                        <div class="data-value">${tg.initData ? '✅ Да' : '❌ Нет'}</div>
+                    </div>
+                `;
+            } else {
+                webAppData.innerHTML = '<div class="data-item"><div class="data-value" style="color: #8E8E93;">Telegram SDK не загружен</div></div>';
+            }
+            
+            // JSON данные
+            const allData = {
+                sdk: {
+                    available: sdkAvailable,
+                    version: window.Telegram?.WebApp?.version,
+                    platform: window.Telegram?.WebApp?.platform
+                },
+                auth: {
+                    available: authAvailable,
+                    authenticated: isAuthenticated,
+                    userData: auth ? auth.getUserData() : null,
+                    initDataUnsafe: window.Telegram?.WebApp?.initDataUnsafe || null
+                }
+            };
+            
+            jsonData.textContent = JSON.stringify(allData, null, 2);
+        }
+        
+        function refreshData() {
+            updateStatus();
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            }
+        }
+        
+        // Обновить данные при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            // Небольшая задержка для инициализации telegram-auth.js
+            setTimeout(updateStatus, 500);
+        });
+        
+        // Обновлять каждые 2 секунды (для отладки)
+        // setInterval(updateStatus, 2000);
+    </script>
+</body>
+</html>
+

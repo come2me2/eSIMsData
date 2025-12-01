@@ -61,6 +61,19 @@ const esimsData = [
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+    // Telegram Auth - получение Telegram ID пользователя
+    const auth = window.telegramAuth;
+    if (auth && auth.isAuthenticated()) {
+        const userId = auth.getUserId();
+        console.log('My eSIMs - Loading for user:', userId);
+        
+        // Сохранить userId для использования при загрузке заказов
+        window.currentUserId = userId;
+        
+        // Когда будет сервер, можно загрузить заказы пользователя:
+        // loadUserESims(userId);
+    }
+    
     setupBackButton();
     renderESimsList();
     setupNavigation();

@@ -276,6 +276,35 @@ let currentSegment = urlParams.get('segment') || 'region';
 
 // Initialize app with optimized loading
 document.addEventListener('DOMContentLoaded', () => {
+    // Telegram Auth - проверка авторизации
+    const auth = window.telegramAuth;
+    if (auth && auth.isAuthenticated()) {
+        const userId = auth.getUserId();
+        const userName = auth.getUserName();
+        console.log('✅ User authenticated:', userId, userName);
+        
+        // Можно использовать userId для загрузки персональных данных
+        // Например, сохранить в глобальной переменной для использования
+        window.currentUserId = userId;
+        window.currentUserName = userName;
+        
+        // Обновить индикатор авторизации
+        const authIndicator = document.getElementById('authIndicator');
+        if (authIndicator) {
+            authIndicator.style.background = '#4CAF50';
+            authIndicator.title = `Авторизован: ${userName} (ID: ${userId})`;
+        }
+    } else {
+        console.warn('⚠️ User not authenticated');
+        
+        // Обновить индикатор авторизации
+        const authIndicator = document.getElementById('authIndicator');
+        if (authIndicator) {
+            authIndicator.style.background = '#FF9800';
+            authIndicator.title = 'Не авторизован. Откройте через Telegram WebApp.';
+        }
+    }
+    
     // Critical operations - execute immediately
     const segmentButtons = document.querySelectorAll('.segment-btn');
     segmentButtons.forEach(btn => {

@@ -19,6 +19,17 @@ function navigateTo(url) {
 
 // Initialize app with optimized loading
 document.addEventListener('DOMContentLoaded', () => {
+    // Telegram Auth - получение данных пользователя
+    const auth = window.telegramAuth;
+    if (auth && auth.isAuthenticated()) {
+        const userData = auth.getUserData();
+        console.log('Account page - User:', userData);
+        
+        // Можно использовать данные пользователя в интерфейсе
+        // Например, показать имя пользователя
+        window.currentUser = userData;
+    }
+    
     // Critical operations - execute immediately
     setupCancelButton();
     setupAccountItems();
