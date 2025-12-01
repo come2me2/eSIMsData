@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <title>Checkout - eSimsData</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <button class="back-btn" id="backBtn">
+                <svg class="back-icon" width="8" height="14" viewBox="0 0 8 14" fill="none">
+                    <path d="M7 1L1 7L7 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Back</span>
+            </button>
+            <div class="header-title">
+                <h1 class="app-title">eSimsData</h1>
+                <p class="app-subtitle">mini app</p>
+            </div>
+            <button class="menu-btn">⋯</button>
+        </header>
+
+        <!-- Main Content -->
+        <main class="checkout-content">
+            <!-- Order Card -->
+            <div class="checkout-card">
+                <!-- Location/Region Info -->
+                <div class="checkout-header" id="checkoutHeader">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+
+                <!-- Divider -->
+                <div class="checkout-divider"></div>
+
+                <!-- Plan Details -->
+                <div class="checkout-plan-details" id="checkoutPlanDetails">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+
+                <!-- Total -->
+                <div class="checkout-total">
+                    <span class="checkout-total-label">Total</span>
+                    <span class="checkout-total-price" id="checkoutTotalPrice">$ 9.99</span>
+                </div>
+            </div>
+
+            <!-- Promo Code Section -->
+            <div class="promo-card">
+                <div class="promo-section">
+                    <input type="text" placeholder="PROMO CODE" class="promo-input" id="promoInput">
+                    <button class="promo-btn" id="promoBtn">OK</button>
+                </div>
+                <div class="promo-error" id="promoError" style="display: none;">Invalid code</div>
+                <div class="promo-success" id="promoSuccess" style="display: none;">Applied code</div>
+            </div>
+        </main>
+
+        <!-- Purchase Button -->
+        <div class="bottom-button-container">
+            <button class="next-btn" id="purchaseBtn">Purchase</button>
+        </div>
+    </div>
+
+    <script src="telegram-auth.js"></script>
+    <script src="checkout.js"></script>
+</body>
+</html>
+
