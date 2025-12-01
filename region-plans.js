@@ -16,9 +16,9 @@ function getFlagPath(countryCode) {
     if (!countryCode) {
         return null;
     }
-    // Use local SVG flags from flags folder
-    const code = countryCode.toLowerCase();
-    return `flags/${code}.svg`;
+    // Файлы в верхнем регистре: AF.svg, TH.svg и т.д.
+    const code = countryCode.toUpperCase();
+    return `/flags/${code}.svg`;
 }
 
 // Country name to ISO code mapping

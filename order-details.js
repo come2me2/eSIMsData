@@ -34,10 +34,9 @@ function getFlagPath(countryCode) {
         return null;
     }
     // Use local SVG flags from flags folder
-    // SVG is vector-based, so it's always crisp at any size and resolution
-    // Format: flags/{code}.svg (SVG scales perfectly)
-    const code = countryCode.toLowerCase();
-    return `flags/${code}.svg`;
+    // Файлы в верхнем регистре: AF.svg, TH.svg и т.д.
+    const code = countryCode.toUpperCase();
+    return `/flags/${code}.svg`;
 }
 
 // Initialize app

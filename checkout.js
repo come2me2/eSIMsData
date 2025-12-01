@@ -58,8 +58,9 @@ function getFlagPath(countryCode) {
     if (!countryCode) {
         return null;
     }
-    const code = countryCode.toLowerCase();
-    return `flags/${code}.svg`;
+    // Файлы в верхнем регистре: AF.svg, TH.svg и т.д.
+    const code = countryCode.toUpperCase();
+    return `/flags/${code}.svg`;
 }
 
 // Initialize app
