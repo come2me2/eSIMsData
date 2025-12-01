@@ -13,15 +13,7 @@ if (tg) {
 
 // Function to get flag image URL from local flags folder
 // Using SVG format for maximum quality (vector, scales perfectly)
-function getFlagPath(countryCode) {
-    if (!countryCode) {
-        return null;
-    }
-    // Use local SVG flags from flags folder
-    // Format: flags/{code}.svg (SVG scales perfectly)
-    const code = countryCode.toLowerCase();
-    return `flags/${code}.svg`;
-}
+// This function is defined later in the file to avoid duplication
 
 // Old mapping removed - using CDN now
 const countryFlagMap = {
@@ -234,9 +226,21 @@ function getFlagPath(countryCode) {
     }
     // Use local SVG flags from flags folder
     // Format: flags/{code}.svg (SVG scales perfectly)
-    // Use absolute path for Vercel compatibility
     const code = countryCode.toLowerCase();
-    return `/flags/${code}.svg`;
+    
+    // Determine base path - works both locally and on Vercel
+    // On Vercel, files are served from root, so we need absolute path
+    // For local development, relative path works
+    const isVercel = window.location.hostname.includes('vercel.app') || 
+                     window.location.hostname.includes('vercel.com');
+    
+    if (isVercel) {
+        // Absolute path for Vercel
+        return `/flags/${code}.svg`;
+    } else {
+        // Relative path for local development
+        return `flags/${code}.svg`;
+    }
 }
 
 // Country data
@@ -368,10 +372,16 @@ function renderCountries(filteredCountries = countries) {
             
             // Обработка ошибки загрузки - заменяем на эмодзи флаг
             flagImg.onerror = function() {
+                console.warn(`Failed to load flag for ${country.name} (${country.code}): ${flagPath}`);
                 const emojiFlag = document.createElement('span');
                 emojiFlag.className = 'country-flag';
                 emojiFlag.textContent = '🏳️';
                 this.parentNode.replaceChild(emojiFlag, this);
+            };
+            
+            // Логирование для отладки (можно убрать после проверки)
+            flagImg.onload = function() {
+                console.log(`Flag loaded successfully: ${flagPath}`);
             };
             
             flagElement = flagImg;
