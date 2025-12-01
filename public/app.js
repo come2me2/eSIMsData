@@ -365,11 +365,19 @@ function renderCountries(filteredCountries = countries) {
             
             // Обработка ошибки загрузки - заменяем на эмодзи флаг
             flagImg.onerror = function() {
-                console.warn(`Failed to load flag for ${country.name} (${country.code}): ${flagPath}`);
+                console.error(`❌ Failed to load flag: ${flagPath}`);
+                console.error(`   Country: ${country.name} (${country.code})`);
+                console.error(`   Full URL: ${window.location.origin}${flagPath}`);
+                console.error(`   Current pathname: ${window.location.pathname}`);
                 const emojiFlag = document.createElement('span');
                 emojiFlag.className = 'country-flag';
                 emojiFlag.textContent = '🏳️';
                 this.parentNode.replaceChild(emojiFlag, this);
+            };
+            
+            // Логирование для отладки
+            flagImg.onload = function() {
+                console.log(`✅ Flag loaded: ${flagPath}`);
             };
             
             // Логирование для отладки (можно убрать после проверки)
