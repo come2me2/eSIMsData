@@ -228,19 +228,10 @@ function getFlagPath(countryCode) {
     // Format: flags/{code}.svg (SVG scales perfectly)
     const code = countryCode.toLowerCase();
     
-    // Determine base path - works both locally and on Vercel
-    // On Vercel, files are served from root, so we need absolute path
-    // For local development, relative path works
-    const isVercel = window.location.hostname.includes('vercel.app') || 
-                     window.location.hostname.includes('vercel.com');
-    
-    if (isVercel) {
-        // Absolute path for Vercel
-        return `/flags/${code}.svg`;
-    } else {
-        // Relative path for local development
-        return `flags/${code}.svg`;
-    }
+    // Use relative path - works both locally and on Vercel
+    // On Vercel, all files are in root, so relative path works from any page
+    // Simple relative path from current page location
+    return `flags/${code}.svg`;
 }
 
 // Country data
