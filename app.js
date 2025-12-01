@@ -234,8 +234,9 @@ function getFlagPath(countryCode) {
     }
     // Use local SVG flags from flags folder
     // Format: flags/{code}.svg (SVG scales perfectly)
+    // Use absolute path for Vercel compatibility
     const code = countryCode.toLowerCase();
-    return `flags/${code}.svg`;
+    return `/flags/${code}.svg`;
 }
 
 // Country data
@@ -356,17 +357,52 @@ function renderCountries(filteredCountries = countries) {
         countryItem.className = 'country-item';
         
         const flagPath = getFlagPath(country.code);
-        const flagElement = flagPath 
-            ? `<img src="${flagPath}" alt="${country.name} flag" class="country-flag" onerror="this.style.display='none'">`
-            : `<span class="country-flag">🏳️</span>`;
         
-        countryItem.innerHTML = `
-            ${flagElement}
-            <span class="country-name">${country.name}</span>
-            <svg class="country-chevron" width="8" height="14" viewBox="0 0 8 14" fill="none">
-                <path d="M1 1L7 7L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        `;
+        // Создаем элемент флага
+        let flagElement;
+        if (flagPath) {
+            const flagImg = document.createElement('img');
+            flagImg.src = flagPath;
+            flagImg.alt = `${country.name} flag`;
+            flagImg.className = 'country-flag';
+            
+            // Обработка ошибки загрузки - заменяем на эмодзи флаг
+            flagImg.onerror = function() {
+                const emojiFlag = document.createElement('span');
+                emojiFlag.className = 'country-flag';
+                emojiFlag.textContent = '🏳️';
+                this.parentNode.replaceChild(emojiFlag, this);
+            };
+            
+            flagElement = flagImg;
+        } else {
+            const emojiFlag = document.createElement('span');
+            emojiFlag.className = 'country-flag';
+            emojiFlag.textContent = '🏳️';
+            flagElement = emojiFlag;
+        }
+        
+        const countryName = document.createElement('span');
+        countryName.className = 'country-name';
+        countryName.textContent = country.name;
+        
+        const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        chevron.setAttribute('class', 'country-chevron');
+        chevron.setAttribute('width', '8');
+        chevron.setAttribute('height', '14');
+        chevron.setAttribute('viewBox', '0 0 8 14');
+        chevron.setAttribute('fill', 'none');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'M1 1L7 7L1 13');
+        path.setAttribute('stroke', 'currentColor');
+        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        chevron.appendChild(path);
+        
+        countryItem.appendChild(flagElement);
+        countryItem.appendChild(countryName);
+        countryItem.appendChild(chevron);
         
         countryItem.addEventListener('click', () => {
             handleCountryClick(country);
