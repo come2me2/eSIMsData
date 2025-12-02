@@ -333,11 +333,20 @@
                 const result = await auth.validateOnServer('/api/validate-telegram');
                 
                 if (result.valid) {
+                    const methodIcon = result.method === 'signature' ? '🔐' : '🔑';
+                    const methodName = result.method === 'signature' 
+                        ? 'Ed25519 Signature (новый)' 
+                        : 'HMAC-SHA256 Hash (классический)';
+                    
                     validationStatus.innerHTML = `
                         <div class="status success">✅ Данные валидны! Подпись верна.</div>
                         <div class="data-item">
                             <div class="data-label">Метод проверки</div>
-                            <div class="data-value">🔑 HMAC-SHA256 (официальный метод Telegram)</div>
+                            <div class="data-value">${methodIcon} ${methodName}</div>
+                        </div>
+                        <div class="data-item">
+                            <div class="data-label">Алгоритм</div>
+                            <div class="data-value">${result.algorithm || 'N/A'}</div>
                         </div>
                         <div class="data-item">
                             <div class="data-label">User ID (верифицирован)</div>

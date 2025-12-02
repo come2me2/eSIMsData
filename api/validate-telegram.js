@@ -1,6 +1,8 @@
 /**
  * Telegram Mini App Data Validation API
- * Валидация initData через hash (HMAC-SHA256)
+ * Поддерживает оба метода:
+ * 1. signature (Ed25519) - новый метод Bot API 8.0+
+ * 2. hash (HMAC-SHA256) - классический метод
  * 
  * Документация: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
  */
@@ -8,14 +10,112 @@
 const crypto = require('crypto');
 
 /**
- * Валидация через hash (HMAC-SHA256)
- * Это официальный метод валидации данных Telegram Mini App
- * 
+ * Публичный ключ Telegram для проверки signature Mini Apps (Ed25519)
+ * Получен из документации Telegram Bot API
+ * Формат: hex-encoded 32 bytes
+ */
+const TELEGRAM_PUBLIC_KEY_HEX = 'e7bf03a2fa4602af4580703d88dda5bb59f32ed8b02a56c187fe7d34caed242d';
+
+/**
+ * Простая реализация Ed25519 verify без внешних зависимостей
+ * Использует встроенный crypto модуль Node.js 16+
+ */
+function verifyEd25519(message, signature, publicKey) {
+    try {
+        // Создаём публичный ключ в формате, который понимает Node.js
+        // Ed25519 public key в DER формате
+        const keyPrefix = Buffer.from('302a300506032b6570032100', 'hex');
+        const derKey = Buffer.concat([keyPrefix, publicKey]);
+        
+        const keyObject = crypto.createPublicKey({
+            key: derKey,
+            format: 'der',
+            type: 'spki'
+        });
+        
+        return crypto.verify(
+            null,
+            message,
+            keyObject,
+            signature
+        );
+    } catch (error) {
+        console.error('Ed25519 verify error:', error.message);
+        return false;
+    }
+}
+
+/**
+ * Валидация через signature (Ed25519) - новый метод Bot API 8.0+
+ * @param {string} initData - строка initData от Telegram WebApp
+ * @returns {Object} - результат валидации
+ */
+function validateBySignature(initData) {
+    try {
+        const urlParams = new URLSearchParams(initData);
+        const signature = urlParams.get('signature');
+        
+        if (!signature) {
+            return { valid: false, error: 'No signature in initData', method: 'signature', fallback: true };
+        }
+        
+        // Удаляем signature из параметров для проверки
+        urlParams.delete('signature');
+        // Также удаляем hash если есть (не участвует в signature проверке)
+        urlParams.delete('hash');
+        
+        // Создаём строку для проверки (отсортированные параметры через \n)
+        const dataCheckString = Array.from(urlParams.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([key, value]) => `${key}=${value}`)
+            .join('\n');
+        
+        // Декодируем signature из base64
+        const signatureBuffer = Buffer.from(signature, 'base64');
+        const publicKeyBuffer = Buffer.from(TELEGRAM_PUBLIC_KEY_HEX, 'hex');
+        const messageBuffer = Buffer.from(dataCheckString, 'utf8');
+        
+        // Проверяем подпись Ed25519
+        const isValid = verifyEd25519(messageBuffer, signatureBuffer, publicKeyBuffer);
+        
+        if (isValid) {
+            // Парсим данные пользователя
+            const userJson = urlParams.get('user');
+            let user = null;
+            if (userJson) {
+                try {
+                    user = JSON.parse(decodeURIComponent(userJson));
+                } catch {
+                    user = JSON.parse(userJson);
+                }
+            }
+            const authDate = urlParams.get('auth_date');
+            
+            return {
+                valid: true,
+                method: 'signature',
+                algorithm: 'Ed25519',
+                user: user,
+                auth_date: authDate ? parseInt(authDate) : null,
+                data: Object.fromEntries(urlParams)
+            };
+        }
+        
+        return { valid: false, error: 'Invalid Ed25519 signature', method: 'signature', fallback: true };
+        
+    } catch (error) {
+        console.error('Signature validation error:', error);
+        return { valid: false, error: error.message, method: 'signature', fallback: true };
+    }
+}
+
+/**
+ * Валидация через hash (HMAC-SHA256) - классический метод
  * @param {string} initData - строка initData от Telegram WebApp
  * @param {string} botToken - токен бота
  * @returns {Object} - результат валидации
  */
-function validateInitData(initData, botToken) {
+function validateByHash(initData, botToken) {
     try {
         if (!botToken) {
             return { 
@@ -25,23 +125,11 @@ function validateInitData(initData, botToken) {
             };
         }
         
-        if (!initData) {
-            return { 
-                valid: false, 
-                error: 'initData is empty', 
-                method: 'hash' 
-            };
-        }
-        
         const urlParams = new URLSearchParams(initData);
         const hash = urlParams.get('hash');
         
         if (!hash) {
-            return { 
-                valid: false, 
-                error: 'No hash in initData', 
-                method: 'hash' 
-            };
+            return { valid: false, error: 'No hash in initData', method: 'hash' };
         }
         
         // Удаляем hash из параметров для проверки
@@ -53,7 +141,7 @@ function validateInitData(initData, botToken) {
             .map(([key, value]) => `${key}=${value}`)
             .join('\n');
         
-        // Вычисляем secret key: HMAC-SHA256(botToken, "WebAppData")
+        // Вычисляем secret key: HMAC-SHA256("WebAppData", botToken)
         const secretKey = crypto
             .createHmac('sha256', 'WebAppData')
             .update(botToken)
@@ -67,33 +155,32 @@ function validateInitData(initData, botToken) {
         
         // Сравниваем хеши
         if (calculatedHash === hash) {
-            // Парсим данные пользователя
             const userJson = urlParams.get('user');
-            const user = userJson ? JSON.parse(decodeURIComponent(userJson)) : null;
+            let user = null;
+            if (userJson) {
+                try {
+                    user = JSON.parse(decodeURIComponent(userJson));
+                } catch {
+                    user = JSON.parse(userJson);
+                }
+            }
             const authDate = urlParams.get('auth_date');
             
             return {
                 valid: true,
                 method: 'hash',
+                algorithm: 'HMAC-SHA256',
                 user: user,
                 auth_date: authDate ? parseInt(authDate) : null,
                 data: Object.fromEntries(urlParams)
             };
         }
         
-        return { 
-            valid: false, 
-            error: 'Hash mismatch - data may be tampered', 
-            method: 'hash' 
-        };
+        return { valid: false, error: 'Hash mismatch - data may be tampered', method: 'hash' };
         
     } catch (error) {
-        console.error('Validation error:', error);
-        return { 
-            valid: false, 
-            error: error.message, 
-            method: 'hash' 
-        };
+        console.error('Hash validation error:', error);
+        return { valid: false, error: error.message, method: 'hash' };
     }
 }
 
@@ -118,12 +205,10 @@ module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Telegram-Init-Data');
     
-    // Handle preflight
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
     
-    // Only POST allowed
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -138,11 +223,16 @@ module.exports = async function handler(req, res) {
             });
         }
         
-        // Получаем BOT_TOKEN из environment variables
-        const botToken = process.env.BOT_TOKEN;
+        let result;
         
-        // Валидация
-        const result = validateInitData(initData, botToken);
+        // 1. Сначала пробуем signature (Ed25519) - новый метод
+        result = validateBySignature(initData);
+        
+        // 2. Если signature нет или ошибка - используем hash (HMAC-SHA256)
+        if (!result.valid && result.fallback) {
+            const botToken = process.env.BOT_TOKEN;
+            result = validateByHash(initData, botToken);
+        }
         
         // Проверяем свежесть данных
         if (result.valid && result.auth_date) {
@@ -154,13 +244,17 @@ module.exports = async function handler(req, res) {
             }
         }
         
-        // Логируем результат (для отладки в Vercel Logs)
+        // Логируем результат
         console.log('Telegram validation:', {
             valid: result.valid,
             method: result.method,
+            algorithm: result.algorithm,
             user_id: result.user?.id,
             error: result.error || null
         });
+        
+        // Удаляем внутренние поля перед отправкой
+        delete result.fallback;
         
         return res.status(result.valid ? 200 : 401).json(result);
         
