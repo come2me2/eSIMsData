@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Version for cache busting - increment when flags are updated
-const FLAG_VERSION = 'v2';
+const FLAG_VERSION = 'v3';
 
 // Function to get flag image URL from local flags folder
 // Using SVG format for maximum quality (vector, scales perfectly)

@@ -221,7 +221,7 @@ const countryFlagMap = {
 
 // Function to get flag image URL from local flags folder
 // Version for cache busting - increment when flags are updated
-const FLAG_VERSION = 'v2';
+const FLAG_VERSION = 'v3';
 
 function getFlagPath(countryCode) {
     if (!countryCode) {
