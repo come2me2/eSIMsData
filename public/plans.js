@@ -9,6 +9,15 @@ if (tg) {
     // Set theme colors
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
+    
+    // Показываем кнопку "назад" в Telegram
+    if (tg.BackButton) {
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.HapticFeedback.impactOccurred('light');
+            window.history.back();
+        });
+    }
 }
 
 // Get country data from URL
@@ -42,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSegmentedControl();
     renderPlans();
     updateInfoBox();
-    setupBackButton();
     setupNextButton();
 });
 
@@ -154,16 +162,6 @@ function selectPlan(planId) {
     if (tg) {
         tg.HapticFeedback.impactOccurred('light');
     }
-}
-
-// Setup back button
-function setupBackButton() {
-    document.getElementById('backBtn').addEventListener('click', () => {
-        if (tg) {
-            tg.HapticFeedback.impactOccurred('light');
-        }
-        window.history.back();
-    });
 }
 
 // Update info box visibility

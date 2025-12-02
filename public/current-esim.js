@@ -9,6 +9,15 @@ if (tg) {
     // Set theme colors
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
+    
+    // Показываем кнопку "назад" в Telegram
+    if (tg.BackButton) {
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.HapticFeedback.impactOccurred('light');
+            window.history.back();
+        });
+    }
 }
 
 // Mock data for Current eSIM
@@ -27,24 +36,10 @@ const esimData = {
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
-    setupBackButton();
     setupESimDetails();
     setupExtendButton();
     setupNavigation();
 });
-
-// Setup back button
-function setupBackButton() {
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            window.history.back();
-        });
-    }
-}
 
 // Setup eSIM details
 function setupESimDetails() {

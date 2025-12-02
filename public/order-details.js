@@ -9,6 +9,15 @@ if (tg) {
     // Set theme colors
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
+    
+    // Показываем кнопку "назад" в Telegram
+    if (tg.BackButton) {
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.HapticFeedback.impactOccurred('light');
+            window.history.back();
+        });
+    }
 }
 
 // Get order data from URL
@@ -42,7 +51,6 @@ function getFlagPath(countryCode) {
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
     setupOrderDetails();
-    setupBackButton();
     setupNavigation();
 });
 
@@ -72,19 +80,6 @@ function setupOrderDetails() {
     if (orderPriceElement) orderPriceElement.textContent = orderData.price;
 }
 
-
-// Setup back button
-function setupBackButton() {
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            window.history.back();
-        });
-    }
-}
 
 // Setup bottom navigation
 function setupNavigation() {
