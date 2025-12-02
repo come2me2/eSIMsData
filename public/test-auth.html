@@ -167,6 +167,12 @@
         </div>
         
         <div class="section">
+            <div class="section-title">🔐 Серверная валидация (signature/hash)</div>
+            <div id="validationStatus"></div>
+            <button class="button" style="background: #34C759; margin-top: 12px;" onclick="validateOnServer()">🔒 Проверить на сервере</button>
+        </div>
+        
+        <div class="section">
             <div class="section-title">Полные данные (JSON)</div>
             <div id="jsonData" class="json-view"></div>
         </div>
@@ -302,6 +308,86 @@
             updateStatus();
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            }
+        }
+        
+        // Серверная валидация через signature/hash
+        async function validateOnServer() {
+            const validationStatus = document.getElementById('validationStatus');
+            validationStatus.innerHTML = '<div class="data-item"><div class="data-value">⏳ Проверка...</div></div>';
+            
+            const auth = window.telegramAuth;
+            
+            if (!auth || !auth.getInitData()) {
+                validationStatus.innerHTML = `
+                    <div class="status error">❌ initData недоступен</div>
+                    <div class="data-item">
+                        <div class="data-label">Причина</div>
+                        <div class="data-value">Откройте приложение через Telegram Mini App</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const result = await auth.validateOnServer('/api/validate-telegram');
+                
+                if (result.valid) {
+                    validationStatus.innerHTML = `
+                        <div class="status success">✅ Данные валидны!</div>
+                        <div class="data-item">
+                            <div class="data-label">Метод проверки</div>
+                            <div class="data-value">${result.method === 'signature' ? '🔐 Ed25519 Signature (новый)' : '🔑 HMAC-SHA256 Hash (старый)'}</div>
+                        </div>
+                        <div class="data-item">
+                            <div class="data-label">User ID (из подписи)</div>
+                            <div class="data-value">${result.user?.id || 'N/A'}</div>
+                        </div>
+                        <div class="data-item">
+                            <div class="data-label">auth_date актуален</div>
+                            <div class="data-value">${result.auth_date_valid ? '✅ Да' : '⚠️ Нет (старше 24ч)'}</div>
+                        </div>
+                    `;
+                    
+                    if (window.Telegram?.WebApp) {
+                        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                    }
+                } else {
+                    validationStatus.innerHTML = `
+                        <div class="status error">❌ Валидация не пройдена</div>
+                        <div class="data-item">
+                            <div class="data-label">Ошибка</div>
+                            <div class="data-value">${result.error || 'Unknown error'}</div>
+                        </div>
+                        <div class="data-item">
+                            <div class="data-label">Метод</div>
+                            <div class="data-value">${result.method || 'N/A'}</div>
+                        </div>
+                    `;
+                    
+                    if (window.Telegram?.WebApp) {
+                        window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+                    }
+                }
+                
+                // Обновляем JSON
+                document.getElementById('jsonData').textContent = JSON.stringify({
+                    validation: result,
+                    initData_length: auth.getInitData()?.length || 0
+                }, null, 2);
+                
+            } catch (error) {
+                validationStatus.innerHTML = `
+                    <div class="status error">❌ Ошибка сервера</div>
+                    <div class="data-item">
+                        <div class="data-label">Ошибка</div>
+                        <div class="data-value">${error.message}</div>
+                    </div>
+                `;
+                
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+                }
             }
         }
         

@@ -240,7 +240,7 @@ function setupPromoCode() {
 
 // Setup purchase button
 function setupPurchaseButton() {
-    document.getElementById('purchaseBtn').addEventListener('click', () => {
+    document.getElementById('purchaseBtn').addEventListener('click', async () => {
         const auth = window.telegramAuth;
         
         // Проверка авторизации
@@ -256,32 +256,74 @@ function setupPurchaseButton() {
             tg.HapticFeedback.impactOccurred('medium');
         }
         
-        // Создание заказа с данными пользователя
-        const orderWithUser = {
-            ...orderData,
-            telegram_user_id: auth.getUserId(),
-            telegram_username: auth.getUsername(),
-            user_name: auth.getUserName(),
-            created_at: new Date().toISOString()
-        };
+        // Показываем индикатор загрузки
+        const purchaseBtn = document.getElementById('purchaseBtn');
+        const originalText = purchaseBtn.textContent;
+        purchaseBtn.textContent = 'Validating...';
+        purchaseBtn.disabled = true;
         
-        console.log('Purchase order with user data:', orderWithUser);
-        
-        // Когда будет сервер, отправка на сервер:
-        // fetch('/api/orders', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(orderWithUser)
-        // });
-        
-        // In a real app, this would trigger Telegram Stars payment
-        if (tg && tg.showConfirm) {
-            tg.showConfirm('Confirm purchase?', (confirmed) => {
-                if (confirmed) {
-                    // Process payment
-                    console.log('Payment confirmed for user:', auth.getUserId());
-                }
-            });
+        try {
+            // 🔐 ВАЖНО: Серверная валидация данных Telegram (signature/hash)
+            const validation = await auth.validateOnServer('/api/validate-telegram');
+            
+            if (!validation.valid) {
+                throw new Error(validation.error || 'Validation failed');
+            }
+            
+            console.log('✅ Telegram data validated:', validation.method);
+            
+            // Создание заказа с данными пользователя (после валидации)
+            const orderWithUser = {
+                ...orderData,
+                telegram_user_id: auth.getUserId(),
+                telegram_username: auth.getUsername(),
+                user_name: auth.getUserName(),
+                validation_method: validation.method,
+                created_at: new Date().toISOString()
+            };
+            
+            console.log('Purchase order with validated user data:', orderWithUser);
+            
+            // Восстанавливаем кнопку
+            purchaseBtn.textContent = originalText;
+            purchaseBtn.disabled = false;
+            
+            // Подтверждение покупки
+            if (tg && tg.showConfirm) {
+                tg.showConfirm('Confirm purchase?', async (confirmed) => {
+                    if (confirmed) {
+                        // Отправка заказа на сервер с initData для повторной проверки
+                        try {
+                            // const result = await auth.secureRequest('/api/orders', orderWithUser);
+                            // console.log('Order created:', result);
+                            console.log('Payment confirmed for validated user:', auth.getUserId());
+                            
+                            if (tg) {
+                                tg.HapticFeedback.notificationOccurred('success');
+                            }
+                        } catch (error) {
+                            console.error('Order creation failed:', error);
+                            if (tg) {
+                                tg.showAlert('Order failed: ' + error.message);
+                            }
+                        }
+                    }
+                });
+            }
+            
+        } catch (error) {
+            console.error('❌ Validation error:', error);
+            
+            // Восстанавливаем кнопку
+            purchaseBtn.textContent = originalText;
+            purchaseBtn.disabled = false;
+            
+            if (tg) {
+                tg.HapticFeedback.notificationOccurred('error');
+                tg.showAlert('Ошибка проверки данных: ' + error.message);
+            } else {
+                alert('Ошибка проверки данных: ' + error.message);
+            }
         }
     });
 }

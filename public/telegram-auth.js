@@ -9,6 +9,8 @@ class TelegramAuth {
         this.user = null;
         this.initData = null;
         this.isReady = false;
+        this.isValidated = false;
+        this.validationResult = null;
         this.init();
     }
 
@@ -304,13 +306,14 @@ class TelegramAuth {
     }
 
     /**
-     * Отправить данные на сервер для валидации
-     * @param {string} apiUrl - URL API endpoint
+     * Отправить данные на сервер для валидации (signature или hash)
+     * @param {string} apiUrl - URL API endpoint (по умолчанию /api/validate-telegram)
      * @returns {Promise<Object>}
      */
-    async validateOnServer(apiUrl) {
+    async validateOnServer(apiUrl = '/api/validate-telegram') {
         if (!this.initData) {
-            throw new Error('No initData available');
+            console.warn('No initData available for validation');
+            return { valid: false, error: 'No initData available' };
         }
 
         try {
@@ -320,20 +323,102 @@ class TelegramAuth {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    initData: this.initData,
-                    user: this.getUserData()
+                    initData: this.initData
                 })
             });
 
-            if (!response.ok) {
-                throw new Error(`Server validation failed: ${response.statusText}`);
+            const result = await response.json();
+            
+            // Сохраняем результат валидации
+            this.validationResult = result;
+            this.isValidated = result.valid === true;
+            
+            if (this.isValidated) {
+                console.log('✅ Telegram data validated via', result.method);
+            } else {
+                console.warn('❌ Telegram validation failed:', result.error);
             }
-
-            return await response.json();
+            
+            return result;
         } catch (error) {
             console.error('Server validation error:', error);
-            throw error;
+            this.validationResult = { valid: false, error: error.message };
+            this.isValidated = false;
+            return this.validationResult;
         }
+    }
+
+    /**
+     * Проверить, прошла ли серверная валидация
+     * @returns {boolean}
+     */
+    isServerValidated() {
+        return this.isValidated;
+    }
+
+    /**
+     * Получить результат последней валидации
+     * @returns {Object|null}
+     */
+    getValidationResult() {
+        return this.validationResult;
+    }
+
+    /**
+     * Валидировать и выполнить действие только если валидация успешна
+     * @param {Function} onSuccess - callback при успешной валидации
+     * @param {Function} onError - callback при ошибке
+     * @returns {Promise<void>}
+     */
+    async validateAndExecute(onSuccess, onError) {
+        const result = await this.validateOnServer();
+        
+        if (result.valid) {
+            if (onSuccess) onSuccess(result);
+        } else {
+            if (onError) {
+                onError(result);
+            } else {
+                console.error('Validation failed:', result.error);
+            }
+        }
+    }
+
+    /**
+     * Создать защищённый запрос с валидацией
+     * Используйте для критичных операций (покупка, сохранение данных)
+     * @param {string} apiUrl - URL API endpoint
+     * @param {Object} data - данные для отправки
+     * @returns {Promise<Object>}
+     */
+    async secureRequest(apiUrl, data = {}) {
+        // Сначала валидируем данные
+        if (!this.isValidated) {
+            const validation = await this.validateOnServer();
+            if (!validation.valid) {
+                throw new Error('Telegram validation failed: ' + validation.error);
+            }
+        }
+
+        // Отправляем запрос с initData для повторной проверки на сервере
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': this.initData || ''
+            },
+            body: JSON.stringify({
+                ...data,
+                telegram_user_id: this.getUserId(),
+                initData: this.initData
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Request failed: ${response.statusText}`);
+        }
+
+        return await response.json();
     }
 }
 
@@ -344,6 +429,8 @@ window.telegramAuth = new TelegramAuth();
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = TelegramAuth;
 }
+
+
 
 
 
