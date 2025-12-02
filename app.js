@@ -220,6 +220,9 @@ const countryFlagMap = {
 };
 
 // Function to get flag image URL from local flags folder
+// Version for cache busting - increment when flags are updated
+const FLAG_VERSION = 'v2';
+
 function getFlagPath(countryCode) {
     if (!countryCode) {
         return null;
@@ -229,7 +232,8 @@ function getFlagPath(countryCode) {
     const code = countryCode.toUpperCase();
     
     // Use absolute path from root - works on Vercel
-    return `/flags/${code}.svg`;
+    // Add version parameter to bust browser cache
+    return `/flags/${code}.svg?${FLAG_VERSION}`;
 }
 
 // Country data
