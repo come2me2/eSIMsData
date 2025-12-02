@@ -334,18 +334,22 @@
                 
                 if (result.valid) {
                     validationStatus.innerHTML = `
-                        <div class="status success">✅ Данные валидны!</div>
+                        <div class="status success">✅ Данные валидны! Подпись верна.</div>
                         <div class="data-item">
                             <div class="data-label">Метод проверки</div>
-                            <div class="data-value">${result.method === 'signature' ? '🔐 Ed25519 Signature (новый)' : '🔑 HMAC-SHA256 Hash (старый)'}</div>
+                            <div class="data-value">🔑 HMAC-SHA256 (официальный метод Telegram)</div>
                         </div>
                         <div class="data-item">
-                            <div class="data-label">User ID (из подписи)</div>
+                            <div class="data-label">User ID (верифицирован)</div>
                             <div class="data-value">${result.user?.id || 'N/A'}</div>
                         </div>
                         <div class="data-item">
+                            <div class="data-label">Username</div>
+                            <div class="data-value">${result.user?.username ? '@' + result.user.username : 'N/A'}</div>
+                        </div>
+                        <div class="data-item">
                             <div class="data-label">auth_date актуален</div>
-                            <div class="data-value">${result.auth_date_valid ? '✅ Да' : '⚠️ Нет (старше 24ч)'}</div>
+                            <div class="data-value">${result.auth_date_valid ? '✅ Да (менее 24ч)' : '⚠️ Нет (старше 24ч)'}</div>
                         </div>
                     `;
                     
