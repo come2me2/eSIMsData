@@ -9,6 +9,15 @@ if (tg) {
     // Set theme colors
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
+    
+    // Показываем кнопку "назад" в Telegram
+    if (tg.BackButton) {
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.HapticFeedback.impactOccurred('light');
+            window.history.back();
+        });
+    }
 }
 
 // Get order data from URL
@@ -77,7 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     setupOrderDetails();
-    setupBackButton();
     setupPromoCode();
     setupPurchaseButton();
 });
@@ -150,16 +158,6 @@ function updateTotalPrice() {
     } else {
         totalPriceElement.textContent = originalPrice;
     }
-}
-
-// Setup back button
-function setupBackButton() {
-    document.getElementById('backBtn').addEventListener('click', () => {
-        if (tg) {
-            tg.HapticFeedback.impactOccurred('light');
-        }
-        window.history.back();
-    });
 }
 
 // Setup promo code button

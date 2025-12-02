@@ -9,26 +9,21 @@ if (tg) {
     // Set theme colors
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
-}
-
-// Initialize app
-document.addEventListener('DOMContentLoaded', () => {
-    setupBackButton();
-    setupNavigation();
-});
-
-// Setup back button
-function setupBackButton() {
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
+    
+    // Показываем кнопку "назад" в Telegram
+    if (tg.BackButton) {
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.HapticFeedback.impactOccurred('light');
             window.history.back();
         });
     }
 }
+
+// Initialize app
+document.addEventListener('DOMContentLoaded', () => {
+    setupNavigation();
+});
 
 // Setup bottom navigation
 function setupNavigation() {

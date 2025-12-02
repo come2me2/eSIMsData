@@ -9,27 +9,18 @@ if (tg) {
     // Set theme colors
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
+    
+    // Help - это главная вкладка, скрываем кнопку "назад"
+    if (tg.BackButton) {
+        tg.BackButton.hide();
+    }
 }
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
-    setupBackButton();
     setupHelpItems();
     setupNavigation();
 });
-
-// Setup back button
-function setupBackButton() {
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            window.history.back();
-        });
-    }
-}
 
 // Setup help items
 function setupHelpItems() {

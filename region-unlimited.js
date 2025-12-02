@@ -9,6 +9,15 @@ if (tg) {
     // Set theme colors
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
+    
+    // Показываем кнопку "назад" в Telegram
+    if (tg.BackButton) {
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.HapticFeedback.impactOccurred('light');
+            window.history.back();
+        });
+    }
 }
 
 // Function to get flag image URL from local flags folder
@@ -162,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupRegionInfo();
     setupSegmentedControl();
     renderPlans();
-    setupBackButton();
     setupNextButton();
     setupCountriesList();
 });
@@ -254,16 +262,6 @@ function selectPlan(planId) {
     if (tg) {
         tg.HapticFeedback.impactOccurred('light');
     }
-}
-
-// Setup back button
-function setupBackButton() {
-    document.getElementById('backBtn').addEventListener('click', () => {
-        if (tg) {
-            tg.HapticFeedback.impactOccurred('light');
-        }
-        window.history.back();
-    });
 }
 
 // Setup countries list toggle

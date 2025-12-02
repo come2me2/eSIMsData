@@ -625,13 +625,8 @@ function handleNavigationClick(section) {
     }
 }
 
-// Cancel button handler
-document.querySelector('.cancel-btn')?.addEventListener('click', () => {
-    if (tg) {
-        tg.close();
-    } else {
-        // Fallback for testing outside Telegram
-        console.log('Close app');
-    }
-});
+// Telegram BackButton - на главной странице скрываем кнопку "назад"
+if (tg && tg.BackButton) {
+    tg.BackButton.hide();
+}
 

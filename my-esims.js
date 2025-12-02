@@ -12,6 +12,15 @@ if (tg) {
     
     // Disable automatic scroll to top
     tg.enableClosingConfirmation();
+    
+    // Показываем кнопку "назад" в Telegram
+    if (tg.BackButton) {
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            tg.HapticFeedback.impactOccurred('light');
+            window.history.back();
+        });
+    }
 }
 
 // Sample eSIM data
@@ -74,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // loadUserESims(userId);
     }
     
-    setupBackButton();
     renderESimsList();
     setupNavigation();
     setupScrollPreservation();
@@ -163,19 +171,6 @@ function setupScrollPreservation() {
             scrollPosition = mainContent.scrollTop;
         }
     }, true);
-}
-
-// Setup back button
-function setupBackButton() {
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            window.history.back();
-        });
-    }
 }
 
 // Render eSIMs list

@@ -62,9 +62,11 @@ body {
     height: 11px;
 }
 
-/* Header */
+/* Header - не используется в Telegram Mini App (навигация через tg.BackButton) */
+/* Стили оставлены для совместимости с web-версией */
 .header {
-    display: flex;
+    display: none; /* Скрыт в Telegram Mini App */
+    /* display: flex; */
     align-items: center;
     justify-content: space-between;
     padding: 8px 16px 12px;
@@ -126,7 +128,7 @@ body {
 
 /* Search Bar */
 .search-container {
-    padding: 0 16px 16px;
+    padding: 16px 16px 16px;
     background-color: transparent;
     width: 100%;
     flex-shrink: 0;
@@ -170,7 +172,7 @@ body {
 /* Main Content */
 .main-content {
     flex: 1;
-    padding: 0 16px 100px;
+    padding: 16px 16px 100px;
     overflow-y: auto;
 }
 

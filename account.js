@@ -9,6 +9,11 @@ if (tg) {
     // Set theme colors
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
+    
+    // Account - это главная вкладка, скрываем кнопку "назад"
+    if (tg.BackButton) {
+        tg.BackButton.hide();
+    }
 }
 
 // Optimized navigation helper
@@ -31,25 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Critical operations - execute immediately
-    setupCancelButton();
     setupAccountItems();
     setupNavigation();
 });
-
-// Setup cancel button
-function setupCancelButton() {
-    const cancelBtn = document.getElementById('cancelBtn');
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.close();
-            } else {
-                // Fallback for testing outside Telegram
-                console.log('Close app');
-            }
-        });
-    }
-}
 
 // Setup account items
 function setupAccountItems() {
