@@ -5,7 +5,7 @@
  * Документация: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
  */
 
-import crypto from 'crypto';
+const crypto = require('crypto');
 
 // Публичный ключ Telegram для проверки signature Mini Apps
 // Этот ключ публичный и одинаковый для всех Mini Apps
@@ -150,7 +150,7 @@ function isAuthDateValid(authDate, maxAgeSeconds = 86400) {
 /**
  * Главный обработчик API
  */
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
