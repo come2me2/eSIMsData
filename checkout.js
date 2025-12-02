@@ -62,6 +62,9 @@ const regionIconMap = {
     'Oceania': 'Oceania.png'
 };
 
+// Version for cache busting - increment when flags are updated
+const FLAG_VERSION = 'v2';
+
 // Function to get flag image URL from local flags folder
 function getFlagPath(countryCode) {
     if (!countryCode) {
@@ -69,7 +72,7 @@ function getFlagPath(countryCode) {
     }
     // Файлы в верхнем регистре: AF.svg, TH.svg и т.д.
     const code = countryCode.toUpperCase();
-    return `/flags/${code}.svg`;
+    return `/flags/${code}.svg?${FLAG_VERSION}`;
 }
 
 // Initialize app

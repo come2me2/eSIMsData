@@ -54,6 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNextButton();
 });
 
+// Version for cache busting - increment when flags are updated
+const FLAG_VERSION = 'v2';
+
 // Function to get flag image URL from local flags folder
 // Using SVG format for maximum quality (vector, scales perfectly)
 function getFlagPath(countryCode) {
@@ -63,7 +66,7 @@ function getFlagPath(countryCode) {
     // Use local SVG flags from flags folder
     // Файлы в верхнем регистре: AF.svg, TH.svg и т.д.
     const code = countryCode.toUpperCase();
-    return `/flags/${code}.svg`;
+    return `/flags/${code}.svg?${FLAG_VERSION}`;
 }
 
 // Setup country info

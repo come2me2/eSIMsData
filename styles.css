@@ -728,15 +728,13 @@ body {
 .checkout-flag {
     width: 60px;
     height: 45px;
-    border-radius: 4px;
-    object-fit: cover;
-    /* Ensure maximum sharpness for SVG flags */
-    image-rendering: auto;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    /* Prevent blurring on high-DPI displays */
-    transform: translateZ(0);
-    backface-visibility: hidden;
+    object-fit: contain;
+    display: block;
+    /* Чёткие края без CSS border-radius - используем встроенный в SVG */
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
+    transform: translate3d(0, 0, 0);
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .checkout-region-icon {
