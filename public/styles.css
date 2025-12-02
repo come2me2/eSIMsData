@@ -331,7 +331,6 @@ body {
     height: 30px;
     min-width: 40px;
     min-height: 30px;
-    border-radius: 4px;
     margin-right: 12px;
     border: none;
     flex-shrink: 0;
@@ -345,18 +344,16 @@ body {
 }
 
 .country-flag img {
-    width: 100%;
-    height: 100%;
+    width: 40px;
+    height: 30px;
     object-fit: cover;
     display: block;
     border-radius: 4px;
+    /* Чёткие края скругления */
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
+    transform: translate3d(0, 0, 0);
     image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-    image-rendering: high-quality;
-    /* Ensure maximum sharpness for SVG flags */
-    image-rendering: auto;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
     /* Prevent blurring on high-DPI displays */
     transform: translateZ(0);
     backface-visibility: hidden;
@@ -502,34 +499,30 @@ body {
 .country-flag-large {
     width: 80px;
     height: 60px;
-    border-radius: 6px;
     margin-bottom: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 60px;
     line-height: 0;
-    overflow: hidden;
     border: none;
     background-color: transparent;
 }
 
 .country-flag-large img,
 .country-flag-img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
     display: block;
-    border-radius: 6px;
-    /* Ensure maximum sharpness for SVG flags */
-    image-rendering: auto;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    /* Prevent blurring on high-DPI displays */
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    image-rendering: crisp-edges;
-    image-rendering: high-quality;
+    border-radius: 8px;
+    /* Чёткие края скругления */
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
+    /* Prevent sub-pixel rendering issues */
+    transform: translate3d(0, 0, 0);
+    /* Crisp rendering for flag images */
+    image-rendering: -webkit-optimize-contrast;
 }
 
 .country-name-large {
