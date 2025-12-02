@@ -172,8 +172,6 @@
         </div>
         
         <button class="button" onclick="refreshData()">🔄 Обновить данные</button>
-        <button class="button" style="background: #FF9500; margin-top: 8px;" onclick="enableTestMode()">🧪 Включить тестовый режим</button>
-        <p style="color: #8E8E93; font-size: 12px; margin-top: 8px; text-align: center;">Тестовый режим эмулирует данные Telegram для демонстрации</p>
     </div>
     
     <script src="telegram-auth.js"></script>
@@ -313,51 +311,6 @@
             setTimeout(updateStatus, 500);
         });
         
-        // Обновлять каждые 2 секунды (для отладки)
-        // setInterval(updateStatus, 2000);
-        
-        // Тестовый режим - эмуляция данных Telegram
-        function enableTestMode() {
-            // Создаём фейковые данные пользователя
-            const testUser = {
-                id: 123456789,
-                first_name: 'Тестовый',
-                last_name: 'Пользователь',
-                username: 'test_user',
-                language_code: 'ru',
-                photo_url: null
-            };
-            
-            // Переопределяем telegramAuth для тестирования
-            window.telegramAuth = {
-                isAuthenticated: () => true,
-                getUserId: () => testUser.id,
-                getUserName: () => `${testUser.first_name} ${testUser.last_name}`,
-                getFirstName: () => testUser.first_name,
-                getLastName: () => testUser.last_name,
-                getUsername: () => testUser.username,
-                getLanguageCode: () => testUser.language_code,
-                getUserPhoto: () => testUser.photo_url,
-                getUserData: () => ({
-                    id: testUser.id,
-                    name: `${testUser.first_name} ${testUser.last_name}`,
-                    first_name: testUser.first_name,
-                    last_name: testUser.last_name,
-                    username: testUser.username,
-                    photo: testUser.photo_url,
-                    language: testUser.language_code,
-                    is_authenticated: true,
-                    is_test_mode: true
-                }),
-                getUser: () => testUser
-            };
-            
-            // Обновляем отображение
-            updateStatus();
-            
-            // Показываем уведомление
-            alert('🧪 Тестовый режим включён!\n\nЭто эмуляция данных Telegram для демонстрации.\nВ реальном приложении данные будут получены из Telegram.');
-        }
     </script>
 </body>
 </html>
