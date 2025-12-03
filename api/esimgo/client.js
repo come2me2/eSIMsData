@@ -147,6 +147,9 @@ async function getCatalogue(countryCode = null) {
             if (countryCode) {
                 const params = new URLSearchParams({ country: countryCode.toUpperCase() });
                 endpoint = `${endpoint}?${params.toString()}`;
+            } else if (endpointPath === '/esims') {
+                // Для /esims пробуем без параметров тоже
+                endpoint = '/esims';
             }
             return await makeRequest(endpoint);
         }
