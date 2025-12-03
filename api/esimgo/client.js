@@ -6,7 +6,8 @@
 
 const esimgoConfig = {
     apiKey: process.env.ESIMGO_API_KEY,
-    apiUrl: process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2',
+    // Используем версию 2.4 или 2.5 (более новая версия API)
+    apiUrl: process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2.4',
     timeout: 30000
 };
 
@@ -118,19 +119,39 @@ async function makeRequest(endpoint, options = {}) {
  * Получить каталог доступных пакетов данных
  * @param {string} countryCode - Код страны (ISO 3166-1 alpha-2, опционально)
  * @returns {Promise<Object>} Каталог продуктов
- * Документация: https://docs.esim-go.com/api/v2_0/#tag/Catalogue
+ * Документация: https://docs.esim-go.com/api/v2_4/
+ * 
+ * Примечание: В API eSIM Go может не быть прямого endpoint /catalogue
+ * Возможно, нужно использовать /bundles или другой endpoint
  */
 async function getCatalogue(countryCode = null) {
-    // Формируем endpoint с параметрами
-    let endpoint = '/catalogue';
+    // Пробуем разные варианты endpoints
+    // Вариант 1: /bundles (если такой endpoint существует)
+    // Вариант 2: /catalogue (классический вариант)
+    // Вариант 3: /products (альтернативное название)
+    
+    let endpoint = '/bundles'; // Пробуем сначала bundles
     
     if (countryCode) {
-        // Добавляем параметр country в query string
         const params = new URLSearchParams({ country: countryCode.toUpperCase() });
         endpoint = `${endpoint}?${params.toString()}`;
     }
     
-    return makeRequest(endpoint);
+    try {
+        return await makeRequest(endpoint);
+    } catch (error) {
+        // Если /bundles не работает, пробуем /catalogue
+        if (error.message.includes('Not Found') || error.message.includes('404')) {
+            console.log('Trying /catalogue endpoint instead of /bundles');
+            endpoint = '/catalogue';
+            if (countryCode) {
+                const params = new URLSearchParams({ country: countryCode.toUpperCase() });
+                endpoint = `${endpoint}?${params.toString()}`;
+            }
+            return await makeRequest(endpoint);
+        }
+        throw error;
+    }
 }
 
 /**
