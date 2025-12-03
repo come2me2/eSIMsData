@@ -38,14 +38,22 @@ let unlimitedPlans = [];
  * Загрузка реальных планов из eSIM Go API
  */
 async function loadPlansFromAPI(countryCode) {
+    console.log('🔵 loadPlansFromAPI called with countryCode:', countryCode);
+    
     try {
         const params = new URLSearchParams();
         if (countryCode) {
             params.append('country', countryCode);
         }
         
-        const response = await fetch(`/api/esimgo/plans?${params.toString()}`);
+        const apiUrl = `/api/esimgo/plans?${params.toString()}`;
+        console.log('🔵 Fetching plans from:', apiUrl);
+        
+        const response = await fetch(apiUrl);
+        console.log('🔵 Response status:', response.status, response.statusText);
+        
         const result = await response.json();
+        console.log('🔵 API response:', result);
         
         if (result.success && result.data) {
             standardPlans = result.data.standard || [];
@@ -82,11 +90,16 @@ async function loadPlansFromAPI(countryCode) {
             
             return true;
         } else {
-            console.warn('Failed to load plans from API, using fallback');
+            console.warn('❌ Failed to load plans from API - result.success is false or no data');
+            console.warn('Result:', result);
             return false;
         }
     } catch (error) {
-        console.error('Error loading plans from API:', error);
+        console.error('❌ Error loading plans from API:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
         // Fallback к захардкоженным планам
         standardPlans = [
             { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
@@ -376,10 +389,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Загружаем реальные планы из API
+    console.log('🔵 DOMContentLoaded - orderData:', orderData);
     const countryCode = orderData?.code || null;
+    console.log('🔵 Loading plans for country:', countryCode);
+    
     const plansLoaded = await loadPlansFromAPI(countryCode);
     
-    console.log('Plans loaded status:', plansLoaded, {
+    console.log('🔵 Plans loaded status:', plansLoaded, {
         standardCount: standardPlans.length,
         unlimitedCount: unlimitedPlans.length,
         firstPlan: standardPlans[0] || unlimitedPlans[0]
