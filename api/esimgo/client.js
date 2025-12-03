@@ -96,7 +96,34 @@ async function makeRequest(endpoint, options = {}) {
             throw new Error(errorMessage);
         }
         
-        const data = await response.json();
+        // Проверяем Content-Type перед парсингом JSON
+        const contentType = response.headers.get('content-type') || '';
+        let data;
+        
+        if (contentType.includes('application/json')) {
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                // Если не удалось распарсить JSON, читаем как текст
+                const text = await response.text();
+                console.error('Failed to parse JSON response:', {
+                    endpoint,
+                    contentType,
+                    textPreview: text.substring(0, 200)
+                });
+                throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+            }
+        } else {
+            // Если ответ не JSON, читаем как текст
+            const text = await response.text();
+            console.error('Non-JSON response:', {
+                endpoint,
+                contentType,
+                textPreview: text.substring(0, 200)
+            });
+            throw new Error(`Expected JSON but got ${contentType}: ${text.substring(0, 100)}`);
+        }
+        
         console.log('eSIM Go API success:', {
             endpoint,
             hasData: !!data

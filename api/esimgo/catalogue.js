@@ -51,6 +51,19 @@ module.exports = async function handler(req, res) {
             country: req.query.country
         });
         
+        // Если это ошибка парсинга JSON, даем понятное сообщение
+        if (error.message.includes('JSON') || error.message.includes('Unexpected token')) {
+            return res.status(500).json({
+                success: false,
+                error: 'Invalid response format from eSIM Go API',
+                message: 'The API returned a non-JSON response. This might indicate: ' +
+                         '1) API endpoint error, 2) Authentication issue, 3) Server error on eSIM Go side.',
+                suggestion: 'Check the API endpoint URL and your API key. ' +
+                           'The /esims endpoint should return JSON with { esims: [], pageCount, pageSize, rows }',
+                errorDetails: error.message
+            });
+        }
+        
         // Если это ошибка 404, даем более понятное сообщение
         if (error.message.includes('Not Found') || error.message.includes('404')) {
             return res.status(404).json({
