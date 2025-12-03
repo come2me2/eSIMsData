@@ -28,17 +28,23 @@ module.exports = async function handler(req, res) {
             hasApiKey: !!process.env.ESIMGO_API_KEY
         });
         
-        // Получаем каталог через /esims endpoint
+        // Получаем каталог через /catalogue endpoint
         const catalogue = await esimgoClient.getCatalogue(country || null);
+        
+        // API возвращает объект с полем bundles: { bundles: [], pageCount, rows, pageSize }
+        const bundles = Array.isArray(catalogue) 
+            ? catalogue 
+            : (catalogue?.bundles || catalogue?.data || []);
         
         console.log('Catalogue fetched:', {
             country: country || 'all',
-            esimsCount: catalogue?.esims?.length || 0,
+            bundlesCount: bundles.length,
             rows: catalogue?.rows || 0,
             pageCount: catalogue?.pageCount || 0,
+            pageSize: catalogue?.pageSize || 0,
             hasData: !!catalogue,
             keys: catalogue ? Object.keys(catalogue) : [],
-            sampleEsim: catalogue?.esims?.[0] || null
+            sampleBundle: bundles[0] || null
         });
         
         return res.status(200).json({
@@ -61,7 +67,7 @@ module.exports = async function handler(req, res) {
                 message: 'The API returned a non-JSON response. This might indicate: ' +
                          '1) API endpoint error, 2) Authentication issue, 3) Server error on eSIM Go side.',
                 suggestion: 'Check the API endpoint URL and your API key. ' +
-                           'The /esims endpoint should return JSON with { esims: [], pageCount, pageSize, rows }',
+                           'The /catalogue endpoint should return JSON with { bundles: [], pageCount, pageSize, rows }',
                 errorDetails: error.message
             });
         }
@@ -71,13 +77,10 @@ module.exports = async function handler(req, res) {
             return res.status(404).json({
                 success: false,
                 error: 'Catalogue endpoint not found',
-                message: 'The /catalogue endpoint does not exist in eSIM Go API. ' +
-                         'Please check the API documentation in your eSIM Go portal ' +
-                         'or contact support to find the correct endpoint for getting available bundles.',
-                suggestion: 'You may need to: 1) Use a different endpoint (e.g., /bundles, /products), ' +
-                           '2) Get eSIM list first, then bundles for each, ' +
-                           '3) Use the eSIM Go portal to access catalogue data.',
-                documentation: 'https://docs.esim-go.com/',
+                message: 'The /catalogue endpoint does not exist in eSIM Go API v2.4. ' +
+                         'Please check the API documentation or contact support.',
+                suggestion: 'Verify that you are using the correct API version (v2.4) and that your API key has access to the catalogue endpoint.',
+                documentation: 'https://docs.esim-go.com/api/v2_4/',
                 portal: 'https://portal.esim-go.com/'
             });
         }
