@@ -45,10 +45,14 @@ function processCatalogue(catalogueData) {
 
     // Обрабатываем каждый eSIM
     // Структура eSIM может содержать: iccid, country, countryCode, и т.д.
-    esims.forEach(esim => {
-        // Получаем код страны из eSIM (может быть в разных полях)
-        const countryCode = (esim.countryCode || esim.country_code || esim.country)?.toUpperCase();
-        if (!countryCode) return;
+    esims.forEach((esim, index) => {
+        try {
+            // Получаем код страны из eSIM (может быть в разных полях)
+            const countryCode = (esim.countryCode || esim.country_code || esim.country || esim.CountryCode || esim.Country)?.toUpperCase();
+            if (!countryCode) {
+                console.warn(`eSIM at index ${index} has no country code:`, Object.keys(esim));
+                return;
+            }
 
         // Находим регион для страны
         let region = null;
@@ -79,10 +83,14 @@ function processCatalogue(catalogueData) {
         
         // Добавляем eSIM к стране
         country.esims.push({
-            iccid: esim.iccid,
-            name: esim.name || esim.productName || 'eSIM',
+            iccid: esim.iccid || esim.ICCID,
+            name: esim.name || esim.productName || esim.Name || 'eSIM',
             originalData: esim // Сохраняем оригинальные данные для справки
         });
+        } catch (esimError) {
+            console.error(`Error processing eSIM at index ${index}:`, esimError, esim);
+            // Продолжаем обработку остальных eSIM
+        }
 
         // Группируем по регионам
         if (!regionsMap.has(region)) {
@@ -139,11 +147,34 @@ module.exports = async function handler(req, res) {
     try {
         const { country, region, format } = req.query;
         
+        console.log('Catalogue-processed request:', { country, region, format });
+        
         // Получаем каталог из eSIM Go
-        const catalogue = await esimgoClient.getCatalogue(country || null);
+        let catalogue;
+        try {
+            catalogue = await esimgoClient.getCatalogue(country || null);
+            console.log('Catalogue received:', {
+                hasEsims: !!catalogue?.esims,
+                esimsCount: catalogue?.esims?.length || 0,
+                keys: Object.keys(catalogue || {})
+            });
+        } catch (catalogueError) {
+            console.error('Error fetching catalogue:', catalogueError);
+            throw new Error(`Failed to fetch catalogue: ${catalogueError.message}`);
+        }
         
         // Обрабатываем данные
-        const processed = processCatalogue(catalogue);
+        let processed;
+        try {
+            processed = processCatalogue(catalogue);
+            console.log('Catalogue processed:', {
+                countriesCount: processed?.countries?.length || 0,
+                regionsCount: Object.keys(processed?.regions || {}).length
+            });
+        } catch (processError) {
+            console.error('Error processing catalogue:', processError);
+            throw new Error(`Failed to process catalogue: ${processError.message}`);
+        }
         
         // Если запрошен конкретный формат
         if (format === 'countries') {
@@ -172,18 +203,23 @@ module.exports = async function handler(req, res) {
             success: true,
             data: processed,
             meta: {
-                totalCountries: processed.totalCountries,
-                totalBundles: processed.totalBundles,
-                regions: Object.keys(processed.regions)
+                totalCountries: processed.totalCountries || 0,
+                totalESIMs: processed.totalESIMs || 0,
+                regions: Object.keys(processed.regions || {})
             }
         });
         
     } catch (error) {
-        console.error('Catalogue processed API error:', error);
+        console.error('Catalogue processed API error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
         
         return res.status(500).json({
             success: false,
-            error: error.message || 'Failed to fetch and process catalogue'
+            error: error.message || 'Failed to fetch and process catalogue',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 };
