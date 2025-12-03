@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test eSIM Go API Connection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            margin-bottom: 24px;
+            color: #333;
+        }
+        
+        .section {
+            margin-bottom: 32px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #333;
+        }
+        
+        .button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .button:hover {
+            background: #0056CC;
+        }
+        
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .data-display {
+            margin-top: 16px;
+            padding: 16px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        pre {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007AFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .input-group {
+            margin-bottom: 12px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        input {
+            width: 100%;
+            max-width: 300px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Тест подключения к eSIM Go API</h1>
+        
+        <!-- Test Connection -->
+        <div class="section">
+            <div class="section-title">1. Проверка подключения</div>
+            <button class="button" onclick="testConnection()">Проверить подключение</button>
+            <div id="connectionStatus"></div>
+        </div>
+        
+        <!-- Get Countries -->
+        <div class="section">
+            <div class="section-title">2. Получить список стран</div>
+            <button class="button" onclick="getCountries()">Получить страны</button>
+            <div id="countriesStatus"></div>
+            <div id="countriesData" class="data-display" style="display: none;"></div>
+        </div>
+        
+        <!-- Get Catalogue -->
+        <div class="section">
+            <div class="section-title">3. Получить каталог (обработанный)</div>
+            <button class="button" onclick="getCatalogueProcessed()">Получить каталог</button>
+            <div id="catalogueStatus"></div>
+            <div id="catalogueData" class="data-display" style="display: none;"></div>
+        </div>
+        
+        <!-- Get Bundles for Country -->
+        <div class="section">
+            <div class="section-title">4. Получить тарифы для страны</div>
+            <div class="input-group">
+                <label>Код страны (ISO 3166-1 alpha-2):</label>
+                <input type="text" id="countryCode" placeholder="TH" value="TH" maxlength="2" style="text-transform: uppercase;">
+            </div>
+            <button class="button" onclick="getBundles()">Получить тарифы</button>
+            <div id="bundlesStatus"></div>
+            <div id="bundlesData" class="data-display" style="display: none;"></div>
+        </div>
+        
+        <!-- Raw Catalogue -->
+        <div class="section">
+            <div class="section-title">5. Получить сырой каталог (для отладки)</div>
+            <div class="input-group">
+                <label>Код страны (опционально):</label>
+                <input type="text" id="rawCountryCode" placeholder="TH (оставьте пустым для всех)" maxlength="2" style="text-transform: uppercase;">
+            </div>
+            <button class="button" onclick="getRawCatalogue()">Получить сырой каталог</button>
+            <div id="rawCatalogueStatus"></div>
+            <div id="rawCatalogueData" class="data-display" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '/api/esimgo';
+        
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function showData(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+        
+        async function testConnection() {
+            showStatus('connectionStatus', '<span class="loading"></span> Проверка подключения...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/catalogue?country=TH`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showStatus('connectionStatus', '✅ Подключение успешно! API работает.', 'success');
+                } else {
+                    showStatus('connectionStatus', `❌ Ошибка: ${data.error || 'Неизвестная ошибка'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('connectionStatus', `❌ Ошибка подключения: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getCountries() {
+            showStatus('countriesStatus', '<span class="loading"></span> Загрузка стран...', 'info');
+            document.getElementById('countriesData').style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE}/countries`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showStatus('countriesStatus', `✅ Получено стран: ${data.data.length}`, 'success');
+                    showData('countriesData', data);
+                } else {
+                    showStatus('countriesStatus', `❌ Ошибка: ${data.error || 'Неизвестная ошибка'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('countriesStatus', `❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getCatalogueProcessed() {
+            showStatus('catalogueStatus', '<span class="loading"></span> Загрузка каталога...', 'info');
+            document.getElementById('catalogueData').style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE}/catalogue-processed`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showStatus('catalogueStatus', 
+                        `✅ Каталог загружен: ${data.data.totalCountries} стран, ${data.data.totalBundles} тарифов`, 
+                        'success');
+                    showData('catalogueData', data);
+                } else {
+                    showStatus('catalogueStatus', `❌ Ошибка: ${data.error || 'Неизвестная ошибка'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('catalogueStatus', `❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getBundles() {
+            const countryCode = document.getElementById('countryCode').value.trim().toUpperCase();
+            
+            if (!countryCode) {
+                showStatus('bundlesStatus', '❌ Введите код страны', 'error');
+                return;
+            }
+            
+            showStatus('bundlesStatus', `<span class="loading"></span> Загрузка тарифов для ${countryCode}...`, 'info');
+            document.getElementById('bundlesData').style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE}/bundles?country=${countryCode}`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showStatus('bundlesStatus', 
+                        `✅ Получено тарифов: ${data.data.length} для ${data.country}`, 
+                        'success');
+                    showData('bundlesData', data);
+                } else {
+                    showStatus('bundlesStatus', `❌ Ошибка: ${data.error || 'Неизвестная ошибка'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('bundlesStatus', `❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getRawCatalogue() {
+            const countryCode = document.getElementById('rawCountryCode').value.trim().toUpperCase();
+            const url = countryCode 
+                ? `${API_BASE}/catalogue?country=${countryCode}`
+                : `${API_BASE}/catalogue`;
+            
+            showStatus('rawCatalogueStatus', 
+                `<span class="loading"></span> Загрузка сырого каталога${countryCode ? ` для ${countryCode}` : ''}...`, 
+                'info');
+            document.getElementById('rawCatalogueData').style.display = 'none';
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const itemsCount = data.data?.data?.length || 0;
+                    showStatus('rawCatalogueStatus', 
+                        `✅ Получено элементов: ${itemsCount}`, 
+                        'success');
+                    showData('rawCatalogueData', data);
+                } else {
+                    showStatus('rawCatalogueStatus', `❌ Ошибка: ${data.error || 'Неизвестная ошибка'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('rawCatalogueStatus', `❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
+
