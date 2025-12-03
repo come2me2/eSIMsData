@@ -50,6 +50,189 @@ let originalPrice = '';
 let isPromoApplied = false;
 let discountPercent = 0;
 
+/**
+ * Поиск bundle name по параметрам
+ */
+async function findBundleName(countryCode, dataAmount, duration, unlimited = false) {
+    try {
+        const params = new URLSearchParams({
+            country: countryCode,
+            dataAmount: dataAmount.toString(),
+            duration: duration.toString(),
+            unlimited: unlimited.toString()
+        });
+        
+        const response = await fetch(`/api/esimgo/find-bundle?${params.toString()}`);
+        const data = await response.json();
+        
+        if (!data.success || !data.data?.bundleName) {
+            throw new Error(data.error || 'Bundle not found');
+        }
+        
+        return data.data.bundleName;
+    } catch (error) {
+        console.error('Error finding bundle:', error);
+        throw error;
+    }
+}
+
+/**
+ * Обработка покупки
+ */
+async function processPurchase(orderWithUser, auth, tg) {
+    const purchaseBtn = document.getElementById('purchaseBtn');
+    const originalText = purchaseBtn.textContent;
+    
+    try {
+        purchaseBtn.textContent = 'Processing...';
+        purchaseBtn.disabled = true;
+        
+        if (tg) {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+        
+        // Определяем параметры плана
+        const selectedPlan = orderWithUser.planType === 'unlimited' 
+            ? unlimitedPlans.find(p => p.id === orderWithUser.planId)
+            : standardPlans.find(p => p.id === orderWithUser.planId);
+        
+        if (!selectedPlan) {
+            throw new Error('Plan not found');
+        }
+        
+        // Парсим данные из плана (например: "1 GB" -> 1000 MB, "7 Days" -> 7)
+        const dataMatch = selectedPlan.data.match(/(\d+)/);
+        const durationMatch = selectedPlan.duration.match(/(\d+)/);
+        
+        if (!dataMatch || !durationMatch) {
+            throw new Error('Invalid plan format');
+        }
+        
+        const dataAmountMB = parseInt(dataMatch[1]) * 1000; // GB to MB
+        const durationDays = parseInt(durationMatch[1]);
+        const isUnlimited = orderWithUser.planType === 'unlimited';
+        
+        // Ищем bundle name
+        purchaseBtn.textContent = 'Finding bundle...';
+        const bundleName = await findBundleName(
+            orderWithUser.code,
+            dataAmountMB,
+            durationDays,
+            isUnlimited
+        );
+        
+        console.log('Found bundle:', bundleName);
+        
+        // Создаем заказ
+        purchaseBtn.textContent = 'Creating order...';
+        const orderResponse = await fetch('/api/esimgo/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bundle_name: bundleName,
+                telegram_user_id: orderWithUser.telegram_user_id,
+                telegram_username: orderWithUser.telegram_username,
+                user_name: orderWithUser.user_name,
+                country_code: orderWithUser.code,
+                country_name: orderWithUser.name,
+                plan_id: orderWithUser.planId,
+                plan_type: orderWithUser.planType
+            })
+        });
+        
+        const orderResult = await orderResponse.json();
+        
+        if (!orderResult.success) {
+            throw new Error(orderResult.error || 'Failed to create order');
+        }
+        
+        console.log('Order created:', orderResult.data);
+        
+        // Если есть assignments (QR код), показываем их
+        if (orderResult.data.assignments) {
+            showOrderSuccess(orderResult.data, tg);
+        } else if (orderResult.data.orderReference) {
+            // Если assignments не получены сразу, получаем их отдельно
+            purchaseBtn.textContent = 'Getting QR code...';
+            await getAndShowAssignments(orderResult.data.orderReference, tg);
+        } else {
+            throw new Error('Order created but no eSIM data received');
+        }
+        
+        if (tg) {
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+        
+    } catch (error) {
+        console.error('Purchase failed:', error);
+        
+        purchaseBtn.textContent = originalText;
+        purchaseBtn.disabled = false;
+        
+        if (tg) {
+            tg.HapticFeedback.notificationOccurred('error');
+            tg.showAlert('Purchase failed: ' + error.message);
+        } else {
+            alert('Purchase failed: ' + error.message);
+        }
+    }
+}
+
+/**
+ * Получить и показать assignments (QR код)
+ */
+async function getAndShowAssignments(orderReference, tg) {
+    try {
+        const response = await fetch(`/api/esimgo/assignments?reference=${orderReference}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to get assignments');
+        }
+        
+        showOrderSuccess({ assignments: data.data, orderReference }, tg);
+    } catch (error) {
+        console.error('Failed to get assignments:', error);
+        throw error;
+    }
+}
+
+/**
+ * Показать успешный заказ с QR кодом
+ */
+function showOrderSuccess(orderData, tg) {
+    // TODO: Создать страницу или модальное окно для показа QR кода
+    // Пока просто перенаправляем на страницу успеха
+    const assignments = orderData.assignments;
+    
+    if (assignments && assignments.iccid) {
+        // Сохраняем в localStorage для отображения в my-esims
+        const orderInfo = {
+            iccid: assignments.iccid,
+            matchingId: assignments.matchingId,
+            smdpAddress: assignments.smdpAddress,
+            orderReference: orderData.orderReference,
+            createdAt: new Date().toISOString()
+        };
+        
+        // Получаем существующие заказы
+        const existingOrders = JSON.parse(localStorage.getItem('esim_orders') || '[]');
+        existingOrders.push(orderInfo);
+        localStorage.setItem('esim_orders', JSON.stringify(existingOrders));
+        
+        // Перенаправляем на страницу успеха или my-esims
+        if (tg) {
+            tg.showAlert('Order successful! Check "My eSIMs" for QR code.');
+            setTimeout(() => {
+                window.location.href = 'my-esims.html';
+            }, 2000);
+        } else {
+            alert('Order successful! Check "My eSIMs" for QR code.');
+            window.location.href = 'my-esims.html';
+        }
+    }
+}
+
 // Region icon file mapping
 const regionIconMap = {
     'Africa': 'Afrrica.png',
@@ -295,23 +478,12 @@ function setupPurchaseButton() {
             if (tg && tg.showConfirm) {
                 tg.showConfirm('Confirm purchase?', async (confirmed) => {
                     if (confirmed) {
-                        // Отправка заказа на сервер с initData для повторной проверки
-                        try {
-                            // const result = await auth.secureRequest('/api/orders', orderWithUser);
-                            // console.log('Order created:', result);
-                            console.log('Payment confirmed for validated user:', auth.getUserId());
-                            
-                            if (tg) {
-                                tg.HapticFeedback.notificationOccurred('success');
-                            }
-                        } catch (error) {
-                            console.error('Order creation failed:', error);
-                            if (tg) {
-                                tg.showAlert('Order failed: ' + error.message);
-                            }
-                        }
+                        await processPurchase(orderWithUser, auth, tg);
                     }
                 });
+            } else {
+                // Если showConfirm недоступен, сразу обрабатываем покупку
+                await processPurchase(orderWithUser, auth, tg);
             }
             
         } catch (error) {

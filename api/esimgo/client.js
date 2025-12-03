@@ -239,23 +239,20 @@ async function getCatalogue(countryCode = null, options = {}) {
 
 /**
  * Создать заказ eSIM
- * @param {Object} orderData - Данные заказа
- * @param {string} orderData.type - Тип транзакции: "transaction" для заказа пакета данных
- * @param {string} orderData.bundle_id - ID пакета из каталога
- * @param {string} orderData.iccid - ICCID eSIM (если уже есть eSIM)
+ * @param {Object} orderData - Данные заказа согласно API v2.4
+ * @param {string} orderData.type - Тип: "transaction" для заказа, "validate" для проверки
+ * @param {boolean} orderData.assign - Автоматически назначить bundle на eSIM
+ * @param {Array} orderData.order - Массив заказов
  * @returns {Promise<Object>} Информация о заказе
  * Документация: https://docs.esim-go.com/api/v2_4/#tag/Orders
  */
 async function createOrder(orderData) {
-    // Структура заказа согласно документации
-    const order = {
-        type: 'transaction', // Тип транзакции для заказа пакета данных
-        ...orderData
-    };
-    
+    // Структура заказа согласно API v2.4
+    // orderData уже должна быть в правильном формате:
+    // { type: 'transaction', assign: true, order: [{ type: 'bundle', quantity: 1, item: bundleName }] }
     return makeRequest('/orders', {
         method: 'POST',
-        body: order
+        body: orderData
     });
 }
 
@@ -310,6 +307,7 @@ module.exports = {
     getESIMInfo,
     getESIMBundles,
     createESIM,
+    getESIMAssignments,
     makeRequest // Экспортируем для использования в других модулях
 };
 
