@@ -36,7 +36,9 @@ module.exports = async function handler(req, res) {
             esimsCount: catalogue?.esims?.length || 0,
             rows: catalogue?.rows || 0,
             pageCount: catalogue?.pageCount || 0,
-            hasData: !!catalogue
+            hasData: !!catalogue,
+            keys: catalogue ? Object.keys(catalogue) : [],
+            sampleEsim: catalogue?.esims?.[0] || null
         });
         
         return res.status(200).json({
