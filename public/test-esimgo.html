@@ -215,16 +215,65 @@
             showStatus('connectionStatus', '<span class="loading"></span> Проверка подключения...', 'info');
             
             try {
-                const response = await fetch(`${API_BASE}/catalogue?country=TH`);
-                const data = await response.json();
+                // Сначала проверяем диагностический endpoint
+                const testResponse = await fetch(`${API_BASE}/test`);
+                const testData = await testResponse.json();
                 
-                if (response.ok && data.success) {
-                    showStatus('connectionStatus', '✅ Подключение успешно! API работает.', 'success');
+                if (testResponse.ok && testData.success) {
+                    const diag = testData.diagnostics;
+                    
+                    if (!diag.hasApiKey) {
+                        showStatus('connectionStatus', 
+                            '❌ ESIMGO_API_KEY не установлен в переменных окружения Vercel', 
+                            'error');
+                        return;
+                    }
+                    
+                    if (!diag.hasFetch) {
+                        showStatus('connectionStatus', 
+                            '❌ fetch недоступен в Node.js окружении', 
+                            'error');
+                        return;
+                    }
+                    
+                    if (diag.testError) {
+                        showStatus('connectionStatus', 
+                            `❌ Ошибка при тестировании API: ${diag.testError.message}`, 
+                            'error');
+                        showData('connectionStatus', diag);
+                        return;
+                    }
+                    
+                    if (diag.testResult && diag.testResult.ok) {
+                        showStatus('connectionStatus', 
+                            '✅ Подключение успешно! API работает. Каталог получен.', 
+                            'success');
+                    } else if (diag.testResult) {
+                        showStatus('connectionStatus', 
+                            `⚠️ API ответил, но с ошибкой: ${diag.testResult.status} ${diag.testResult.statusText}`, 
+                            'error');
+                        if (diag.testResult.errorText) {
+                            showStatus('connectionStatus', 
+                                `Детали: ${diag.testResult.errorText}`, 
+                                'error');
+                        }
+                    } else {
+                        showStatus('connectionStatus', 
+                            '⚠️ Не удалось получить результат теста', 
+                            'error');
+                    }
+                    
+                    // Показываем диагностическую информацию
+                    showData('connectionStatus', diag);
                 } else {
-                    showStatus('connectionStatus', `❌ Ошибка: ${data.error || 'Неизвестная ошибка'}`, 'error');
+                    showStatus('connectionStatus', 
+                        `❌ Ошибка диагностики: ${testData.error || 'Неизвестная ошибка'}`, 
+                        'error');
                 }
             } catch (error) {
-                showStatus('connectionStatus', `❌ Ошибка подключения: ${error.message}`, 'error');
+                showStatus('connectionStatus', 
+                    `❌ Ошибка подключения: ${error.message}`, 
+                    'error');
             }
         }
         
