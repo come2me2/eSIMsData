@@ -6,8 +6,9 @@
 
 const esimgoConfig = {
     apiKey: process.env.ESIMGO_API_KEY,
-    // Используем версию 2.4 согласно документации
-    apiUrl: process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2.4',
+    // Используем версию v2 - тест показал, что /v2/esims работает
+    // Можно переопределить через переменную окружения ESIMGO_API_URL
+    apiUrl: process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2',
     timeout: 30000
 };
 
