@@ -49,6 +49,22 @@ module.exports = async function handler(req, res) {
             country: req.query.country
         });
         
+        // Если это ошибка 404, даем более понятное сообщение
+        if (error.message.includes('Not Found') || error.message.includes('404')) {
+            return res.status(404).json({
+                success: false,
+                error: 'Catalogue endpoint not found',
+                message: 'The /catalogue endpoint does not exist in eSIM Go API. ' +
+                         'Please check the API documentation in your eSIM Go portal ' +
+                         'or contact support to find the correct endpoint for getting available bundles.',
+                suggestion: 'You may need to: 1) Use a different endpoint (e.g., /bundles, /products), ' +
+                           '2) Get eSIM list first, then bundles for each, ' +
+                           '3) Use the eSIM Go portal to access catalogue data.',
+                documentation: 'https://docs.esim-go.com/',
+                portal: 'https://portal.esim-go.com/'
+            });
+        }
+        
         return res.status(500).json({
             success: false,
             error: error.message || 'Failed to fetch catalogue',
