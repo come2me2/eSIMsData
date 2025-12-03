@@ -15,7 +15,7 @@ module.exports = async function handler(req, res) {
     
     try {
         const apiKey = process.env.ESIMGO_API_KEY;
-        const apiUrl = process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2';
+        const apiUrl = process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2.4';
         
         // Проверяем наличие API ключа
         if (!apiKey) {

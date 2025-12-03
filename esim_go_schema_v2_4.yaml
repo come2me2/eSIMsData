@@ -1,0 +1,5800 @@
+openapi: 3.0.0
+info:
+  title: eSIM Go API
+  description: |
+    To access the eSIMGo API, you need to authenticate your requests using an API key. 
+    Here's a brief overview of the authentication process:
+      1. Assuming that you have created account already:
+      - Log into your eSIMGo account at https://sso.esim-go.com/login.
+      - Navigate to Account Settings -> API Details to find your API key.
+      - Keep your API key secure and avoid sharing it with others.
+      2. API Key Usage:
+      - Include your API key in the header of all eSIMGo API requests.
+      - Use the header key 'X-API-KEY' with your API key as the value.
+      3. Security Scheme:
+      - The eSIMGo API uses an HTTP security scheme type for authentication.
+      4. Authorization Types:
+      - The API supports 'apiKeyAuth' authorization type.
+  version: 2.4.0
+servers:
+  - url: https://api.esim-go.com/v2.4
+    description: eSIM Go API
+tags:
+  - name: API
+  - name: Callback
+  - name: eSIMs
+  - name: eSIMs (Deprecated)
+  - name: Organisation
+  - name: Orders
+  - name: Inventory
+  - name: Catalogue
+  - name: Networks
+paths:
+  /your-usage-callback-url/:
+    post:
+      tags:
+        - Callback
+      summary: eSIM Usage Callback
+      x-explorer-enabled: false
+      description: |
+        **Note:** V3 of the Callback system is now available and provides additional data as well as HMAC signature validation.
+        **This must be enabled in the eSIM Portal.**
+        V2 of the Callback system is still available by default, but will be disabled in the future.
+
+         To enable it on the eSIM Portal go to Account Settings -> API Details -> Callback Version.
+
+
+        **Description:**
+        The eSIMGo API offers a callback functionality that provides real-time notifications about eSIM activity, including data consumption and balance. This feature allows for tracking usage, automating responses, and customizing notifications, enhancing customer account management. 
+        Key benefits include real-time updates, usage tracking, automated responses, and customizable notifications. 
+        When data is used on an eSIM, a usage event can be sent to a URL defined by you in the eSIM Portal. The usage event will report the current bundle in use by an eSIM, and its remaining data.
+
+          To set up the URL in the eSIM Portal go to Account Settings -> API Details -> Callback URL.
+
+
+
+        Example of validating HMAC body in NodeJS:
+
+        ```javascript
+        import crypto from "crypto";
+
+        const signature = crypto
+            .createHmac("sha256", key) // key is your API Key
+            .update(body) // body is the raw (string) request body
+            .digest("base64");
+
+        const matches = signature === signatureHeader;
+        ```
+
+        Validation uses your API Key as the HMAC key.
+        The body of the request is the raw (string) request body, and should not be parsed as JSON before validation.
+
+        **Note:** Bundle names are case sensitive e.g. "esim_1GB_7D_IM_U".
+
+        **Request Body Notes:**
+        - The "try" button for this endpoint is **NOT** functional
+        - The schema defines an example message that is sent to the configured callback URL.
+        - For more information on callback notification types, Please see the [Notifications Page](/api/notifications#overview).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BundleAlert'
+            example:
+              iccid: '8944538532008160222'
+              alertType: Utilisation
+              bundle:
+                id: '123456789'
+                name: A_BUNDLE_20GB_30D_EU_U
+                description: A Bundle, 20GB, 30 Days, EU, Unthrottled
+                initialQuantity: 20000000000
+                remainingQuantity: 19000000000
+                startTime: '2006-01-02T15:04:05Z'
+                endTime: '2007-01-02T15:04:05Z'
+                reference: 12345-12345-12345-12345-0
+                unlimited: false
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json: {}
+  /esims/apply:
+    post:
+      summary: Apply Bundle to an eSIM
+      description: |
+        # eSIM Provisioning and Bundle Application Endpoint
+
+        This endpoint allows you to obtain a new eSIM with a pre-applied Bundle or apply a Bundle to an existing eSIM.
+
+        ## Key Features:
+        1. Assign Bundles to new or existing eSIMs
+        2. Option to request multiple eSIMs with the same Bundle
+        3. Ability to assign different Bundles to separate new eSIMs
+
+        ## Usage Guidelines:
+        - Provide either 'Bundle' or 'Bundles' parameter
+        - ICCID is optional for existing eSIMs
+        - 'Repeat' parameter for multiple new eSIMs (incompatible with ICCID)
+        - Bundle names are case-sensitive (e.g., "esim_1GB_7D_IM_U")
+
+        ## Important Notes:
+        - Requires pre-purchased Bundles in your account inventory
+        - Bundle activation usually instant, but allow up to 10 minutes for full processing
+        - eSIM can be installed and registered on a network during processing
+        - The Bundle Status can be checked through [Get the Status of a bundle assigned to an eSIM](/api/v2_4/operations/esimsiccidbundlesname/get/)
+
+        The endpoint always returns the ICCID in the response.
+      tags:
+        - eSIMs
+      requestBody:
+        description: Details of Bundle to apply to eSIM
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/ApplyBundleWithICCIDRequest'
+                - $ref: '#/components/schemas/ApplyBundleWithList'
+            examples:
+              New eSIM (or topup existing eSIM):
+                value:
+                  iccid: '8943108165015003887'
+                  name: A_BUNDLE_20GB_30D_EU_U
+                  allowReassign: false
+              Mixed Bundles:
+                value:
+                  bundles:
+                    - name: A_BUNDLE_20GB_30D_EU_U
+                    - name: A_BUNDLE_20GB_30D_EU_U
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: Success message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESIMApplyResponse'
+              example:
+                esims:
+                  - iccid: '8944123456789012345'
+                    status: ACTIVE
+                applyReference: 123e4567-e89b-12d3-a456-426614174000
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -X POST 'https://api.esim-go.com/v2.4/esims/apply' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 POST 'https://api.esim-go.com/v2.4/esims/apply' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'post',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/apply',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/apply"
+              method := "POST"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/apply"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("POST", url, headers=headers, data=payload)
+
+            print(response.text)
+  /esims/assignments:
+    get:
+      tags:
+        - eSIMs
+      summary: Get eSIM Install Details
+      description: |
+        # eSIM SMDP+ Details Retrieval Endpoint
+
+        This API endpoint retrieves eSIM SMDP+ details based on provided Order or Apply References.
+
+        ## Key features:
+
+        1. Input: One or multiple reference numbers can be submitted via query parameters.
+        2. Output: For each reference, the system returns:
+           - ICCID (Integrated Circuit Card Identifier)
+           - SMDP+ (Subscription Manager Data Preparation) address
+           - Matching ID
+        3. Output format options:
+           - Default: text/csv
+           - Alternative formats: application/json, application/zip
+           - Format selection is controlled via the 'Accept' header in the request
+        4. Special functionality: When requesting 'application/zip', the response is a ZIP file containing QR code images in PNG format.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: reference
+          in: query
+          schema:
+            type: string
+          description: (Required) Order Reference or Apply Reference
+        - name: additionalFields
+          in: query
+          schema:
+            type: string
+          example: appleInstallUrl
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/eSIMDetailsInstallResponse'
+              example:
+                iccid: '8944123456789012345'
+                matchingId: A1B2-C3D4-E5F6-G7H8
+                smdpAddress: http://smdp.example.com
+                profileStatus: Released
+                pin: '1234'
+                puk: '12345678'
+                firstInstalledDateTime: '2023-06-15T14:30:00.000Z'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl 'https://api.esim-go.com/v2.4/esims/assignments' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/esims/assignments' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/assignments',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/assignments"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/assignments"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /esims/{iccid}/history:
+    get:
+      tags:
+        - eSIMs
+      summary: Get eSIM history
+      description: |
+        This endpoint returns the history of a specific eSIM. It provides a chronological list of actions performed on the eSIM, including bundle assignments and their states.
+
+        This endpoint is useful for tracking the lifecycle of an eSIM, including bundle assignments, updates, and other significant events.
+
+        Bundle Assignment States:
+        - **Bundle Applied:**
+          The bundle has been successfully assigned to the eSIM
+        - **eSIM Updated:**
+          The eSIM Reference has been updated.
+        - **eSIM Refreshed:**
+          eSIM was forcibly disconnected from the network, prompting it to reestablish its connection.
+        - **eSIM Utilisation Alert:**
+          A notification has been triggered due to the eSIM reaching a certain usage threshold.
+        - **eSIM Returned:**
+          The eSIM is no longer assigned to your organisation after undergoing the returns process.
+        - **Bundle Refunded To Balance:**
+          The unused bundle has been credited back to the organization's account balance.
+        - **Bundle Refunded to Inventory:**
+          The unused bundle has been returned to the organization's inventory for potential reassignment.
+        - **Bundle Revoked:**
+          The bundle has been removed from the eSIM.
+        - **eSIM First Attachment:**
+          The eSIM has successfully connected to a mobile network for the first time since activation.
+        - **eSIM First Use:**
+         The eSIM has been used for the first time to consume data service.
+        - **Bundle Expired:**
+          The bundle's validity period has ended and/or has been used in full. It is no longer active or usable.
+        - **Bundle Lapsed:**
+          The bundle has become inactive after no activity for 12 months.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: iccid
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) The ICCID of the eSIM
+          example: 8944123456789012000
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESIMHistory'
+              example:
+                - name: Bundle Applied
+                  bundleName: A_BUNDLE_20GB_30D_EU_U
+                  date: '2023-04-07T00:50:31.618780311Z'
+                - name: Bundle Revoked
+                  bundleName: A_BUNDLE_20GB_30D_EU_U
+                  date: '2023-04-07T00:50:31.618780311Z'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/esims/{iccid}/history' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/esims/{iccid}/history' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}/history',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}/history"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}/history"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /esims/{iccid}/refresh:
+    get:
+      tags:
+        - eSIMs
+      summary: Refresh eSIM
+      description: |-
+        This request generates a cancel location request to the network, prompting it to reestablish its connection.
+        Please note that this process disconnects the customer from the network and should be used solely for troubleshooting. It is not intended for canceling locations in bulk.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: iccid
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) The ICCID of the eSIM
+          example: 8944123456789012000
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+              example:
+                status: Successfully refreshed SIM
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/esims/{iccid}/refresh' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/esims/{iccid}/refresh' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}/refresh',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}/refresh"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}/refresh"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /esims/{iccid}/compatible/{bundle}:
+    get:
+      tags:
+        - eSIMs
+      summary: Check eSIM and Bundle Compatibility
+      description: |-
+        To ensure optimal service, eSIM Go utilizes multiple providers. As a result, certain bundles may be incompatible with existing eSIMs if they originate from different providers, preventing eSIM top-ups.
+
+          This endpoint is designed to verify eSIM-bundle compatibility.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: iccid
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) The ICCID of the eSIM
+          example: 8944123456789012000
+        - name: bundle
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompatibilityResponse'
+              example:
+                compatible: false
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/esims/{iccid}/compatible/{bundle}' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/esims/{iccid}/compatible/{bundle}' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}/compatible/{bundle}',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}/compatible/{bundle}"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}/compatible/{bundle}"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /esims/{iccid}/sms:
+    post:
+      tags:
+        - eSIMs
+      summary: Send SMS to eSIM
+      description: |
+        The Send SMS endpoint is a powerful feature of the eSIMGo API that allows you to send text messages directly to eSIMs. This endpoint becomes particularly useful when combined with eSIMGo's real-time notification system, which provides updates about eSIM activity through callback functionality. The callback should be set up separatelly.
+
+         Key points:
+
+        1. Message requirements:
+          - UTF-8 compliant
+          - Length: 1-160 characters
+
+        2. Default recipient: 'eSIM' (currently the only supported value)
+          - Custom identifiers available upon request
+
+        Note: For custom identifiers, please contact your Account Manager.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  description: UTF-8 compliant message
+                  type: string
+                  required: true
+                  minLength: 1
+                  maxLength: 160
+                  default: message
+                from:
+                  description: |
+                    Name of sender that will show in SMS.
+
+                    This defaults to `eSIM` and is the only supported value by default. Unique identifiers can be assigned to your Organisation on request.
+                  type: string
+                  default: eSIM
+              example:
+                message: Hello!
+                from: eSIM
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: iccid
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) The ICCID of the eSIM
+          example: 8944123456789012000
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+              example:
+                status: sent
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/esims/{iccid}/sms' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json' \
+            -d '{"message":"string","from":"string"}'
+        - lang: shell
+          label: Httpie
+          source: |-
+            printf '{"message":"string","from":"string"}'| http  --timeout 3600 POST 'https://api.esim-go.com/v2.4/esims/{iccid}/sms' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+            let data = JSON.stringify({
+              "message": "string",
+              "from": "string"
+            });
+
+            let config = {
+              method: 'post',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}/sms',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              },
+              data : data
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "strings"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}/sms"
+              method := "POST"
+
+              payload := strings.NewReader(`{"message":"string","from":"string"}`)
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, payload)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}/sms"
+
+            payload = json.dumps({
+              "message": "string",
+              "from": "string"
+            })
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("POST", url, headers=headers, data=payload)
+
+            print(response.text)
+  /esims/{iccid}/bundles:
+    get:
+      tags:
+        - eSIMs
+      summary: List Bundles applied to eSIM
+      description: |
+        This endpoint allows you to retrieve a list of all bundles that have been applied to a specific eSIM. This endpoint is useful for tracking the service history and current status of an eSIM.
+
+        Remaining data can be found here.
+
+        Each Bundle can have multiple assignments.
+
+        Bundle Assignment States:
+        - **Processing:**
+          The bundle assignment is currently processing.
+          This is usually instant but can, on occasion, take up to 10 minutes to complete.
+          The eSIM can still be installed and will register on a network while the bundle is processing.
+        - **Queued:**
+          The bundle has been successfully assigned, has not been used yet, and is queued for use.
+        - **Active:**
+          The bundle has successfully been used.
+          It has data remaining and is within the bundle duration.
+        - **Depleted:**
+          The bundle has no data remaining but is still within the bundle duration.
+        - **Expired:**
+          The bundle has expired, and the bundle duration has been exceeded.
+        - **Revoked:**
+          The bundle has been revoked, and is no longer on the esim.
+        - **Lapsed:**
+          The bundle has expired without being used and is no longer on the eSIM.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: includeUsed
+          in: query
+          schema:
+            type: string
+          description: |
+            Include used & expired Bundles
+            Backward compatibility for v2.1
+          example: true
+        - name: limit
+          in: query
+          schema:
+            type: string
+          description: |
+            Number of assignments to return. Must be between 1 and 200. Default is 15
+          example: 10
+        - name: iccid
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) The ICCID of the eSIM
+          example: 8944123456789012000
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BundlesList'
+              example:
+                bundles:
+                  - name: esim_1GB_7D_GB_V2
+                    description: eSIM, 1GB, 7 Days, United Kingdom, V2
+                    assignments:
+                      - id: '215009266'
+                        callTypeGroup: data
+                        initialQuantity: 1000000000
+                        remainingQuantity: 1000000000
+                        assignmentDateTime: '2024-12-11T10:47:00.34523Z'
+                        assignmentReference: 3a6e2e40-c674-45e9-b289-b35027bf72a9-0
+                        bundleState: queued
+                        unlimited: false
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}/bundles"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}/bundles"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+    post:
+      tags:
+        - eSIMs (Deprecated)
+      summary: Apply a Bundle to an eSIM (Deprecated)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                name: <string>
+                startTime: <string>
+                repeat: <integer>
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: iccid
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) The ICCID of the eSIM
+          example: <string>
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                status: <string>
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json' \
+            -d '{"name":"string","startTime":"string","repeat":0}'
+        - lang: shell
+          label: Httpie
+          source: |-
+            printf '{"name":"string","startTime":"string","repeat":0}'| http  --timeout 3600 POST 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+            let data = JSON.stringify({
+              "name": "string",
+              "startTime": "string",
+              "repeat": 0
+            });
+
+            let config = {
+              method: 'post',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              },
+              data : data
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "strings"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}/bundles"
+              method := "POST"
+
+              payload := strings.NewReader(`{"name":"string","startTime":"string","repeat":0}`)
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, payload)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}/bundles"
+
+            payload = json.dumps({
+              "name": "string",
+              "startTime": "string",
+              "repeat": 0
+            })
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("POST", url, headers=headers, data=payload)
+
+            print(response.text)
+  /esims/{iccid}/bundles/{name}:
+    get:
+      tags:
+        - eSIMs
+      summary: Get applied Bundle status
+      description: |
+        Provides details about an individual assignment of a Bundle applied to an eSIM.
+
+         Bundle Assignment States:
+          - Processing: The bundle assignment is currently processing. This is usually 
+            instant but can occasionally take up to 10 minutes to complete. The eSIM 
+            can still be installed and will register on a network while the bundle is 
+            processing.
+          - Queued: The bundle has been successfully assigned, has not been used yet, 
+            and is queued for use.
+          - Active: The bundle has successfully been used. It has data remaining and 
+            is within the bundle duration.
+          - Depleted: The bundle has no data remaining but is still within the bundle 
+            duration.
+          - Expired: The bundle has expired, and the bundle duration has been exceeded.
+          - Revoked: The bundle has been revoked and is no longer on the eSIM.
+          - Lapsed: The bundle has expired without being used and is no longer on the eSIM.
+
+        Notes:
+          - If multiple of the same bundle are applied to a single eSIM, the status 
+            bundle with the latest assignment will be returned.
+          - Bundle names are case sensitive and should be typed exactly as shown, 
+            e.g., "esim_1GB_7D_IM_U".
+          - Remaining data can be found in the response.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: iccid
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) The ICCID of the eSIM
+          example: 8944123456789012000
+        - name: name
+          in: path
+          schema:
+            type: string
+          required: true
+          description: |
+            (Required) Name of Bundle Format as defined in [List Catalogue](/api/#get-/catalogue) API call. Example: `esim_10GB_30D_IM_U`
+          example: esim_10GB_30D_IM_U
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentResponse'
+              example:
+                assignments:
+                  - id: '215009266'
+                    callTypeGroup: data
+                    initialQuantity: 1000000000
+                    remainingQuantity: 1000000000
+                    assignmentDateTime: '2024-12-11T10:47:00.34523Z'
+                    assignmentReference: 3a6e2e40-c674-45e9-b289-b35027bf72a9-0
+                    bundleState: queued
+                    unlimited: false
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+    delete:
+      summary: Revoke applied Bundle
+      description: |
+        This endpoint is used to revoke the latest assignment of a given bundle type from an eSIM. It requires two parameters: the ICCID of the eSIM and the name of the bundle to be revoked. If the specified ICCID has multiple bundles with the same name, the oldest unused bundle will be revoked.
+
+        Example:
+        For an eSIM with ICCID 8943108165015003887 that has the following bundles:
+        
+        ¥ ESIM_1G_UK (Assignment ID: 243)
+        
+        ¥ ESIM_1G_UK (Assignment ID: 245)
+        
+        ¥ ESIM_1G_US (Assignment ID: 247)
+        
+        If you revoke the "ESIM_1G_UK" bundle, the oldest unused assignment (ID: 243) will be revoked.
+
+        **IMPORTANT:** If there are no bundles left on the eSIM AFTER the revoke, AND if the eSIM is not installed, the eSIM may undergo the eSIM Go returns process. The start of the returns process will REMOVE the eSIM from your account - you will no longer be able to access it. After a minimum of 4 days: if during the returns process, the eSIM is now installed (e.g. by your end user), the eSIM will be returned to your account. If you DO NOT want the eSIM to be given back to eSIM Go, ensure the eSIM either:
+        - Is installed
+        - Has more than 1 bundle on it at the time of revoking
+
+        Revokes latest assignment of a given Bundle type. If a bundle assignment has not been started and no data has been consumed, the bundle assignment can either be returned to the inventory or credited back to the organisations balance. If the bundle assignment has started, or was purchased outside of their permitted refund period, typically 60 days, it cannot be returned to the inventory or taken as a credit.
+
+        **Note:** Bundle names are case sensitive and should be typed like the following "esim_1GB_7D_IM_U".
+      tags:
+        - eSIMs
+      parameters:
+        - in: path
+          name: iccid
+          schema:
+            type: string
+          required: true
+          description: The ICCID of the eSIM
+        - in: path
+          name: name
+          schema:
+            type: string
+          required: true
+          description: >
+            Name of Bundle
+
+
+            Format as defined in [List Catalogue](/api/v2_4/operations/catalogue/get) API
+            call.
+
+            Example: `esim_10GB_30D_IM_U`
+        - in: query
+          name: refundToBalance
+          schema:
+            type: boolean
+          required: false
+          description: >-
+            If Applicable, refund the value of this bundle to organisation
+            balance
+        - in: query
+          name: offerId
+          schema:
+            type: string
+          required: false
+          description: >-
+            If Applicable, the offerId of the bundle to revoke. needed for
+            refunding to balance
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum:
+              - validate
+              - transaction
+          required: false
+          description: >-
+            type `validate` will provide options for the revoke and the
+            behaviours, if any. type `transaction` will execute the revoke.
+            Defaults to `transaction`
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Success message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: >-
+            Unauthorised - returned when the api token is invalid; the user does
+            not have any available Bundles left or the eSIM is not accessible by
+            the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: >-
+            curl -g -X DELETE
+            'https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}' \
+
+            -H 'X-API-Key: $API_KEY' \
+
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: >-
+            http --timeout 3600 DELETE
+            'https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'delete',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}"
+              method := "DELETE"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: >
+            import requests
+
+            import json
+
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}"
+
+
+            payload = {}
+
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+
+            response = requests.request("DELETE", url, headers=headers,
+            data=payload)
+
+
+            print(response.text)
+  /esims/{iccid}/bundles/{name}/assignments/{assignmentId}:
+    delete:
+      tags:
+        - eSIMs
+      summary: Revoke specific Bundle
+      description: |
+        This endpoint revokes a specific bundle from an eSIM using assignment ID.        
+        
+        **IMPORTANT:** If there are no bundles left on the eSIM AFTER the revoke, AND if the eSIM is not installed, the eSIM may undergo the eSIM Go returns process. The start of the returns process will REMOVE the eSIM from your account - you will no longer be able to access it. After a minimum of 4 days: if during the returns process, the eSIM is now installed (e.g. by your end user), the eSIM will be returned to your account. If you DO NOT want the eSIM to be given back to eSIM Go, ensure the eSIM either:
+        - Is installed
+        - Has more than 1 bundle on it at the time of revoking
+
+        Revokes latest assignment of a given Bundle type. If a bundle assignment has not been started and no data has been consumed, the bundle assignment can either be returned to the inventory or credited back to the organisations balance. If the bundle assignment has started, or was purchased outside of their permitted refund period, typically 60 days, it cannot be returned to the inventory or taken as a credit.
+
+        **Note:** Bundle names are case sensitive and should be typed like the following "esim_1GB_7D_IM_U".
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: type
+          in: query
+          schema:
+            type: string
+          description: type `validate` will provide options for the revoke and the behaviours, if any. type `transaction` will execute the revoke. Defaults to `transaction`
+          example: validate
+        - name: iccid
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) The ICCID of the eSIM
+          example: 8944123456789012000
+        - name: name
+          in: path
+          schema:
+            type: string
+          required: true
+          description: |
+            (Required) Name of Bundle Format as defined in [List Catalogue](/api/#get-/catalogue) API call. Example: `esim_10GB_30D_IM_U`
+          example: esim_10GB_30D_IM_U
+        - name: assignmentId
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) ID of individual Bundle Assignment to revoke from an eSIM
+          example: 123231231
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+              example:
+                status: Successfully Revoked Bundle, bundle has been refunded to inventory
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g -X DELETE 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}/assignments/{assignmentId}' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 DELETE 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}/assignments/{assignmentId}' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'delete',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}/assignments/{assignmentId}',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}/assignments/{assignmentId}"
+              method := "DELETE"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}/bundles/{name}/assignments/{assignmentId}"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("DELETE", url, headers=headers, data=payload)
+
+            print(response.text)
+  /esims/{iccid}/location:
+    get:
+      tags:
+        - eSIMs
+      summary: Get eSIM Location
+      description: This endpoint provides the most recent location and associated network operator information for a specified eSIM.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: iccid
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResponse'
+              example:
+                mobileNetworkCode: FRAF1
+                networkName: Orange
+                networkBrandName: Orange France
+                country: FR
+                lastSeen: '2024-07-27T00:25:07.382562Z'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/esims/{iccid}/location' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/esims/{iccid}/location' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}/location',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}/location"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}/location"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /esims/{iccid}:
+    get:
+      tags:
+        - eSIMs
+      summary: Get eSIM details
+      description: |
+        This endpoint allows you to retrieve detailed information about a specific eSIM using its ICCID (Integrated Circuit Card Identifier). 
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: additionalFields
+          in: query
+          schema:
+            type: string
+          example: appleInstallUrl
+        - name: iccid
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) The ICCID of the eSIM
+          example: 8944123456789012000
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/eSIMDetailsResponse'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/esims/{iccid}' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/esims/{iccid}' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims/{iccid}',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims/{iccid}"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims/{iccid}"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /esims:
+    get:
+      tags:
+        - eSIMs
+      summary: List eSIMs
+      description: |
+        This endpoint retrieves all eSIMs currently assigned to your organization. It provides a comprehensive view of your eSIM inventory with flexible options for data retrieval and management.
+
+        **Key Features:**
+          1. Pagination: Efficiently manage large datasets by specifying the page number and items per page.
+          2. Sorting: Customize the order of results using the 'direction' and 'orderBy' parameters.
+          3. Filtering: Refine your search with multiple filter options for precise data retrieval.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: string
+          description: Page of ESIMs to return
+        - in: query
+          name: perPage
+          schema:
+            type: integer
+            enum:
+              - 10
+              - 25
+              - 50
+              - 100
+          description: Number of ESIMs to return per page
+        - in: query
+          name: direction
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+          description: Direction of ordering
+        - in: query
+          name: orderBy
+          schema:
+            type: string
+            enum:
+              - iccid
+          description: Name of column to order by
+        - in: query
+          name: filterBy
+          schema:
+            type: string
+            enum:
+              - iccid, customerRef, lastAction, actionDate, assignedDate
+          description: Name of column to filter by. eSIMs can be filtered by ICCID, Customer Reference, Last Action (Bundle Refund, Bundle Applied, Bundle Revoked, eSIM Updated, eSIM Refreshed, eSIM Utilisation Alert), Last Action Date and SIM Assignment Date.
+        - in: query
+          name: filter
+          schema:
+            type: string
+          description: Value to filter by
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: A list of your eSIMs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESIMs'
+              example:
+                esims:
+                  - iccid: '8901234567890123456'
+                    customerRef: CUST001
+                    lastAction: Bundle Applied
+                    actionDate: '2023-05-15T14:30:00Z'
+                    physical: false
+                    assignedDate: '2023-05-01T10:00:00Z'
+                  - iccid: '8909876543210987654'
+                    customerRef: CUST002
+                    lastAction: Activated
+                    actionDate: '2023-05-16T09:15:00Z'
+                    physical: true
+                    assignedDate: '2023-05-10T11:30:00Z'
+        '400':
+          description: Bad Request - returned when incorrect data given
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl 'https://api.esim-go.com/v2.4/esims' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/esims' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+    put:
+      tags:
+        - eSIMs
+      summary: Update eSIM Details
+      description: |
+        A feature that enables the association of a unique identifier with an eSIM. This functionality allows for the integration of relevant operational data, such as customer order IDs.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSimDetails'
+            example:
+              iccid: '8944123456789012345'
+              customerRef: ref-123
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: iccid
+          in: query
+          schema:
+            type: string
+          description: (Required) ICCID of eSIM
+          example: 8944123456789012000
+        - name: customerRef
+          in: query
+          schema:
+            type: string
+          description: (Required) New Customer Reference
+          example: Test
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+              example:
+                status: success
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -X PUT 'https://api.esim-go.com/v2.4/esims' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json' \
+            -d '{"iccid":"string","customerRef":"string"}'
+        - lang: shell
+          label: Httpie
+          source: |-
+            printf '{"iccid":"string","customerRef":"string"}'| http  --timeout 3600 PUT 'https://api.esim-go.com/v2.4/esims' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+            let data = JSON.stringify({
+              "iccid": "string",
+              "customerRef": "string"
+            });
+
+            let config = {
+              method: 'put',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/esims',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              },
+              data : data
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "strings"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/esims"
+              method := "PUT"
+
+              payload := strings.NewReader(`{"iccid":"string","customerRef":"string"}`)
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, payload)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/esims"
+
+            payload = json.dumps({
+              "iccid": "string",
+              "customerRef": "string"
+            })
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("PUT", url, headers=headers, data=payload)
+
+            print(response.text)
+  /organisation:
+    get:
+      tags:
+        - Organisation
+      summary: Get Current Organisation Details
+      description: This endpoint allows you to retrieve comprehensive information about your organisation, including details of all associated users.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganisationResponse'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl 'https://api.esim-go.com/v2.4/organisation' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/organisation' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/organisation',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/organisation"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/organisation"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /organisation/balance:
+    post:
+      tags:
+        - Organisation
+      summary: Topup Organisation Balance
+      description: |
+        Update the pre-payed balance held by your organisation. Initial payment is done using the Portal: https://portal.esim-go.com/. This will store your card details for future use. Follow up payments can be done using the API.
+
+         Note: The minimum top-up amount is $1000 and the maximum daily top-up is set at $5000. If you wish to raise or lower this amount, please contact your account manager.
+      requestBody:
+        content: {}
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: amount
+          in: query
+          schema:
+            type: string
+          description: (Required) The amount of to be charged to the saved card
+          example: 1000
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopupResponse'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -X POST 'https://api.esim-go.com/v2.4/organisation/balance' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 POST 'https://api.esim-go.com/v2.4/organisation/balance' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'post',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/organisation/balance',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/organisation/balance"
+              method := "POST"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/organisation/balance"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("POST", url, headers=headers, data=payload)
+
+            print(response.text)
+  /organisation/groups:
+    get:
+      tags:
+        - Organisation
+      summary: Get Bundle Groups
+      description: |
+        This endpoint returns a list of the groups of Bundles available for your Organisation to order. Bundles in eSIM Go are categorised into groups. 
+
+         Name of the bundle group depends on your account tier. In the example below you will find the groups description for **standard** organisation tier.
+
+         Standard Fixed
+         * All these bundles are for a finite and fixed amount of data.
+         * eg. the moniker for a Standard Fixed Turkey 1GB 7 Days bundle is esim_1GB_7D_TR_V2
+
+         Standard Long Duration
+         * All these bundles are for a finite and fixed amount of data.
+         * eg. the moniker for a Standard 50GB 90 Days Long Duration Bundle is esim_50GB_90D_RGBS_V2
+
+         Standard Unlimited Lite
+         * These bundles will provide 1GB of unthrottled data every 24 hours, once this is depleted data will be throttled to 512kbps. This repeats each day for the duration of the bundle.
+         * eg. the moniker for a Standard Unlimited Lite Turkey 1 day bundle is esim_UL_1D_TR_V2
+
+         Standard Unlimited Essential
+         * These bundles will provide 1GB of unthrottled data every 24 hours, once this is depleted data will be throttled to 1.25mbps. This repeats each day for the duration of the bundle.
+         * eg. the moniker for a Standard Unlimited Lite Turkey 1 day bundle is esim_ULE_1D_TR_V2
+
+         Standard Unlimited Plus
+         * These bundles will provide 2GB of unthrottled data every 24 hours, once this is depleted data will be throttled to 2mbps. This repeats each day for the duration of the bundle.
+         * eg. the moniker for a Standard Unlimited Plus Turkey 1 day bundle is esim_ULP_1D_TR_V2
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BundleGroupList'
+              example:
+                groups:
+                  - name: Standard Fixed Bundles
+                  - name: Standard Unlimited Bundles
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl 'https://api.esim-go.com/v2.4/organisation/groups' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/organisation/groups' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/organisation/groups',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/organisation/groups"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/organisation/groups"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /orders:
+    get:
+      tags:
+        - Orders
+      summary: List orders
+      description: |
+        Get details on all previous orders, including total cost and contents. Response data is paginated.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: includeIccids
+          in: query
+          schema:
+            type: boolean
+          description: |
+            Set to true to include eSIM data (ICCID, Matching ID and SMDP Address) in the response, and an ICCIDs array.
+          example: 'true'
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: |
+            Page number to return.
+          example: '1'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: |
+            Number of results to return per page.
+          example: '10'
+        - name: createdAt
+          in: query
+          schema:
+            type: string
+          description: |
+            Specifies the date range for filtering orders. This parameter has a 'lte:' prefix to specify the end date. For example, to query orders from March 1, 2024, to March 31, 2024, use the following format: `createdAt=gte:2024-03-01T00:00:00.000Z&createdAt=lte:2024-03-31T23:59:59.999Z`.
+          example: <dateTime>
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponseTransaction'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl 'https://api.esim-go.com/v2.4/orders' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/orders' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/orders',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/orders"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/orders"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+    post:
+      tags:
+        - Orders
+      summary: Create orders
+      description: |
+        Orders can be validated and processed using this endpoint.
+        Total will be deducted from your Organisation's balance.
+
+        ## Auto-assign
+        By specifying ICCID(s) of eSIM(s) belonging to your Organisation and
+        setting 'assign' to true, a bundle can be automatically assigned to
+        eSIM(s).
+
+        If specified ICCID(s) of eSIM(s) and the specified bundle(s) are not compatible, and ÔallowReassignÕ set to true, the bundle(s) will be assigned to new ICCID(s).
+
+        Bundle assignments to an eSIM are usually instant but please allow for
+        up to 10 minutes for the bundle to fully process. While the bundle is
+        processing the eSIM can be successfully installed and the eSIM will
+        register onto a network if within coverage.
+
+        The Bundle Status can be checked through [Get the Status of a bundle
+        assigned to an eSIM](/api/v2_4/operations/esimsiccidbundlesname/get/)
+
+        ## Usage:
+        - eSIM ICCIDs can only be specified if assign is set to true
+        - If assign is set to true, but no ICCIDs are provided, bundles are
+          assigned to new eSIMs
+        - If ICCIDs are provided, quantity is required to match the number of
+          ICCIDs for each bundle
+        - If quantity is specified and assign is set to false, the quantity of
+          that bundle is purchased into inventory
+        - If new bundles and specified eSIM ICCIDs are not compatible and ÔallowReassignÕ set to true, bundles will be assigned to new ICCIDs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+            example:
+              type: transaction
+              assign: true
+              order:
+                - type: bundle
+                  quantity: 3
+                  item: esim_10GB_30D_IM_U
+                  allowReassign: false
+                - type: bundle
+                  quantity: 5
+                  item: esim_10GB_30D_IM_U
+                  iccids:
+                    - '8901234567890123456'
+                    - '8901234567890123457'
+                  allowReassign: true
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/OrderResponseValidate'
+                  - $ref: '#/components/schemas/OrderResponseTransaction'
+              examples:
+                validateResponse:
+                  summary: Example of a validation response
+                  value:
+                    $ref: '#/components/schemas/OrderResponseValidate/example'
+                transactionResponse:
+                  summary: Example of a transaction response
+                  value:
+                    $ref: '#/components/schemas/OrderResponseTransaction/example'
+        '400':
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example: ''
+        '401':
+          description: Unauthorized
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example: ''
+        '503':
+          description: Service Unavailable
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Message'
+              example: ''
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl 'https://api.esim-go.com/v2.4/orders' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json' \
+            -d '{"type":"validate","assign":true,"Order":[{"type":"bundle","quantity":0,"item":"string","iccids":["string"],"allowReassign":true}]}'
+        - lang: shell
+          label: Httpie
+          source: |-
+            printf '{"type":"validate","assign":true,"Order":[{"type":"bundle","quantity":0,"item":"string","iccids":["string"],"allowReassign":true}]}'| http  --timeout 3600 POST 'https://api.esim-go.com/v2.4/orders' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+            let data = JSON.stringify({
+              "type": "validate",
+              "assign": true,
+              "Order": [
+                {
+                  "type": "bundle",
+                  "quantity": 0,
+                  "item": "string",
+                  "iccids": [
+                    "string"
+                  ],
+                  "allowReassign": true
+                }
+              ]
+            });
+
+            let config = {
+              method: 'post',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/orders',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              },
+              data : data
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "strings"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/orders"
+              method := "POST"
+
+              payload := strings.NewReader(`{"type":"validate","assign":true,"Order":[{"type":"bundle","quantity":0,"item":"string","iccids":["string"],"allowReassign":true}]}`)
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, payload)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/orders"
+
+            payload = json.dumps({
+              "type": "validate",
+              "assign": True,
+              "Order": [
+                {
+                  "type": "bundle",
+                  "quantity": 0,
+                  "item": "string",
+                  "iccids": [
+                    "string"
+                  ],
+                  "allowReassign": True
+                }
+              ]
+            })
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("POST", url, headers=headers, data=payload)
+
+            print(response.text)
+  /orders/{orderReference}:
+    get:
+      tags:
+        - Orders
+      summary: Get order detail
+      description: |
+        Get details on an order, including total cost and contents
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: orderReference
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) Reference for your order
+          example: <string>
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponseTransaction'
+              example:
+                order:
+                  - esims:
+                      - iccid: '8912345678901234567'
+                        matchingId: AB-12C3DE-4FGHIJ5
+                        smdpAddress: http://rsp.mockprovider.com
+                    type: bundle
+                    item: esim_5GB_30D_EU_V3
+                    iccids:
+                      - '8912345678901234567'
+                    quantity: 1
+                    subTotal: 9.99
+                    pricePerUnit: 9.99
+                    AllowReassign: true
+                total: 9.99
+                currency: USD
+                status: completed
+                statusMessage: 'Order completed: 1 eSIMs assigned'
+                orderReference: 1a2b3c4d-5e6f-7g8h-9i10-11j12k13l14m
+                createdDate: '2023-06-15T10:30:45.123456789Z'
+                assigned: true
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/orders/{orderReference}' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/orders/{orderReference}' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/orders/{orderReference}',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/orders/{orderReference}"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/orders/{orderReference}"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /inventory:
+    get:
+      tags:
+        - Inventory
+      summary: Get bundle inventory
+      description: |
+        All of your Organisation's currently purchased Bundles and their remaining usages.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryResponse'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl 'https://api.esim-go.com/v2.4/inventory' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/inventory' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/inventory',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/inventory"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/inventory"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /inventory/refund:
+    post:
+      tags:
+        - Inventory
+      summary: Refund bundle from inventory
+      description: |
+        Refunds an item in the inventory to the organisations balance.
+        
+        
+        Takes a usageId and a quantity.
+        
+        
+        The usageId's can be found by querying the /inventory endpoint.
+        
+        
+        The quantity of a refund cannot exceed the remaining quantity left for the specific usageId. If you wish to refund multiple usageId's, multiple calls to this endpoint will need to be done. 
+         
+        
+        If the bundle was purchased outside of their permitted refund period, typically 60 days, it cannot be refunded.
+
+        
+        **IMPORTANT:** Access to the refund functionality is **disabled by default**. To enable refunds, you must first contact your account manager.
+      security:
+        - apikeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundInventoryItem'
+      parameters:
+        - name: Content-Type
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+              example:
+                status: Successfully refunded bundles to balance
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl 'https://api.esim-go.com/v2.4/inventory/refund' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json' \
+            -d '{"usageId":0,"quantity":0}'
+        - lang: shell
+          label: Httpie
+          source: |-
+            printf '{"usageId":0,"quantity":0}'| http  --timeout 3600 POST 'https://api.esim-go.com/v2.4/inventory/refund' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+            let data = JSON.stringify({
+              "usageId": 0,
+              "quantity": 0
+            });
+
+            let config = {
+              method: 'post',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/inventory/refund',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              },
+              data : data
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "strings"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/inventory/refund"
+              method := "POST"
+
+              payload := strings.NewReader(`{"usageId":0,"quantity":0}`)
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, payload)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/inventory/refund"
+
+            payload = json.dumps({
+              "usageId": 0,
+              "quantity": 0
+            })
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("POST", url, headers=headers, data=payload)
+
+            print(response.text)
+  /catalogue:
+    get:
+      tags:
+        - Catalogue
+      summary: Get Bundle catalogue
+      description: |
+        List all Bundles available to your Organisation for ordering.
+        Bundle names can be used with the `/orders` endpoint to place an order.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: page
+          in: query
+          schema:
+            type: integer
+            example: '1'
+          description: Page of Bundles to return
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+          description: Number of Bundles to return per page
+          example: '50'
+        - name: direction
+          in: query
+          schema:
+            type: string
+          description: Direction of ordering
+          example: asc
+        - name: orderBy
+          in: query
+          schema:
+            type: string
+          description: Name of column to order by
+        - name: description
+          in: query
+          schema:
+            type: string
+          description: Wildcard search for description
+        - name: group
+          in: query
+          schema:
+            type: string
+          description: Filter by Bundle Group (exact value) e.g. `Standard eSIM Bundles`
+        - name: countries
+          in: query
+          schema:
+            type: string
+          description: Comma-separated list of country ISO codes to filter by. This will search for Bundles that include at least one of the countries as their base country. e.g. `GB, US`
+        - name: region
+          in: query
+          schema:
+            type: string
+          description: This will return Bundles that have a base country in the specified region. e.g. `Europe`
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogueResponse'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl 'https://api.esim-go.com/v2.4/catalogue' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/catalogue' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/catalogue',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/catalogue"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/catalogue"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /catalogue/bundle/{name}:
+    get:
+      tags:
+        - Catalogue
+      summary: Get Bundle details from catalogue
+      description: |-
+        Get details of a specific Bundle from your Organisation's catalogue.
+        **Note:** Bundle names are case sensitive e.g. "esim_1GB_7D_IM_U".
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: name
+          in: path
+          schema:
+            type: string
+          required: true
+          description: (Required) Name of Bundle to get countries for. Bundle names are case sensitive.
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BundleCatalogueResponse'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl -g 'https://api.esim-go.com/v2.4/catalogue/bundle/{name}' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/catalogue/bundle/{name}' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/catalogue/bundle/{name}',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/catalogue/bundle/{name}"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/catalogue/bundle/{name}"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+  /networks:
+    get:
+      tags:
+        - Networks
+      summary: Get Country Network Data
+      description: |
+        This endpoint is used to return the networks for a country/countries searched for either by an array of countires or ISO codes (ISOs).
+
+         Alternatively, it can be toggled to return all countries and their
+        networks.
+
+         Please refer to the rate sheet, availible to download in the eSIM Go
+        Management Portal for a full list of country names and ISO codes.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+          example: application/json
+        - name: countries
+          in: query
+          schema:
+            type: string
+          description: List of Countries e.g. United Kingdom, United States
+        - name: isos
+          in: query
+          schema:
+            type: string
+          description: List of ISOs e.g. GB, US
+        - name: returnAll
+          in: query
+          schema:
+            type: string
+          description: Used to toggle returning of all Countries e.g. true/false
+          example: true
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                example: application/json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkResponse'
+        '400':
+          description: Bad Request - returned when request format is not accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '403':
+          description: Unauthorised - returned when the api token is invalid; the user does not have any available Bundles left or the ICCID is not accessible by the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '503':
+          description: Processing - Please come back later or use the *Retry-After* (seconds) header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+      x-codeSamples:
+        - lang: shell
+          label: cURL
+          source: |-
+            curl 'https://api.esim-go.com/v2.4/networks' \
+            -H 'X-API-Key: $API_KEY' \
+            -H 'Content-Type: application/json'
+        - lang: shell
+          label: Httpie
+          source: |-
+            http --timeout 3600 GET 'https://api.esim-go.com/v2.4/networks' \
+             X-API-Key:'$API_KEY' \
+             Content-Type:'application/json'
+        - lang: js
+          label: Node
+          source: |
+            const axios = require('axios');
+
+            let config = {
+              method: 'get',
+              maxBodyLength: Infinity,
+              url: 'https://api.esim-go.com/v2.4/networks',
+              headers: { 
+                'X-API-Key': '$API_KEY', 
+                'Content-Type': 'application/json'
+              }
+            };
+
+            axios.request(config)
+            .then((response) => {
+              console.log(JSON.stringify(response.data));
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+        - lang: go
+          label: Go
+          source: |-
+            package main
+
+            import (
+              "fmt"
+              "net/http"
+              "io/ioutil"
+            )
+
+            func main() {
+
+              url := "https://api.esim-go.com/v2.4/networks"
+              method := "GET"
+
+              client := &http.Client {
+              }
+              req, err := http.NewRequest(method, url, nil)
+
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              req.Header.Add("X-API-Key", "$API_KEY")
+              req.Header.Add("Content-Type", "application/json")
+
+              res, err := client.Do(req)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              defer res.Body.Close()
+
+              body, err := ioutil.ReadAll(res.Body)
+              if err != nil {
+                fmt.Println(err)
+                return
+              }
+              fmt.Println(string(body))
+            }
+        - lang: python
+          label: Python
+          source: |
+            import requests
+            import json
+
+            url = "https://api.esim-go.com/v2.4/networks"
+
+            payload = {}
+            headers = {
+              'X-API-Key': '$API_KEY',
+              'Content-Type': 'application/json'
+            }
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+
+            print(response.text)
+components:
+  securitySchemes:
+    apikeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      x-displayName: API Key in Header
+      description: |
+        Your API Key can passed to the eSIMGo API by setting a Header with the key `X-API-Key` in your HTTP call.
+
+        e.g.
+
+        ```
+        curl -H 'X-API-Key: $API_KEY' https://api.esim-go.com/v2.3/esims/$ICCID/bundles
+        ```
+  schemas:
+    BundleAlert:
+      type: object
+      properties:
+        iccid:
+          type: string
+          description: The ICCID (Integrated Circuit Card Identifier) of the SIM card
+        alertType:
+          type: string
+          description: The type of alert being sent
+        bundle:
+          type: object
+          properties:
+            id:
+              type: string
+              description: Unique identifier for the bundle
+            reference:
+              type: string
+              description: Reference code for the bundle
+            name:
+              type: string
+              description: Name of the bundle
+            description:
+              type: string
+              description: Description of the bundle
+            initialQuantity:
+              type: integer
+              description: The initial quantity the bundle had (in bytes)
+            remainingQuantity:
+              type: integer
+              description: The remaining quantity the bundle had (in bytes)
+            startTime:
+              type: string
+              format: date-time
+              description: Start time of the bundle validity
+            endTime:
+              type: string
+              format: date-time
+              description: End time of the bundle validity
+            unlimited:
+              type: boolean
+              description: Indicates if the bundle has unlimited usage
+    ESIMs:
+      type: object
+      properties:
+        esims:
+          type: array
+          items:
+            type: object
+            properties:
+              iccid:
+                description: ICCID of ESIM
+                type: string
+              customerRef:
+                description: Reference of ESIM
+                type: string
+              lastAction:
+                description: Last action performed on the ESIM (e.g. Bundle Applied)
+                type: string
+              actionDate:
+                description: The date of the Last Action performed on the ESIM
+                type: string
+              physical:
+                description: Type of SIM
+                type: boolean
+              assignedDate:
+                description: The date of ESIM's first assignment
+                type: string
+    ApplyBundleWithList:
+      type: object
+      properties:
+        bundles:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Name of Bundle to apply
+              repeat:
+                description: How many eSIMs will be assigned with this bundle applied (if left empty Bundle will assign to one eSIM)
+                type: integer
+              allowReassign:
+                description: Allow a new eSIM to be provided if the bundle is not compatible with the eSIM profile
+                type: boolean
+            required:
+              - name
+      required:
+        - bundles
+    ApplyBundleWithICCIDRequest:
+      type: object
+      properties:
+        iccid:
+          type: string
+          description: ICCID of target eSIM to apply Bundle to. If not provided, a new eSIM will be assigned to you.
+        name:
+          type: string
+          description: Name of Bundle to apply
+        repeat:
+          description: How many eSIMs will be assigned with this bundle applied (if left empty Bundle will assign to one eSIM)
+          type: integer
+        allowReassign:
+          description: Allow a new eSIM to be provided if the bundle is not compatible with the eSIM profile
+          type: boolean
+      required:
+        - name
+    ESIMApplyResponse:
+      type: object
+      properties:
+        esims:
+          type: array
+          items:
+            type: object
+            properties:
+              iccid:
+                description: Newly assigned eSIM ICCID
+                type: string
+              status:
+                description: Status of Bundle
+                type: string
+              bundle:
+                description: Name of bundle applied
+                type: string
+        applyReference:
+          type: string
+          description: Apply Reference
+    ESIMHistory:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Bundle Assignment State
+        bundleName:
+          type: string
+          description: Bundle name
+        date:
+          type: string
+          description: Action date and time
+    CompatibilityResponse:
+      type: object
+      properties:
+        compatible:
+          type: boolean
+          description: Indicates whether the item is compatible or not
+      required:
+        - compatible
+    BundlesList:
+      type: object
+      properties:
+        bundles:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Name of the bundle
+              description:
+                type: string
+                description: Description of the bundle (size, validity period, coverage)
+              assignments:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: ID of assignment
+                    callTypeGroup:
+                      type: string
+                      description: Type of the bundle
+                    initialQuantity:
+                      type: integer
+                      description: The initial quantity the bundle had (in bytes)
+                    remainingQuantity:
+                      type: integer
+                      description: The remaining quantity the bundle had (in bytes)
+                    assignmentDateTime:
+                      type: string
+                      format: date-time
+                      description: The date and time the bundle was created (utc string)
+                    assignmentReference:
+                      type: string
+                      description: Assigment reference
+                    bundleState:
+                      type: string
+                      description: Current state of a bundle
+                    unlimited:
+                      type: boolean
+                      description: If the bundle is unlimited
+    AssignmentResponse:
+      type: object
+      properties:
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assignment'
+    Assignment:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the bundle
+        callTypeGroup:
+          type: string
+          description: Call Type Group of the bundle
+        initialQuantity:
+          type: integer
+          format: int64
+          description: The initial quantity the bundle had (in bytes)
+        remainingQuantity:
+          type: integer
+          format: int64
+          description: The remaining quantity the bundle has (in bytes)
+        assignmentDateTime:
+          type: string
+          format: date-time
+          description: The date and time the bundle was created (utc string)
+        assignmentReference:
+          type: string
+          description: Assigment reference
+        bundleState:
+          type: string
+          description: Current state of a bundle
+        unlimited:
+          type: boolean
+          description: If the bundle is unlimited
+    eSIMDetailsResponse:
+      type: object
+      properties:
+        iccid:
+          type: string
+          description: The Integrated Circuit Card Identifier of the SIM card
+          example: '894123456789123456'
+        pin:
+          type: string
+          description: The Personal Identification Number for the SIM card
+          example: '0000'
+        puk:
+          type: string
+          description: The Personal Unblocking Key for the SIM card
+          example: '123445678'
+        matchingId:
+          type: string
+          description: A unique identifier for matching purposes (used for eSIM activation)
+          example: JQ-123456-ABCDEPFX
+        smdpAddress:
+          type: string
+          description: The Subscription Manager Data Preparation server address (used for eSIM activation)
+          example: http://rsp.example.com
+        profileStatus:
+          type: string
+          description: The current status of the SIM profile
+          example: Installed
+        firstInstalledDateTime:
+          type: integer
+          format: int64
+          description: The timestamp of when the profile was first installed (in milliseconds since epoch)
+          example: 1723541877280
+        customerRef:
+          type: string
+          description: Customer reference information
+          example: ''
+    BundleGroupList:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/BundleGroup'
+    BundleGroup:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Bundle group name
+        priceListUrl:
+          type: string
+          format: uri
+          description: URL to download a pricing list for specific bundle group
+        desc:
+          type: string
+          description: Bundle group description
+        icon:
+          type: string
+          format: uri
+          description: URL to download a bundle group icon
+      required:
+        - name
+    Order:
+      type: object
+      properties:
+        order:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              item:
+                type: string
+              quantity:
+                type: integer
+              subTotal:
+                type: integer
+              pricePerUnit:
+                type: integer
+              invoiceLink:
+                type: string
+        total:
+          type: integer
+        currency:
+          type: string
+        status:
+          type: string
+        statusMessage:
+          type: string
+        orderReference:
+          type: string
+        createDate:
+          type: string
+    OrderList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Order'
+    OrderRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - validate
+            - transaction
+        assign:
+          type: boolean
+          description: To specify if bundle(s) to be assigned to eSIM(s)
+        order:
+          type: array
+          items:
+            $ref: '#/components/schemas/BundleOrder'
+    BundleOrder:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - bundle
+        quantity:
+          type: integer
+          description: Quantity of the bundles to purchase. If you purchase several different bundles, specify the quantity of each item separately.
+        item:
+          type: string
+          description: Name of the bundle
+        iccids:
+          type: array
+          description: ICCID of the eSIM to assign bundle to (quantity of items and number of ICCIDs should match)
+          items:
+            type: string
+        allowReassign:
+          type: boolean
+          description: Allow a new eSIM to be provided if the bundle is not compatible with the eSIM profile
+    OrderResponseValidate:
+      type: object
+      properties:
+        order:
+          type: array
+          description: Order type [ validate ]
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                description: Item type [ bundle ]
+              item:
+                type: string
+                description: Name of the bundle
+              quantity:
+                type: integer
+                description: Quantity of items
+              subTotal:
+                type: number
+                format: float
+                description: Cost of a bundle multiplied by its quantity
+              pricePerUnit:
+                type: number
+                format: float
+                description: Price per each item
+              AllowReassign:
+                type: boolean
+                description: Allow a new eSIM to be provided if the bundle is not compatible with the eSIM profile
+        total:
+          type: number
+          format: float
+          description: Total price
+        valid:
+          type: boolean
+          description: Indicates if request is valid
+        currency:
+          type: string
+          description: Currency of the transaction
+        createdDate:
+          type: string
+          format: date-time
+          description: Data and time of order creation
+        assigned:
+          type: boolean
+          description: Indicates if bundle was assigned to eSIM
+      example:
+        order:
+          - type: bundle
+            item: esim_1GB_7D_AX_V2
+            quantity: 1
+            subTotal: 2.28
+            pricePerUnit: 2.28
+            AllowReassign: false
+        total: 2.28
+        valid: true
+        currency: USD
+        createdDate: '2025-03-28T14:47:26.153875019Z'
+        assigned: true
+    OrderResponseTransaction:
+      type: object
+      properties:
+        order:
+          type: array
+          description: Order type [ transaction ]
+          items:
+            type: object
+            properties:
+              esims:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    iccid:
+                      type: string
+                      description: ICCID of eSIM new bundle was assigned to
+                    matchingId:
+                      type: string
+                      description: SMDP+ ID (used in eSIM activation)
+                    smdpAddress:
+                      type: string
+                      description: SMDP+ Address (used in eSIM activation)
+              type:
+                type: string
+                description: Item type [ bundle ]
+              item:
+                type: string
+                description: Name of the bundle
+              iccids:
+                type: array
+                description: ICCID of eSIM new bundle was assigned to
+                items:
+                  type: string
+              quantity:
+                type: integer
+                description: Quantity of items
+              subTotal:
+                type: number
+                format: float
+                description: Cost of a bundle multiplied by its quantity
+              pricePerUnit:
+                type: number
+                format: float
+                description: Price per each item
+              AllowReassign:
+                type: boolean
+                description: Allow a new eSIM to be provided if the bundle is not compatible with the eSIM profile
+        total:
+          type: number
+          format: float
+          description: Total price
+        currency:
+          type: string
+          description: Currency of the transaction
+        status:
+          type: string
+          description: Status of the order
+        statusMessage:
+          type: string
+          description: Status message
+        orderReference:
+          type: string
+          description: Order reference
+        createdDate:
+          type: string
+          format: date-time
+          description: Data and time of order creation
+        assigned:
+          type: boolean
+          description: Indicates if bundle was assigned to eSIM
+        sourceIP:
+          type: string
+          description: Source IP of the order
+      example:
+        order:
+          - type: bundle
+            item: esim_data_plan_2
+            quantity: 1
+            subTotal: 9.99
+            pricePerUnit: 9.99
+            AllowReassign: false
+            esims:
+              - iccid: '8900000000000000001'
+                matchingId: MATCH-001
+                smdpAddress: 'http://smdp.example.com'
+            iccids:
+              - '8900000000000000001'
+        total: 9.99
+        currency: USD
+        status: completed
+        statusMessage: 'Order completed: 1 eSIM assigned'
+        orderReference: order-ref-002
+        createdDate: '2023-06-14T15:45:00Z'
+        assigned: true
+        sourceIP: '244.178.44.111'
+    eSIMDetailsInstallResponse:
+      type: object
+      properties:
+        iccid:
+          type: string
+          description: The ICCID (Integrated Circuit Card Identifier) of the eSIM
+          example: '8944123456789012345'
+        matchingId:
+          type: string
+          description: The matching ID for the eSIM profile
+          example: A1B2-C3D4-E5F6-G7H8
+        smdpAddress:
+          type: string
+          description: The address of the Subscription Manager Data Preparation (SM-DP+) server
+          example: http://smdp.example.com
+        profileStatus:
+          type: string
+          description: The current status of the eSIM profile
+          example: Released
+        pin:
+          type: string
+          description: The PIN (Personal Identification Number) for the eSIM
+          example: '1234'
+        puk:
+          type: string
+          description: The PUK (PIN Unlock Key) for the eSIM
+          example: '12345678'
+        firstInstalledDateTime:
+          type: string
+          format: date-time
+          description: The date and time when the profile was first installed
+          example: '2023-06-15T14:30:00.000Z'
+    LocationResponse:
+      type: object
+      properties:
+        mobileNetworkCode:
+          type: string
+          example: FRAF1
+          description: Mobile Network Code
+        networkName:
+          type: string
+          example: Orange
+          description: Mobile network name
+        networkBrandName:
+          type: string
+          example: Orange France
+          description: Mobile network brand name
+        country:
+          type: string
+          example: FR
+          description: Country
+        lastSeen:
+          type: string
+          format: date-time
+          example: '2024-07-27T00:25:07.382562Z'
+          description: Last seen date and time
+    OrganisationResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Acme Corp
+          description: Name of organisation
+        apiKey:
+          type: string
+          example: ak_1234567890abcdef
+          description: API Key
+        taxLiable:
+          type: string
+          example: 'Yes'
+          description: If the organisation is tax liable
+        addr1:
+          type: string
+          example: 123 Main St
+          description: Address line 1
+        addr2:
+          type: string
+          example: Suite 456
+          description: Address line 2
+        city:
+          type: string
+          example: Metropolis
+          description: City
+        country:
+          type: string
+          example: USA
+          description: Country
+        postcode:
+          type: string
+          example: '12345'
+          description: Postal Code
+        callbackUrl:
+          type: string
+          example: https://api.acmecorp.com/callback
+          description: Callback URL
+        notes:
+          type: string
+          example: Premium customer
+          description: Notes attached to organisation
+        groups:
+          type: array
+          items:
+            type: string
+          example:
+            - Enterprise
+            - Tech
+          description: Groups an organisation assigned to
+        currency:
+          type: string
+          example: USD
+          description: Selected currency
+        balance:
+          type: integer
+          example: 10000
+          description: Organisational balance + test credit
+        testCredit:
+          type: integer
+          example: 500
+          description: Organisational test credit
+        testCreditExpiry:
+          type: string
+          format: date
+          example: '2023-12-31'
+          description: Organisational test credit expiry date
+        businessType:
+          type: string
+          example: Corporation
+          description: Business type
+        website:
+          type: string
+          example: https://www.acmecorp.com
+          description: Website
+        productDescription:
+          type: string
+          example: Cloud computing services
+          description: Product Description
+        users:
+          type: array
+          items:
+            type: object
+            properties:
+              firstName:
+                type: string
+                example: John
+                description: User first name
+              lastName:
+                type: string
+                example: Doe
+                description: User last name
+              role:
+                type: string
+                example: Admin
+                description: User role
+              emailAddress:
+                type: string
+                example: '{EMAIL}'
+                description: Email address (login)
+              phoneNumber:
+                type: string
+                example: +1 (555) 123-4567
+                description: Phone number
+              timeZone:
+                type: string
+                example: America/New_York
+                description: User Time Zone
+    TopupResponse:
+      type: object
+      properties:
+        amount:
+          type: integer
+          description: The amount of the topup
+          example: 5000
+        balance:
+          type: integer
+          description: The current balance after the topup
+          example: 12500
+        ref:
+          type: integer
+          description: A reference number for the topup transaction
+          example: 987654321
+    InventoryResponse:
+      type: object
+      properties:
+        bundles:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: The name of the bundle
+              desc:
+                type: string
+                description: A description of the bundle
+              useDms:
+                type: boolean
+                description: Indicates if DMS is used
+              available:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: The ID of the available bundle
+                    total:
+                      type: integer
+                      description: The total number of bundles
+                    remaining:
+                      type: integer
+                      description: The remaining number of bundles
+                    expiry:
+                      type: string
+                      format: date
+                      description: The expiry date of the bundle
+              countries:
+                type: array
+                items:
+                  type: string
+                description: List of countries where the bundle is valid
+              data:
+                type: integer
+                description: The amount of data in MB
+              duration:
+                type: integer
+                description: The duration of the bundle
+              durationUnit:
+                type: string
+                enum:
+                  - day
+                  - month
+                description: The unit of duration (day or month)
+              autostart:
+                type: boolean
+                description: Indicates if the bundle autostarts
+              unlimited:
+                type: boolean
+                description: Indicates if the bundle has unlimited data
+              speed:
+                type: array
+                items:
+                  type: string
+                nullable: true
+                description: The supported network speeds
+              allowances:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      description: Type of allowances (DATA, SMS, VOICE)
+                    service:
+                      type: string
+                      description: Service (Roaming, Standard)
+                    description:
+                      type: string
+                      description: Allowance description
+                    amount:
+                      type: integer
+                      description: The amount of units
+                    unit:
+                      type: string
+                      description: MB/MINS/SMS
+                    unlimited:
+                      type: boolean
+                      description: Indicates if the allowance is unlimited
+    CatalogueResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            description: Bundle Name
+          description:
+            type: string
+            description: Bundle Description
+          groups:
+            type: array
+            description: Bundle Group
+            items:
+              type: string
+          countries:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Country name
+                region:
+                  type: string
+                  description: Country region
+                iso:
+                  type: string
+                  description: Country ISO (internationally recognized means of identifying countries)
+          dataAmount:
+            type: integer
+            description: Data Amount (MB)
+          duration:
+            type: integer
+            description: Bundle Duration
+          speed:
+            type: array
+            description: Bundle Speed
+            items:
+              type: string
+          autostart:
+            type: boolean
+            description: If the bundle auto starts
+          unlimited:
+            type: boolean
+            description: If the bundle is unlimited
+          roamingEnabled:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Country name
+                region:
+                  type: string
+                  description: Country region
+                iso:
+                  type: string
+                  description: Country ISO (internationally recognized means of identifying countries)
+          price:
+            type: integer
+            description: Bundle price in the organisation currency
+          billingType:
+            type: string
+            description: Billing type of the bundle
+            enum:
+              - FixedCost
+    BundleCatalogueResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Bundle Name
+        description:
+          type: string
+          description: Bundle Description
+        countries:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Country name
+              region:
+                type: string
+                description: Country region
+              iso:
+                type: string
+                description: Country ISO (internationally recognized means of identifying countries)
+        dataAmount:
+          type: integer
+          description: Data Amount (MB)
+        duration:
+          type: integer
+          description: Bundle Duration
+        speed:
+          type: array
+          description: Bundle Speed
+          items:
+            type: string
+        autostart:
+          type: boolean
+          description: If the bundle auto starts
+        unlimited:
+          type: boolean
+          description: If the bundle is unlimited
+        roamingEnabled:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Country name
+              region:
+                type: string
+                description: Country region
+              iso:
+                type: string
+                description: Country ISO (internationally recognized means of identifying countries)
+        price:
+          type: integer
+          description: Bundle price in the organisation currency
+        billingType:
+          type: string
+          description: Billing type of the bundle
+          enum:
+            - FixedCost
+    NetworkResponse:
+      type: object
+      properties:
+        countryNetworks:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Country ISO (internationally recognized means of identifying countries)
+              networks:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Network name
+                    brandName:
+                      type: string
+                      description: Brand network name
+                    mcc:
+                      type: string
+                      description: Mobile Country Code
+                    mnc:
+                      type: string
+                      description: Mobile Network Code
+                    tagid:
+                      type: string
+                      description: Network TADIG
+                    speed:
+                      type: array
+                      description: Network speed
+                      items:
+                        type: string
+    RefundInventoryItem:
+      type: object
+      properties:
+        usageId:
+          type: integer
+          description: The usage id for the refund. Can be found by querying "Get bundle inventory" endpoint
+        quantity:
+          type: integer
+          description: The quantity of the refund
+    UpdateSimDetails:
+      type: object
+      properties:
+        iccid:
+          type: string
+          description: ICCID of eSIM
+        customerRef:
+          type: string
+          description: New Customer Reference
+    StatusMessage:
+      type: object
+      properties:
+        status:
+          description: status message of api request
+          type: string
+    Message:
+      type: object
+      properties:
+        message:
+          description: status of api functions which do not return data
+          type: string

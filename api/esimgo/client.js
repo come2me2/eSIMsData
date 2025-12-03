@@ -1,14 +1,15 @@
 /**
  * eSIM Go API Client
  * Документация: https://docs.esim-go.com/
- * API v2.0: https://docs.esim-go.com/api/v2_0/
+ * API v2.4: https://api.esim-go.com/v2.4
+ * OpenAPI Schema: esim_go_schema_v2_4.yaml
  */
 
 const esimgoConfig = {
     apiKey: process.env.ESIMGO_API_KEY,
-    // Используем версию v2 - тест показал, что /v2/esims работает
+    // Используем версию v2.4 - последняя версия API
     // Можно переопределить через переменную окружения ESIMGO_API_URL
-    apiUrl: process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2',
+    apiUrl: process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2.4',
     timeout: 30000
 };
 
@@ -18,7 +19,7 @@ if (!esimgoConfig.apiKey) {
 
 /**
  * Базовый метод для выполнения запросов к eSIM Go API
- * Документация: https://docs.esim-go.com/api/v2_0/
+ * Документация: https://docs.esim-go.com/api/v2_4/
  * 
  * Использует встроенный fetch (Node.js 18+) или node-fetch для старых версий
  */
@@ -208,7 +209,7 @@ async function getCatalogue(countryCode = null) {
  * @param {string} orderData.bundle_id - ID пакета из каталога
  * @param {string} orderData.iccid - ICCID eSIM (если уже есть eSIM)
  * @returns {Promise<Object>} Информация о заказе
- * Документация: https://docs.esim-go.com/api/v2_0/#tag/Orders
+ * Документация: https://docs.esim-go.com/api/v2_4/#tag/Orders
  */
 async function createOrder(orderData) {
     // Структура заказа согласно документации
@@ -227,7 +228,7 @@ async function createOrder(orderData) {
  * Получить статус заказа
  * @param {string} orderId - ID заказа в eSIM Go
  * @returns {Promise<Object>} Статус заказа
- * Документация: https://docs.esim-go.com/api/v2_0/#tag/Orders
+ * Документация: https://docs.esim-go.com/api/v2_4/#tag/Orders
  */
 async function getOrderStatus(orderId) {
     return makeRequest(`/orders/${orderId}`);
@@ -237,7 +238,7 @@ async function getOrderStatus(orderId) {
  * Получить информацию о eSIM
  * @param {string} iccid - ICCID eSIM
  * @returns {Promise<Object>} Информация о eSIM
- * Документация: https://docs.esim-go.com/api/v2_0/#tag/eSIMs
+ * Документация: https://docs.esim-go.com/api/v2_4/#tag/eSIMs
  */
 async function getESIMInfo(iccid) {
     return makeRequest(`/esims/${iccid}`);
@@ -247,7 +248,7 @@ async function getESIMInfo(iccid) {
  * Получить пакеты данных для eSIM
  * @param {string} iccid - ICCID eSIM
  * @returns {Promise<Object>} Список пакетов данных
- * Документация: https://docs.esim-go.com/api/v2_0/#tag/eSIMs
+ * Документация: https://docs.esim-go.com/api/v2_4/#tag/eSIMs
  */
 async function getESIMBundles(iccid) {
     return makeRequest(`/esims/${iccid}/bundles`);
@@ -257,7 +258,7 @@ async function getESIMBundles(iccid) {
  * Создать новый eSIM профиль
  * @param {Object} esimData - Данные для создания eSIM
  * @returns {Promise<Object>} Информация о созданном eSIM (ICCID, QR код)
- * Документация: https://docs.esim-go.com/api/v2_0/#tag/eSIMs
+ * Документация: https://docs.esim-go.com/api/v2_4/#tag/eSIMs
  */
 async function createESIM(esimData = {}) {
     return makeRequest('/esims', {

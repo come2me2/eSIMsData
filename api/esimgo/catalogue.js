@@ -1,7 +1,7 @@
 /**
  * eSIM Go API - Получение каталога продуктов
  * Endpoint: GET /catalogue
- * Документация: https://docs.esim-go.com/api/v2_0/#tag/Catalogue
+ * Документация: https://docs.esim-go.com/api/v2_4/#tag/Catalogue
  */
 
 const esimgoClient = require('./client');

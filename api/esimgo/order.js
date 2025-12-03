@@ -1,7 +1,7 @@
 /**
  * eSIM Go API - Создание заказа eSIM
  * Endpoint: POST /orders
- * Документация: https://docs.esim-go.com/api/v2_0/#tag/Orders
+ * Документация: https://docs.esim-go.com/api/v2_4/#tag/Orders
  */
 
 const esimgoClient = require('./client');
