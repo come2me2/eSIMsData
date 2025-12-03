@@ -81,50 +81,50 @@ function processCatalogue(catalogueData) {
                 return;
             }
 
-        // Находим регион для страны
-        let region = null;
-        for (const [regName, countries] of Object.entries(regionMapping)) {
-            if (countries.includes(countryCode)) {
-                region = regName;
-                break;
+            // Находим регион для страны
+            let region = null;
+            for (const [regName, countries] of Object.entries(regionMapping)) {
+                if (countries.includes(countryCode)) {
+                    region = regName;
+                    break;
+                }
             }
-        }
 
-        // Если регион не найден, добавляем в "Other"
-        if (!region) {
-            region = 'Other';
-        }
+            // Если регион не найден, добавляем в "Other"
+            if (!region) {
+                region = 'Other';
+            }
 
-        // Создаём или обновляем запись страны
-        if (!countriesMap.has(countryCode)) {
-            countriesMap.set(countryCode, {
-                code: countryCode,
-                name: esim.countryName || esim.country_name || esim.country || countryCode,
-                region: region,
-                esims: [],
-                bundles: [] // Bundles будут получены отдельно для каждого eSIM
+            // Создаём или обновляем запись страны
+            if (!countriesMap.has(countryCode)) {
+                countriesMap.set(countryCode, {
+                    code: countryCode,
+                    name: esim.countryName || esim.country_name || esim.country || countryCode,
+                    region: region,
+                    esims: [],
+                    bundles: [] // Bundles будут получены отдельно для каждого eSIM
+                });
+            }
+
+            const country = countriesMap.get(countryCode);
+            
+            // Добавляем eSIM к стране
+            country.esims.push({
+                iccid: esim.iccid || esim.ICCID,
+                name: esim.name || esim.productName || esim.Name || 'eSIM',
+                originalData: esim // Сохраняем оригинальные данные для справки
             });
-        }
 
-        const country = countriesMap.get(countryCode);
-        
-        // Добавляем eSIM к стране
-        country.esims.push({
-            iccid: esim.iccid || esim.ICCID,
-            name: esim.name || esim.productName || esim.Name || 'eSIM',
-            originalData: esim // Сохраняем оригинальные данные для справки
-        });
+            // Группируем по регионам
+            if (!regionsMap.has(region)) {
+                regionsMap.set(region, {
+                    name: region,
+                    countries: []
+                });
+            }
         } catch (esimError) {
             console.error(`Error processing eSIM at index ${index}:`, esimError, esim);
             // Продолжаем обработку остальных eSIM
-        }
-
-        // Группируем по регионам
-        if (!regionsMap.has(region)) {
-            regionsMap.set(region, {
-                name: region,
-                countries: []
-            });
         }
     });
 
