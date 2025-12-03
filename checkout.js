@@ -67,8 +67,18 @@ async function loadPlansFromAPI(countryCode) {
             console.log('Plans loaded from API:', {
                 standard: standardPlans.length,
                 unlimited: unlimitedPlans.length,
-                country: countryCode
+                country: countryCode,
+                sampleStandard: standardPlans[0] || null,
+                sampleUnlimited: unlimitedPlans[0] || null
             });
+            
+            // Логируем первые планы для отладки
+            if (standardPlans.length > 0) {
+                console.log('First standard plan:', standardPlans[0]);
+            }
+            if (unlimitedPlans.length > 0) {
+                console.log('First unlimited plan:', unlimitedPlans[0]);
+            }
             
             return true;
         } else {
@@ -367,11 +377,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Загружаем реальные планы из API
     const countryCode = orderData?.code || null;
-    await loadPlansFromAPI(countryCode);
+    const plansLoaded = await loadPlansFromAPI(countryCode);
+    
+    console.log('Plans loaded status:', plansLoaded, {
+        standardCount: standardPlans.length,
+        unlimitedCount: unlimitedPlans.length,
+        firstPlan: standardPlans[0] || unlimitedPlans[0]
+    });
     
     setupOrderDetails();
     setupPromoCode();
     setupPurchaseButton();
+    
+    // Если планы загрузились, обновляем отображение
+    if (plansLoaded && (standardPlans.length > 0 || unlimitedPlans.length > 0)) {
+        updateOrderDetailsWithRealPlans();
+    }
 });
 
 // Setup order details
@@ -408,6 +429,17 @@ function setupOrderDetails() {
     
     // Setup plan details
     const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
+    
+    // Если планы еще не загружены, используем fallback
+    if (plans.length === 0) {
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">Loading...</span>
+            <span class="checkout-plan-duration">Loading...</span>
+        `;
+        originalPrice = '$ 9.99';
+        return; // Выходим, updateOrderDetailsWithRealPlans обновит позже
+    }
+    
     const selectedPlan = plans.find(p => p.id === orderData.planId) || plans[0];
     
     if (selectedPlan) {
@@ -418,6 +450,12 @@ function setupOrderDetails() {
         
         // Store original price (используем реальную цену из API или fallback)
         originalPrice = selectedPlan.price || '$ 9.99';
+        
+        console.log('Setup order details with plan:', {
+            planId: orderData.planId,
+            selectedPlan: selectedPlan,
+            price: originalPrice
+        });
     } else {
         // Fallback если план не найден
         planDetailsElement.innerHTML = `
@@ -429,6 +467,40 @@ function setupOrderDetails() {
     
     // Update total price
     updateTotalPrice();
+}
+
+/**
+ * Обновление деталей заказа с реальными планами из API
+ */
+function updateOrderDetailsWithRealPlans() {
+    const planDetailsElement = document.getElementById('checkoutPlanDetails');
+    const totalPriceElement = document.getElementById('checkoutTotalPrice');
+    
+    if (!planDetailsElement || !totalPriceElement) {
+        return;
+    }
+    
+    // Находим выбранный план
+    const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
+    const selectedPlan = plans.find(p => p.id === orderData.planId) || plans[0];
+    
+    if (selectedPlan) {
+        // Обновляем детали плана
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">${selectedPlan.data}</span>
+            <span class="checkout-plan-duration">${selectedPlan.duration}</span>
+        `;
+        
+        // Обновляем цену
+        originalPrice = selectedPlan.price || '$ 9.99';
+        updateTotalPrice();
+        
+        console.log('Order details updated with real plan:', {
+            plan: selectedPlan.data,
+            duration: selectedPlan.duration,
+            price: selectedPlan.price
+        });
+    }
 }
 
 // Update total price display with discount if applicable

@@ -23,6 +23,13 @@ function groupBundlesIntoPlans(bundles) {
     
     // Группируем по типу (unlimited или нет)
     bundles.forEach(bundle => {
+        // Форматируем цену правильно
+        const priceValue = bundle.price || bundle.pricePerUnit || 0;
+        const currency = bundle.currency || 'USD';
+        const priceFormatted = currency === 'USD' 
+            ? `$ ${priceValue.toFixed(2)}`
+            : `${currency} ${priceValue.toFixed(2)}`;
+        
         const plan = {
             id: bundle.name, // Используем bundle name как ID
             bundle_name: bundle.name,
@@ -30,9 +37,9 @@ function groupBundlesIntoPlans(bundles) {
             dataAmount: bundle.dataAmount,
             duration: `${bundle.duration} Days`,
             durationDays: bundle.duration,
-            price: `${bundle.currency || 'USD'} ${bundle.price?.toFixed(2) || '0.00'}`,
-            priceValue: bundle.price || 0,
-            currency: bundle.currency || 'USD',
+            price: priceFormatted,
+            priceValue: priceValue,
+            currency: currency,
             unlimited: bundle.unlimited || false,
             countries: bundle.countries || [],
             description: bundle.description || ''
