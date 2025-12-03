@@ -195,6 +195,22 @@
             <div id="rawCatalogueStatus"></div>
             <div id="rawCatalogueData" class="data-display" style="display: none;"></div>
         </div>
+        
+        <!-- Debug Different Endpoints -->
+        <div class="section">
+            <div class="section-title">6. Проверить разные endpoints (debug)</div>
+            <div class="input-group">
+                <label>Endpoint для проверки:</label>
+                <input type="text" id="debugEndpoint" placeholder="bundles" value="bundles">
+            </div>
+            <div class="input-group">
+                <label>Код страны (опционально):</label>
+                <input type="text" id="debugCountry" placeholder="TH" maxlength="2" style="text-transform: uppercase;">
+            </div>
+            <button class="button" onclick="testDebugEndpoint()">Проверить endpoint</button>
+            <div id="debugStatus"></div>
+            <div id="debugData" class="data-display" style="display: none;"></div>
+        </div>
     </div>
     
     <script>
@@ -361,7 +377,7 @@
                 const data = await response.json();
                 
                 if (response.ok && data.success) {
-                    const itemsCount = data.data?.data?.length || 0;
+                    const itemsCount = data.data?.esims?.length || data.data?.data?.length || 0;
                     showStatus('rawCatalogueStatus', 
                         `✅ Получено элементов: ${itemsCount}`, 
                         'success');
@@ -371,6 +387,37 @@
                 }
             } catch (error) {
                 showStatus('rawCatalogueStatus', `❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testDebugEndpoint() {
+            const endpoint = document.getElementById('debugEndpoint').value.trim() || 'bundles';
+            const country = document.getElementById('debugCountry').value.trim().toUpperCase();
+            
+            showStatus('debugStatus', 
+                `<span class="loading"></span> Проверка endpoint: ${endpoint}${country ? ` для ${country}` : ''}...`, 
+                'info');
+            document.getElementById('debugData').style.display = 'none';
+            
+            try {
+                const url = country 
+                    ? `${API_BASE}/debug?endpoint=${endpoint}&country=${country}`
+                    : `${API_BASE}/debug?endpoint=${endpoint}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const analysis = data.analysis;
+                    showStatus('debugStatus', 
+                        `✅ Endpoint работает! Тип: ${analysis.responseType}, Ключи: ${analysis.keys.join(', ')}`, 
+                        'success');
+                    showData('debugData', data);
+                } else {
+                    showStatus('debugStatus', `❌ Ошибка: ${data.error || 'Неизвестная ошибка'}`, 'error');
+                }
+            } catch (error) {
+                showStatus('debugStatus', `❌ Ошибка: ${error.message}`, 'error');
             }
         }
     </script>

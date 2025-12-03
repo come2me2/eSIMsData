@@ -20,12 +20,18 @@ module.exports = async function handler(req, res) {
     }
     
     try {
-        const { endpoint = 'esims' } = req.query;
+        const { endpoint = 'esims', country } = req.query;
         
-        console.log('Debug request for endpoint:', endpoint);
+        console.log('Debug request for endpoint:', endpoint, 'country:', country);
+        
+        // Формируем endpoint с параметрами если нужно
+        let endpointPath = `/${endpoint}`;
+        if (country && endpoint !== 'esims') {
+            endpointPath += `?country=${country.toUpperCase()}`;
+        }
         
         // Получаем сырой ответ от API
-        const rawResponse = await esimgoClient.makeRequest(`/${endpoint}`);
+        const rawResponse = await esimgoClient.makeRequest(endpointPath);
         
         // Анализируем структуру
         const analysis = {
