@@ -42,14 +42,32 @@ function processCatalogue(catalogueData) {
     }
     
     // Проверяем, является ли ответ массивом Bundle
-    const bundles = Array.isArray(catalogueData) ? catalogueData : (catalogueData.data || []);
+    let bundles = null;
+    if (Array.isArray(catalogueData)) {
+        bundles = catalogueData;
+    } else if (catalogueData.data && Array.isArray(catalogueData.data)) {
+        bundles = catalogueData.data;
+    } else if (catalogueData.bundles && Array.isArray(catalogueData.bundles)) {
+        bundles = catalogueData.bundles;
+    } else if (catalogueData.items && Array.isArray(catalogueData.items)) {
+        bundles = catalogueData.items;
+    } else {
+        bundles = [];
+    }
+    
+    console.log('processCatalogue: bundles extracted', {
+        bundlesCount: bundles.length,
+        isArray: Array.isArray(bundles),
+        sampleBundle: bundles[0] || null
+    });
     
     if (!Array.isArray(bundles) || bundles.length === 0) {
         console.warn('processCatalogue: bundles is not an array or empty', {
             isArray: Array.isArray(bundles),
             length: bundles?.length || 0,
             type: typeof catalogueData,
-            keys: Object.keys(catalogueData || {})
+            keys: Object.keys(catalogueData || {}),
+            catalogueDataType: Array.isArray(catalogueData) ? 'array' : typeof catalogueData
         });
         return {
             countries: [],
@@ -194,17 +212,63 @@ module.exports = async function handler(req, res) {
         // Получаем каталог из eSIM Go
         let catalogue;
         try {
-            catalogue = await esimgoClient.getCatalogue(country || null, {
+            // Пробуем получить каталог с разными параметрами
+            const options = {
                 perPage: 1000 // Получаем больше Bundle за раз
-            });
-            console.log('Catalogue received:', {
+            };
+            
+            // Если указан регион, добавляем его
+            if (region) {
+                options.region = region;
+            }
+            
+            catalogue = await esimgoClient.getCatalogue(country || null, options);
+            
+            // Детальное логирование для отладки
+            console.log('Catalogue received (raw):', {
                 isArray: Array.isArray(catalogue),
-                bundlesCount: Array.isArray(catalogue) ? catalogue.length : (catalogue?.data?.length || 0),
-                keys: Object.keys(catalogue || {}),
-                sampleBundle: Array.isArray(catalogue) ? catalogue[0] : (catalogue?.data?.[0] || null)
+                type: typeof catalogue,
+                bundlesCount: Array.isArray(catalogue) ? catalogue.length : (catalogue?.data?.length || catalogue?.bundles?.length || 0),
+                keys: catalogue ? Object.keys(catalogue) : [],
+                firstItem: Array.isArray(catalogue) ? catalogue[0] : (catalogue?.data?.[0] || catalogue?.bundles?.[0] || null),
+                fullResponsePreview: JSON.stringify(catalogue).substring(0, 500) // Первые 500 символов для отладки
             });
+            
+            // Если ответ не массив, проверяем возможные структуры
+            if (!Array.isArray(catalogue)) {
+                if (catalogue?.data && Array.isArray(catalogue.data)) {
+                    console.log('Found catalogue.data array, using it');
+                    catalogue = catalogue.data;
+                } else if (catalogue?.bundles && Array.isArray(catalogue.bundles)) {
+                    console.log('Found catalogue.bundles array, using it');
+                    catalogue = catalogue.bundles;
+                } else if (catalogue?.items && Array.isArray(catalogue.items)) {
+                    console.log('Found catalogue.items array, using it');
+                    catalogue = catalogue.items;
+                } else {
+                    // Если это объект с пагинацией, возможно данные в другом поле
+                    console.warn('Catalogue is not an array and no known array field found', {
+                        keys: Object.keys(catalogue || {}),
+                        type: typeof catalogue
+                    });
+                }
+            }
+            
+            // Если каталог пустой, логируем предупреждение
+            if ((Array.isArray(catalogue) && catalogue.length === 0) || !catalogue) {
+                console.warn('Catalogue is empty!', {
+                    country: country || 'all',
+                    region: region || 'all',
+                    catalogueType: typeof catalogue,
+                    catalogueKeys: catalogue ? Object.keys(catalogue) : []
+                });
+            }
         } catch (catalogueError) {
-            console.error('Error fetching catalogue:', catalogueError);
+            console.error('Error fetching catalogue:', {
+                message: catalogueError.message,
+                stack: catalogueError.stack,
+                name: catalogueError.name
+            });
             throw new Error(`Failed to fetch catalogue: ${catalogueError.message}`);
         }
         
