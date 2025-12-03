@@ -28,21 +28,26 @@ const regionMapping = {
  * Обработка каталога eSIM Go в структурированный формат
  */
 function processCatalogue(catalogueData) {
-    if (!catalogueData || !catalogueData.data) {
+    // Структура ответа от /esims: { esims: [], pageCount, pageSize, rows }
+    if (!catalogueData || !catalogueData.esims) {
         return {
             countries: [],
             regions: {},
-            bundles: []
+            bundles: [],
+            esims: []
         };
     }
 
-    const bundles = catalogueData.data || [];
+    // eSIMs из ответа могут содержать информацию о доступных тарифах
+    const esims = catalogueData.esims || [];
     const countriesMap = new Map();
     const regionsMap = new Map();
 
-    // Обрабатываем каждый bundle
-    bundles.forEach(bundle => {
-        const countryCode = bundle.country?.toUpperCase();
+    // Обрабатываем каждый eSIM
+    // Структура eSIM может содержать: iccid, country, countryCode, и т.д.
+    esims.forEach(esim => {
+        // Получаем код страны из eSIM (может быть в разных полях)
+        const countryCode = (esim.countryCode || esim.country_code || esim.country)?.toUpperCase();
         if (!countryCode) return;
 
         // Находим регион для страны
@@ -63,25 +68,20 @@ function processCatalogue(catalogueData) {
         if (!countriesMap.has(countryCode)) {
             countriesMap.set(countryCode, {
                 code: countryCode,
-                name: bundle.country_name || countryCode,
+                name: esim.countryName || esim.country_name || esim.country || countryCode,
                 region: region,
-                bundles: []
+                esims: [],
+                bundles: [] // Bundles будут получены отдельно для каждого eSIM
             });
         }
 
         const country = countriesMap.get(countryCode);
         
-        // Добавляем bundle к стране
-        country.bundles.push({
-            id: bundle.id || bundle.bundle_id,
-            name: bundle.name || `${bundle.data_amount || 'N/A'} ${bundle.data_unit || 'GB'}`,
-            data: bundle.data_amount ? `${bundle.data_amount} ${bundle.data_unit || 'GB'}` : 'N/A',
-            duration: bundle.validity ? `${bundle.validity} ${bundle.validity_unit || 'Days'}` : 'N/A',
-            price: bundle.price ? {
-                amount: bundle.price.amount || bundle.price,
-                currency: bundle.price.currency || 'USD'
-            } : null,
-            originalData: bundle // Сохраняем оригинальные данные для справки
+        // Добавляем eSIM к стране
+        country.esims.push({
+            iccid: esim.iccid,
+            name: esim.name || esim.productName || 'eSIM',
+            originalData: esim // Сохраняем оригинальные данные для справки
         });
 
         // Группируем по регионам
@@ -111,9 +111,14 @@ function processCatalogue(catalogueData) {
     return {
         countries,
         regions,
-        bundles: bundles,
+        esims: esims,
         totalCountries: countries.length,
-        totalBundles: bundles.length
+        totalESIMs: esims.length,
+        pagination: {
+            pageCount: catalogueData.pageCount,
+            pageSize: catalogueData.pageSize,
+            rows: catalogueData.rows
+        }
     };
 }
 

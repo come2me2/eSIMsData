@@ -224,10 +224,12 @@ async function createESIM(esimData = {}) {
 
 module.exports = {
     getCatalogue,
+    getESIMs,
     createOrder,
     getOrderStatus,
     getESIMInfo,
     getESIMBundles,
-    createESIM
+    createESIM,
+    makeRequest // Экспортируем для использования в других модулях
 };
 

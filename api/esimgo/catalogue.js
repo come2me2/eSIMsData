@@ -28,12 +28,14 @@ module.exports = async function handler(req, res) {
             hasApiKey: !!process.env.ESIMGO_API_KEY
         });
         
-        // Получаем каталог продуктов
+        // Получаем каталог через /esims endpoint
         const catalogue = await esimgoClient.getCatalogue(country || null);
         
         console.log('Catalogue fetched:', {
             country: country || 'all',
-            itemsCount: catalogue?.data?.length || 0,
+            esimsCount: catalogue?.esims?.length || 0,
+            rows: catalogue?.rows || 0,
+            pageCount: catalogue?.pageCount || 0,
             hasData: !!catalogue
         });
         
