@@ -56,10 +56,19 @@ module.exports = async function handler(req, res) {
     } catch (error) {
         console.error('Debug API error:', error);
         
-        return res.status(500).json({
+        // Если это access denied, возвращаем 403
+        const statusCode = error.message.includes('Access denied') || error.message.includes('access denied') 
+            ? 403 
+            : 500;
+        
+        return res.status(statusCode).json({
             success: false,
             error: error.message,
-            stack: error.stack
+            suggestion: error.message.includes('Access denied') 
+                ? 'This endpoint may not be available for your API key or requires different permissions. ' +
+                  'Try checking the eSIM Go API documentation or contact support to find the correct endpoint for getting available bundles/catalogue.'
+                : undefined,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 };

@@ -85,7 +85,18 @@ async function makeRequest(endpoint, options = {}) {
                 const errorData = await response.json();
                 errorMessage = errorData.message || errorData.error || errorData.detail || errorMessage;
                 console.error('eSIM Go API error response:', errorData);
-            } catch {
+                
+                // Специальная обработка для "access denied"
+                if (errorMessage.toLowerCase().includes('access denied') || 
+                    errorMessage.toLowerCase().includes('forbidden') ||
+                    response.status === 403) {
+                    throw new Error(`Access denied: This endpoint may require different permissions or is not available for your API key. Endpoint: ${endpoint}`);
+                }
+            } catch (jsonError) {
+                // Если это уже наша ошибка access denied, пробрасываем дальше
+                if (jsonError.message.includes('Access denied')) {
+                    throw jsonError;
+                }
                 // Если не удалось распарсить JSON, используем текст
                 const text = await response.text().catch(() => '');
                 if (text) {
