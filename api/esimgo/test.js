@@ -36,19 +36,23 @@ module.exports = async function handler(req, res) {
         
         if (hasFetch) {
             try {
-            // Пробуем разные варианты endpoints и версий API
-            const apiVersions = ['v2.5', 'v2.4', 'v2.3', 'v2'];
-            const endpointPaths = ['/bundles', '/catalogue', '/products', '/packages', '/available-bundles'];
+            // Пробуем разные варианты endpoints для v2.4
+            const endpointPaths = [
+                '/esims',           // Список eSIM (может содержать каталог)
+                '/bundles',         // Прямой каталог bundles
+                '/catalogue',       // Классический каталог
+                '/products',        // Альтернативное название
+                '/packages',        // Еще один вариант
+                '/available-bundles' // Явное название
+            ];
             
             const testUrls = [];
+            const baseUrl = apiUrl; // Используем уже настроенный apiUrl (v2.4)
             
-            // Генерируем все комбинации версий и endpoints
-            for (const version of apiVersions) {
-                const baseUrl = `https://api.esim-go.com/${version}`;
-                for (const path of endpointPaths) {
-                    testUrls.push(`${baseUrl}${path}?country=TH`);
-                    testUrls.push(`${baseUrl}${path}`);
-                }
+            // Генерируем URLs с параметром country и без
+            for (const path of endpointPaths) {
+                testUrls.push(`${baseUrl}${path}?country=TH`);
+                testUrls.push(`${baseUrl}${path}`);
             }
                 
                 let testUrl = testUrls[0];
