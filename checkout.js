@@ -123,8 +123,18 @@ async function processPurchase(orderWithUser, auth, tg) {
         
         console.log('Found bundle:', bundleName);
         
+        // Проверяем режим тестирования (можно установить через localStorage или URL параметр)
+        const urlParams = new URLSearchParams(window.location.search);
+        const testMode = urlParams.get('test') === 'true' || 
+                        localStorage.getItem('esimgo_test_mode') === 'true' ||
+                        false; // По умолчанию false (реальный заказ)
+        
+        if (testMode) {
+            console.warn('⚠️ TEST MODE: Order will be validated but not created');
+        }
+        
         // Создаем заказ
-        purchaseBtn.textContent = 'Creating order...';
+        purchaseBtn.textContent = testMode ? 'Validating order...' : 'Creating order...';
         const orderResponse = await fetch('/api/esimgo/order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -136,7 +146,8 @@ async function processPurchase(orderWithUser, auth, tg) {
                 country_code: orderWithUser.code,
                 country_name: orderWithUser.name,
                 plan_id: orderWithUser.planId,
-                plan_type: orderWithUser.planType
+                plan_type: orderWithUser.planType,
+                test_mode: testMode // Передаем режим тестирования
             })
         });
         
@@ -144,6 +155,33 @@ async function processPurchase(orderWithUser, auth, tg) {
         
         if (!orderResult.success) {
             throw new Error(orderResult.error || 'Failed to create order');
+        }
+        
+        // Проверяем режим тестирования
+        if (orderResult.test_mode) {
+            console.log('✅ Order validated (TEST MODE):', orderResult.data);
+            
+            // В тестовом режиме показываем информацию о валидации
+            if (tg) {
+                tg.showAlert(
+                    `✅ Validation successful!\n\n` +
+                    `Price: ${orderResult.data.currency} ${orderResult.data.total}\n` +
+                    `Bundle: ${bundleName}\n\n` +
+                    `This was a test. No real order was created.\n` +
+                    `Remove ?test=true from URL to create real orders.`
+                );
+            } else {
+                alert(
+                    `✅ Validation successful!\n\n` +
+                    `Price: ${orderResult.data.currency} ${orderResult.data.total}\n` +
+                    `Bundle: ${bundleName}\n\n` +
+                    `This was a test. No real order was created.`
+                );
+            }
+            
+            purchaseBtn.textContent = originalText;
+            purchaseBtn.disabled = false;
+            return; // Не продолжаем с получением QR кода в тестовом режиме
         }
         
         console.log('Order created:', orderResult.data);

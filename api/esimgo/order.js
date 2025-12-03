@@ -42,10 +42,23 @@ module.exports = async function handler(req, res) {
             });
         }
         
+        // Определяем режим работы: validate (тест) или transaction (реальный заказ)
+        // Можно переопределить через переменную окружения ESIMGO_ORDER_MODE
+        // или через параметр test_mode в запросе
+        const orderMode = req.body.test_mode === true 
+            ? 'validate' 
+            : (process.env.ESIMGO_ORDER_MODE === 'validate' ? 'validate' : 'transaction');
+        
+        const isTestMode = orderMode === 'validate';
+        
+        if (isTestMode) {
+            console.log('⚠️ TEST MODE: Using validate instead of transaction (no real order will be created)');
+        }
+        
         // Создаём заказ в eSIM Go согласно API v2.4
-        // Структура: { type: 'transaction', assign: true, order: [{ type: 'bundle', quantity: 1, item: bundleName }] }
+        // Структура: { type: 'transaction'|'validate', assign: true, order: [{ type: 'bundle', quantity: 1, item: bundleName }] }
         const orderData = {
-            type: 'transaction', // 'transaction' для создания заказа, 'validate' для проверки
+            type: orderMode, // 'transaction' для создания заказа, 'validate' для проверки
             assign: assign, // автоматически назначить bundle на eSIM
             order: [{
                 type: 'bundle',
@@ -62,15 +75,37 @@ module.exports = async function handler(req, res) {
         
         const order = await esimgoClient.createOrder(orderData);
         
-        console.log('Order created:', {
+        console.log('Order ' + (isTestMode ? 'validated' : 'created') + ':', {
+            mode: orderMode,
             orderReference: order.orderReference,
             status: order.status,
             statusMessage: order.statusMessage,
+            valid: order.valid, // для validate режима
+            total: order.total,
+            currency: order.currency,
             telegram_user_id,
             bundle_name: bundleName,
             country_code,
             hasEsims: !!order.order?.[0]?.esims
         });
+        
+        // В режиме validate не получаем assignments (заказ не создан)
+        if (isTestMode) {
+            return res.status(200).json({
+                success: true,
+                test_mode: true,
+                data: {
+                    ...order,
+                    telegram_user_id,
+                    country_code,
+                    country_name,
+                    plan_id,
+                    plan_type,
+                    bundle_name: bundleName,
+                    note: 'This is a validation request. No real order was created. Set test_mode: false to create a real order.'
+                }
+            });
+        }
         
         // Получаем детали установки eSIM (QR код, SMDP+ адрес) если заказ успешен
         let assignments = null;
@@ -95,6 +130,7 @@ module.exports = async function handler(req, res) {
         
         return res.status(200).json({
             success: true,
+            test_mode: false,
             data: {
                 ...order,
                 assignments: assignments, // QR код и данные для установки

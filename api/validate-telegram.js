@@ -125,6 +125,14 @@ function validateByHash(initData, botToken) {
             };
         }
         
+        // Логируем для отладки (без чувствительных данных)
+        console.log('Hash validation attempt:', {
+            hasInitData: !!initData,
+            initDataLength: initData?.length || 0,
+            hasBotToken: !!botToken,
+            botTokenLength: botToken?.length || 0
+        });
+        
         const urlParams = new URLSearchParams(initData);
         const hash = urlParams.get('hash');
         
@@ -152,6 +160,15 @@ function validateByHash(initData, botToken) {
             .createHmac('sha256', secretKey)
             .update(dataCheckString)
             .digest('hex');
+        
+        // Логируем для отладки (без чувствительных данных)
+        console.log('Hash comparison:', {
+            receivedHash: hash.substring(0, 8) + '...',
+            calculatedHash: calculatedHash.substring(0, 8) + '...',
+            match: calculatedHash === hash,
+            dataCheckStringLength: dataCheckString.length,
+            paramsCount: urlParams.size
+        });
         
         // Сравниваем хеши
         if (calculatedHash === hash) {
@@ -223,6 +240,15 @@ module.exports = async function handler(req, res) {
             });
         }
         
+        // Логируем полученные данные (без чувствительной информации)
+        console.log('Received validation request:', {
+            hasInitData: !!initData,
+            initDataType: typeof initData,
+            initDataLength: initData?.length || 0,
+            hasBotToken: !!process.env.BOT_TOKEN,
+            botTokenLength: process.env.BOT_TOKEN?.length || 0
+        });
+        
         let result;
         
         // 1. Сначала пробуем signature (Ed25519) - новый метод
@@ -231,6 +257,11 @@ module.exports = async function handler(req, res) {
         // 2. Если signature нет или ошибка - используем hash (HMAC-SHA256)
         if (!result.valid && result.fallback) {
             const botToken = process.env.BOT_TOKEN;
+            
+            if (!botToken) {
+                console.warn('BOT_TOKEN not set in environment variables');
+            }
+            
             result = validateByHash(initData, botToken);
         }
         
