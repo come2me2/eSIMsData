@@ -182,22 +182,57 @@ async function getESIMs(options = {}) {
 }
 
 /**
- * Получить каталог доступных пакетов данных
- * @param {string} countryCode - Код страны (ISO 3166-1 alpha-2, опционально)
- * @returns {Promise<Object>} Каталог продуктов
- * Документация: https://docs.esim-go.com/api/v2_4/
+ * Получить каталог доступных пакетов данных (Bundle)
+ * @param {string|string[]} countryCode - Код страны или массив кодов (ISO 3166-1 alpha-2, опционально)
+ * @param {Object} options - Дополнительные опции
+ * @param {number} options.page - Номер страницы
+ * @param {number} options.perPage - Количество элементов на странице
+ * @param {string} options.region - Регион для фильтрации
+ * @param {string} options.group - Группа Bundle для фильтрации
+ * @returns {Promise<Object>} Каталог продуктов (Bundle)
+ * Документация: https://docs.esim-go.com/api/v2_4/#tag/Catalogue
  * 
- * Использует endpoint /esims для получения списка доступных eSIM
+ * Использует endpoint /catalogue для получения каталога Bundle
  */
-async function getCatalogue(countryCode = null) {
-    // Используем /esims как основной endpoint
-    // Он возвращает список доступных eSIM с информацией о них
-    let endpoint = '/esims';
+async function getCatalogue(countryCode = null, options = {}) {
+    // Используем /catalogue endpoint согласно API v2.4
+    const params = new URLSearchParams();
     
+    // Параметр countries (может быть строка или массив)
     if (countryCode) {
-        const params = new URLSearchParams({ country: countryCode.toUpperCase() });
-        endpoint = `${endpoint}?${params.toString()}`;
+        if (Array.isArray(countryCode)) {
+            params.append('countries', countryCode.join(','));
+        } else {
+            params.append('countries', countryCode.toUpperCase());
+        }
     }
+    
+    // Дополнительные параметры
+    if (options.page) {
+        params.append('page', options.page.toString());
+    }
+    if (options.perPage) {
+        params.append('perPage', options.perPage.toString());
+    }
+    if (options.region) {
+        params.append('region', options.region);
+    }
+    if (options.group) {
+        params.append('group', options.group);
+    }
+    if (options.description) {
+        params.append('description', options.description);
+    }
+    if (options.direction) {
+        params.append('direction', options.direction);
+    }
+    if (options.orderBy) {
+        params.append('orderBy', options.orderBy);
+    }
+    
+    const endpoint = params.toString() 
+        ? `/catalogue?${params.toString()}`
+        : '/catalogue';
     
     return makeRequest(endpoint);
 }

@@ -26,105 +26,125 @@ const regionMapping = {
 
 /**
  * Обработка каталога eSIM Go в структурированный формат
+ * Структура ответа от /catalogue: массив Bundle объектов
  */
 function processCatalogue(catalogueData) {
-    // Структура ответа от /esims: { esims: [], pageCount, pageSize, rows }
+    // Структура ответа от /catalogue: массив Bundle объектов
     if (!catalogueData) {
         console.warn('processCatalogue: catalogueData is null or undefined');
         return {
             countries: [],
             regions: {},
             bundles: [],
-            esims: [],
             totalCountries: 0,
-            totalESIMs: 0,
-            pagination: {}
+            totalBundles: 0
         };
     }
     
-    if (!catalogueData.esims || !Array.isArray(catalogueData.esims)) {
-        console.warn('processCatalogue: esims is not an array', {
-            hasEsims: !!catalogueData.esims,
-            type: typeof catalogueData.esims,
-            keys: Object.keys(catalogueData)
+    // Проверяем, является ли ответ массивом Bundle
+    const bundles = Array.isArray(catalogueData) ? catalogueData : (catalogueData.data || []);
+    
+    if (!Array.isArray(bundles) || bundles.length === 0) {
+        console.warn('processCatalogue: bundles is not an array or empty', {
+            isArray: Array.isArray(bundles),
+            length: bundles?.length || 0,
+            type: typeof catalogueData,
+            keys: Object.keys(catalogueData || {})
         });
         return {
             countries: [],
             regions: {},
             bundles: [],
-            esims: [],
             totalCountries: 0,
-            totalESIMs: 0,
-            pagination: {
-                pageCount: catalogueData.pageCount,
-                pageSize: catalogueData.pageSize,
-                rows: catalogueData.rows
-            }
+            totalBundles: 0
         };
     }
 
-    // eSIMs из ответа могут содержать информацию о доступных тарифах
-    const esims = catalogueData.esims || [];
+    console.log(`Processing ${bundles.length} bundles`);
+
     const countriesMap = new Map();
     const regionsMap = new Map();
-    
-    console.log(`Processing ${esims.length} eSIMs`);
+    const processedBundles = [];
 
-    // Обрабатываем каждый eSIM
-    // Структура eSIM может содержать: iccid, country, countryCode, и т.д.
-    esims.forEach((esim, index) => {
+    // Обрабатываем каждый Bundle
+    bundles.forEach((bundle, index) => {
         try {
-            // Получаем код страны из eSIM (может быть в разных полях)
-            const countryCode = (esim.countryCode || esim.country_code || esim.country || esim.CountryCode || esim.Country)?.toUpperCase();
-            if (!countryCode) {
-                console.warn(`eSIM at index ${index} has no country code:`, Object.keys(esim));
+            // Bundle имеет структуру:
+            // { name, description, countries: [{name, region, iso}], dataAmount, duration, price, ... }
+            
+            if (!bundle.countries || !Array.isArray(bundle.countries) || bundle.countries.length === 0) {
+                console.warn(`Bundle at index ${index} has no countries:`, bundle.name);
                 return;
             }
 
-            // Находим регион для страны
-            let region = null;
-            for (const [regName, countries] of Object.entries(regionMapping)) {
-                if (countries.includes(countryCode)) {
-                    region = regName;
-                    break;
+            // Обрабатываем каждую страну в Bundle
+            bundle.countries.forEach(countryInfo => {
+                const countryCode = (countryInfo.iso || countryInfo.ISO || countryInfo.code)?.toUpperCase();
+                if (!countryCode) {
+                    return;
                 }
-            }
 
-            // Если регион не найден, добавляем в "Other"
-            if (!region) {
-                region = 'Other';
-            }
+                // Используем регион из Bundle или находим по маппингу
+                let region = countryInfo.region || null;
+                if (!region) {
+                    for (const [regName, countries] of Object.entries(regionMapping)) {
+                        if (countries.includes(countryCode)) {
+                            region = regName;
+                            break;
+                        }
+                    }
+                }
+                if (!region) {
+                    region = 'Other';
+                }
 
-            // Создаём или обновляем запись страны
-            if (!countriesMap.has(countryCode)) {
-                countriesMap.set(countryCode, {
-                    code: countryCode,
-                    name: esim.countryName || esim.country_name || esim.country || countryCode,
-                    region: region,
-                    esims: [],
-                    bundles: [] // Bundles будут получены отдельно для каждого eSIM
-                });
-            }
+                // Создаём или обновляем запись страны
+                if (!countriesMap.has(countryCode)) {
+                    countriesMap.set(countryCode, {
+                        code: countryCode,
+                        name: countryInfo.name || countryCode,
+                        region: region,
+                        bundles: []
+                    });
+                }
 
-            const country = countriesMap.get(countryCode);
-            
-            // Добавляем eSIM к стране
-            country.esims.push({
-                iccid: esim.iccid || esim.ICCID,
-                name: esim.name || esim.productName || esim.Name || 'eSIM',
-                originalData: esim // Сохраняем оригинальные данные для справки
+                const country = countriesMap.get(countryCode);
+                
+                // Добавляем Bundle к стране (если еще не добавлен)
+                const bundleExists = country.bundles.some(b => b.name === bundle.name);
+                if (!bundleExists) {
+                    country.bundles.push({
+                        name: bundle.name,
+                        description: bundle.description,
+                        dataAmount: bundle.dataAmount,
+                        duration: bundle.duration,
+                        price: bundle.price,
+                        unlimited: bundle.unlimited,
+                        autostart: bundle.autostart,
+                        speed: bundle.speed,
+                        groups: bundle.groups,
+                        roamingEnabled: bundle.roamingEnabled
+                    });
+                }
             });
 
-            // Группируем по регионам
-            if (!regionsMap.has(region)) {
-                regionsMap.set(region, {
-                    name: region,
-                    countries: []
-                });
-            }
-        } catch (esimError) {
-            console.error(`Error processing eSIM at index ${index}:`, esimError, esim);
-            // Продолжаем обработку остальных eSIM
+            // Сохраняем обработанный Bundle
+            processedBundles.push({
+                name: bundle.name,
+                description: bundle.description,
+                countries: bundle.countries,
+                dataAmount: bundle.dataAmount,
+                duration: bundle.duration,
+                price: bundle.price,
+                unlimited: bundle.unlimited,
+                autostart: bundle.autostart,
+                speed: bundle.speed,
+                groups: bundle.groups,
+                roamingEnabled: bundle.roamingEnabled
+            });
+
+        } catch (bundleError) {
+            console.error(`Error processing bundle at index ${index}:`, bundleError, bundle);
         }
     });
 
@@ -146,14 +166,9 @@ function processCatalogue(catalogueData) {
     return {
         countries,
         regions,
-        esims: esims,
+        bundles: processedBundles,
         totalCountries: countries.length,
-        totalESIMs: esims.length,
-        pagination: {
-            pageCount: catalogueData.pageCount,
-            pageSize: catalogueData.pageSize,
-            rows: catalogueData.rows
-        }
+        totalBundles: processedBundles.length
     };
 }
 
@@ -179,11 +194,14 @@ module.exports = async function handler(req, res) {
         // Получаем каталог из eSIM Go
         let catalogue;
         try {
-            catalogue = await esimgoClient.getCatalogue(country || null);
+            catalogue = await esimgoClient.getCatalogue(country || null, {
+                perPage: 1000 // Получаем больше Bundle за раз
+            });
             console.log('Catalogue received:', {
-                hasEsims: !!catalogue?.esims,
-                esimsCount: catalogue?.esims?.length || 0,
-                keys: Object.keys(catalogue || {})
+                isArray: Array.isArray(catalogue),
+                bundlesCount: Array.isArray(catalogue) ? catalogue.length : (catalogue?.data?.length || 0),
+                keys: Object.keys(catalogue || {}),
+                sampleBundle: Array.isArray(catalogue) ? catalogue[0] : (catalogue?.data?.[0] || null)
             });
         } catch (catalogueError) {
             console.error('Error fetching catalogue:', catalogueError);
@@ -196,6 +214,7 @@ module.exports = async function handler(req, res) {
             processed = processCatalogue(catalogue);
             console.log('Catalogue processed:', {
                 countriesCount: processed?.countries?.length || 0,
+                bundlesCount: processed?.bundles?.length || 0,
                 regionsCount: Object.keys(processed?.regions || {}).length
             });
         } catch (processError) {
@@ -231,7 +250,7 @@ module.exports = async function handler(req, res) {
             data: processed,
             meta: {
                 totalCountries: processed.totalCountries || 0,
-                totalESIMs: processed.totalESIMs || 0,
+                totalBundles: processed.totalBundles || 0,
                 regions: Object.keys(processed.regions || {})
             }
         });
