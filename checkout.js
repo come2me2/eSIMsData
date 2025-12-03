@@ -30,20 +30,70 @@ const orderData = {
     planType: urlParams.get('planType') || 'standard'
 };
 
-// Plans data (same as in other files)
-const standardPlans = [
-    { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
-    { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
-    { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
-    { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
-];
+// Plans data - загружаются динамически из API
+let standardPlans = [];
+let unlimitedPlans = [];
 
-const unlimitedPlans = [
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-];
+/**
+ * Загрузка реальных планов из eSIM Go API
+ */
+async function loadPlansFromAPI(countryCode) {
+    try {
+        const params = new URLSearchParams();
+        if (countryCode) {
+            params.append('country', countryCode);
+        }
+        
+        const response = await fetch(`/api/esimgo/plans?${params.toString()}`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            standardPlans = result.data.standard || [];
+            unlimitedPlans = result.data.unlimited || [];
+            
+            // Добавляем ID для совместимости (если нет)
+            standardPlans.forEach((plan, index) => {
+                if (!plan.id) {
+                    plan.id = `plan${index + 1}`;
+                }
+            });
+            
+            unlimitedPlans.forEach((plan, index) => {
+                if (!plan.id) {
+                    plan.id = `unlimited${index + 1}`;
+                }
+            });
+            
+            console.log('Plans loaded from API:', {
+                standard: standardPlans.length,
+                unlimited: unlimitedPlans.length,
+                country: countryCode
+            });
+            
+            return true;
+        } else {
+            console.warn('Failed to load plans from API, using fallback');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error loading plans from API:', error);
+        // Fallback к захардкоженным планам
+        standardPlans = [
+            { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
+            { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
+            { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
+            { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
+        ];
+        
+        unlimitedPlans = [
+            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
+            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
+            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
+            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
+        ];
+        return false;
+    }
+}
 
 // Store original price and discount state
 let originalPrice = '';
@@ -93,35 +143,41 @@ async function processPurchase(orderWithUser, auth, tg) {
         
         // Определяем параметры плана
         const selectedPlan = orderWithUser.planType === 'unlimited' 
-            ? unlimitedPlans.find(p => p.id === orderWithUser.planId)
-            : standardPlans.find(p => p.id === orderWithUser.planId);
+            ? unlimitedPlans.find(p => p.id === orderWithUser.planId || p.bundle_name === orderWithUser.planId)
+            : standardPlans.find(p => p.id === orderWithUser.planId || p.bundle_name === orderWithUser.planId);
         
         if (!selectedPlan) {
             throw new Error('Plan not found');
         }
         
-        // Парсим данные из плана (например: "1 GB" -> 1000 MB, "7 Days" -> 7)
-        const dataMatch = selectedPlan.data.match(/(\d+)/);
-        const durationMatch = selectedPlan.duration.match(/(\d+)/);
-        
-        if (!dataMatch || !durationMatch) {
-            throw new Error('Invalid plan format');
+        // Если у плана есть bundle_name (из API), используем его напрямую
+        let bundleName;
+        if (selectedPlan.bundle_name) {
+            bundleName = selectedPlan.bundle_name;
+            console.log('Using bundle_name from plan:', bundleName);
+        } else {
+            // Fallback: парсим данные и ищем bundle
+            const dataMatch = selectedPlan.data.match(/(\d+)/);
+            const durationMatch = selectedPlan.duration.match(/(\d+)/);
+            
+            if (!dataMatch || !durationMatch) {
+                throw new Error('Invalid plan format');
+            }
+            
+            const dataAmountMB = parseInt(dataMatch[1]) * 1000; // GB to MB
+            const durationDays = parseInt(durationMatch[1]);
+            const isUnlimited = orderWithUser.planType === 'unlimited';
+            
+            // Ищем bundle name
+            purchaseBtn.textContent = 'Finding bundle...';
+            bundleName = await findBundleName(
+                orderWithUser.code,
+                dataAmountMB,
+                durationDays,
+                isUnlimited
+            );
+            console.log('Found bundle:', bundleName);
         }
-        
-        const dataAmountMB = parseInt(dataMatch[1]) * 1000; // GB to MB
-        const durationDays = parseInt(durationMatch[1]);
-        const isUnlimited = orderWithUser.planType === 'unlimited';
-        
-        // Ищем bundle name
-        purchaseBtn.textContent = 'Finding bundle...';
-        const bundleName = await findBundleName(
-            orderWithUser.code,
-            dataAmountMB,
-            durationDays,
-            isUnlimited
-        );
-        
-        console.log('Found bundle:', bundleName);
         
         // Проверяем режим тестирования (можно установить через localStorage или URL параметр)
         const urlParams = new URLSearchParams(window.location.search);
@@ -297,7 +353,7 @@ function getFlagPath(countryCode) {
 }
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Telegram Auth - проверка авторизации перед оформлением заказа
     const auth = window.telegramAuth;
     if (auth && auth.isAuthenticated()) {
@@ -308,6 +364,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('Checkout - User not authenticated');
         // Можно показать предупреждение или перенаправить
     }
+    
+    // Загружаем реальные планы из API
+    const countryCode = orderData?.code || null;
+    await loadPlansFromAPI(countryCode);
     
     setupOrderDetails();
     setupPromoCode();
@@ -350,13 +410,22 @@ function setupOrderDetails() {
     const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
     const selectedPlan = plans.find(p => p.id === orderData.planId) || plans[0];
     
-    planDetailsElement.innerHTML = `
-        <span class="checkout-plan-amount">${selectedPlan.data}</span>
-        <span class="checkout-plan-duration">${selectedPlan.duration}</span>
-    `;
-    
-    // Store original price
-    originalPrice = selectedPlan.price;
+    if (selectedPlan) {
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">${selectedPlan.data}</span>
+            <span class="checkout-plan-duration">${selectedPlan.duration}</span>
+        `;
+        
+        // Store original price (используем реальную цену из API или fallback)
+        originalPrice = selectedPlan.price || '$ 9.99';
+    } else {
+        // Fallback если план не найден
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">Loading...</span>
+            <span class="checkout-plan-duration">Loading...</span>
+        `;
+        originalPrice = '$ 9.99';
+    }
     
     // Update total price
     updateTotalPrice();
