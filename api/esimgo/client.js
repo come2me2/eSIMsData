@@ -144,45 +144,50 @@ async function makeRequest(endpoint, options = {}) {
 }
 
 /**
+ * Получить список eSIM
+ * @param {Object} options - Опции запроса
+ * @param {number} options.page - Номер страницы (опционально)
+ * @param {number} options.pageSize - Размер страницы (опционально)
+ * @returns {Promise<Object>} Список eSIM с пагинацией
+ * Документация: https://docs.esim-go.com/api/v2_4/
+ */
+async function getESIMs(options = {}) {
+    let endpoint = '/esims';
+    const params = new URLSearchParams();
+    
+    if (options.page) {
+        params.append('page', options.page);
+    }
+    if (options.pageSize) {
+        params.append('pageSize', options.pageSize);
+    }
+    
+    if (params.toString()) {
+        endpoint = `${endpoint}?${params.toString()}`;
+    }
+    
+    return makeRequest(endpoint);
+}
+
+/**
  * Получить каталог доступных пакетов данных
  * @param {string} countryCode - Код страны (ISO 3166-1 alpha-2, опционально)
  * @returns {Promise<Object>} Каталог продуктов
  * Документация: https://docs.esim-go.com/api/v2_4/
  * 
- * Примечание: В API eSIM Go может не быть прямого endpoint /catalogue
- * Возможно, нужно использовать /bundles или другой endpoint
+ * Использует endpoint /esims для получения списка доступных eSIM
  */
 async function getCatalogue(countryCode = null) {
-    // Пробуем разные варианты endpoints
-    // Вариант 1: /bundles (если такой endpoint существует)
-    // Вариант 2: /catalogue (классический вариант)
-    // Вариант 3: /products (альтернативное название)
-    
-    let endpoint = '/bundles'; // Пробуем сначала bundles
+    // Используем /esims как основной endpoint
+    // Он возвращает список доступных eSIM с информацией о них
+    let endpoint = '/esims';
     
     if (countryCode) {
         const params = new URLSearchParams({ country: countryCode.toUpperCase() });
         endpoint = `${endpoint}?${params.toString()}`;
     }
     
-    try {
-        return await makeRequest(endpoint);
-    } catch (error) {
-        // Если /bundles не работает, пробуем /catalogue
-        if (error.message.includes('Not Found') || error.message.includes('404')) {
-            console.log('Trying /catalogue endpoint instead of /bundles');
-            endpoint = '/catalogue';
-            if (countryCode) {
-                const params = new URLSearchParams({ country: countryCode.toUpperCase() });
-                endpoint = `${endpoint}?${params.toString()}`;
-            } else if (endpointPath === '/esims') {
-                // Для /esims пробуем без параметров тоже
-                endpoint = '/esims';
-            }
-            return await makeRequest(endpoint);
-        }
-        throw error;
-    }
+    return makeRequest(endpoint);
 }
 
 /**
