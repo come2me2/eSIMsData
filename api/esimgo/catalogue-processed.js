@@ -41,14 +41,15 @@ function processCatalogue(catalogueData) {
         };
     }
     
-    // Проверяем, является ли ответ массивом Bundle
+    // Проверяем, является ли ответ массивом Bundle или объектом с bundles
     let bundles = null;
     if (Array.isArray(catalogueData)) {
         bundles = catalogueData;
+    } else if (catalogueData.bundles && Array.isArray(catalogueData.bundles)) {
+        // API возвращает объект с полем bundles: { bundles: [], pageCount, rows, pageSize }
+        bundles = catalogueData.bundles;
     } else if (catalogueData.data && Array.isArray(catalogueData.data)) {
         bundles = catalogueData.data;
-    } else if (catalogueData.bundles && Array.isArray(catalogueData.bundles)) {
-        bundles = catalogueData.bundles;
     } else if (catalogueData.items && Array.isArray(catalogueData.items)) {
         bundles = catalogueData.items;
     } else {
@@ -58,7 +59,8 @@ function processCatalogue(catalogueData) {
     console.log('processCatalogue: bundles extracted', {
         bundlesCount: bundles.length,
         isArray: Array.isArray(bundles),
-        sampleBundle: bundles[0] || null
+        sampleBundle: bundles[0] || null,
+        sourceType: Array.isArray(catalogueData) ? 'array' : (catalogueData.bundles ? 'bundles' : 'other')
     });
     
     if (!Array.isArray(bundles) || bundles.length === 0) {
@@ -234,14 +236,15 @@ module.exports = async function handler(req, res) {
                 fullResponsePreview: JSON.stringify(catalogue).substring(0, 500) // Первые 500 символов для отладки
             });
             
-            // Если ответ не массив, проверяем возможные структуры
+            // API возвращает объект с полем bundles: { bundles: [], pageCount, rows, pageSize }
+            // Оставляем как есть, processCatalogue обработает это правильно
             if (!Array.isArray(catalogue)) {
-                if (catalogue?.data && Array.isArray(catalogue.data)) {
+                if (catalogue?.bundles && Array.isArray(catalogue.bundles)) {
+                    console.log('Found catalogue.bundles array, will be processed correctly');
+                    // Не меняем структуру, processCatalogue знает про bundles
+                } else if (catalogue?.data && Array.isArray(catalogue.data)) {
                     console.log('Found catalogue.data array, using it');
                     catalogue = catalogue.data;
-                } else if (catalogue?.bundles && Array.isArray(catalogue.bundles)) {
-                    console.log('Found catalogue.bundles array, using it');
-                    catalogue = catalogue.bundles;
                 } else if (catalogue?.items && Array.isArray(catalogue.items)) {
                     console.log('Found catalogue.items array, using it');
                     catalogue = catalogue.items;
