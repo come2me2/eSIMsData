@@ -36,13 +36,20 @@ module.exports = async function handler(req, res) {
         
         if (hasFetch) {
             try {
-                // Пробуем разные варианты endpoints
-                const testUrls = [
-                    `${apiUrl}/bundles?country=TH`,
-                    `${apiUrl}/catalogue?country=TH`,
-                    `${apiUrl}/bundles`,
-                    `${apiUrl}/catalogue`
-                ];
+            // Пробуем разные варианты endpoints и версий API
+            const apiVersions = ['v2.5', 'v2.4', 'v2.3', 'v2'];
+            const endpointPaths = ['/bundles', '/catalogue', '/products', '/packages', '/available-bundles'];
+            
+            const testUrls = [];
+            
+            // Генерируем все комбинации версий и endpoints
+            for (const version of apiVersions) {
+                const baseUrl = `https://api.esim-go.com/${version}`;
+                for (const path of endpointPaths) {
+                    testUrls.push(`${baseUrl}${path}?country=TH`);
+                    testUrls.push(`${baseUrl}${path}`);
+                }
+            }
                 
                 let testUrl = testUrls[0];
                 let lastError = null;

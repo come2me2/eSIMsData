@@ -6,8 +6,9 @@
 
 const esimgoConfig = {
     apiKey: process.env.ESIMGO_API_KEY,
-    // Используем версию 2.4 или 2.5 (более новая версия API)
-    apiUrl: process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2.4',
+    // Пробуем разные версии API
+    // v2.5 - последняя версия, v2.4 - предыдущая, v2 - старая
+    apiUrl: process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2.5',
     timeout: 30000
 };
 
