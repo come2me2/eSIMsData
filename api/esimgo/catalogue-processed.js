@@ -29,12 +29,37 @@ const regionMapping = {
  */
 function processCatalogue(catalogueData) {
     // Структура ответа от /esims: { esims: [], pageCount, pageSize, rows }
-    if (!catalogueData || !catalogueData.esims) {
+    if (!catalogueData) {
+        console.warn('processCatalogue: catalogueData is null or undefined');
         return {
             countries: [],
             regions: {},
             bundles: [],
-            esims: []
+            esims: [],
+            totalCountries: 0,
+            totalESIMs: 0,
+            pagination: {}
+        };
+    }
+    
+    if (!catalogueData.esims || !Array.isArray(catalogueData.esims)) {
+        console.warn('processCatalogue: esims is not an array', {
+            hasEsims: !!catalogueData.esims,
+            type: typeof catalogueData.esims,
+            keys: Object.keys(catalogueData)
+        });
+        return {
+            countries: [],
+            regions: {},
+            bundles: [],
+            esims: [],
+            totalCountries: 0,
+            totalESIMs: 0,
+            pagination: {
+                pageCount: catalogueData.pageCount,
+                pageSize: catalogueData.pageSize,
+                rows: catalogueData.rows
+            }
         };
     }
 
@@ -42,6 +67,8 @@ function processCatalogue(catalogueData) {
     const esims = catalogueData.esims || [];
     const countriesMap = new Map();
     const regionsMap = new Map();
+    
+    console.log(`Processing ${esims.length} eSIMs`);
 
     // Обрабатываем каждый eSIM
     // Структура eSIM может содержать: iccid, country, countryCode, и т.д.
