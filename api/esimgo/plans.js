@@ -11,7 +11,20 @@
  */
 
 // Загружаем client модуль в начале файла
-const esimgoClient = require('./client');
+let esimgoClient;
+try {
+    esimgoClient = require('./client');
+    if (!esimgoClient || !esimgoClient.getCatalogue) {
+        throw new Error('Client module loaded but getCatalogue function not found');
+    }
+} catch (error) {
+    console.error('CRITICAL: Failed to load client module:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+    });
+    // Не устанавливаем esimgoClient, чтобы проверка сработала
+}
 
 /**
  * Группировка bundles в планы
@@ -118,8 +131,19 @@ module.exports = async function handler(req, res) {
         const countryCode = country ? country.toUpperCase() : null;
         
         console.log('Calling getCatalogue with:', { countryCode, options: catalogueOptions });
-        console.log('esimgoClient available:', !!esimgoClient);
-        console.log('getCatalogue function available:', typeof esimgoClient.getCatalogue === 'function');
+        
+        // Проверяем, что client загружен
+        if (!esimgoClient) {
+            const errorMsg = 'eSIM Go client module failed to load. Check server logs for details.';
+            console.error(errorMsg);
+            throw new Error(errorMsg);
+        }
+        
+        if (typeof esimgoClient.getCatalogue !== 'function') {
+            const errorMsg = 'getCatalogue function not found in client module';
+            console.error(errorMsg, { clientKeys: Object.keys(esimgoClient) });
+            throw new Error(errorMsg);
+        }
         
         let catalogue;
         try {
