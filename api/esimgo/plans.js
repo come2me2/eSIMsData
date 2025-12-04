@@ -10,13 +10,8 @@
  * Возвращает структурированные планы с реальными ценами из каталога
  */
 
-let esimgoClient;
-try {
-    esimgoClient = require('./client');
-} catch (clientError) {
-    console.error('Failed to load esimgo client:', clientError);
-    // Продолжаем, но вернем ошибку при вызове
-}
+// Загружаем client модуль в начале файла
+const esimgoClient = require('./client');
 
 /**
  * Группировка bundles в планы
@@ -123,11 +118,8 @@ module.exports = async function handler(req, res) {
         const countryCode = country ? country.toUpperCase() : null;
         
         console.log('Calling getCatalogue with:', { countryCode, options: catalogueOptions });
-        
-        // Проверяем, что client загружен
-        if (!esimgoClient) {
-            throw new Error('eSIM Go client not loaded');
-        }
+        console.log('esimgoClient available:', !!esimgoClient);
+        console.log('getCatalogue function available:', typeof esimgoClient.getCatalogue === 'function');
         
         let catalogue;
         try {
