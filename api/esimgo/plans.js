@@ -79,12 +79,32 @@ function groupBundlesIntoPlans(bundles) {
     const unlimitedMap = new Map();
     plans.unlimited.forEach(plan => {
         const key = plan.durationDays;
+        // Убеждаемся, что priceValue - это число
+        const priceValue = typeof plan.priceValue === 'number' ? plan.priceValue : parseFloat(plan.priceValue) || 0;
+        plan.priceValue = priceValue; // Обновляем значение на случай, если оно было строкой
+        
         if (!unlimitedMap.has(key)) {
             unlimitedMap.set(key, plan);
         } else {
             // Если уже есть план с такой длительностью, выбираем с минимальной ценой
+            // Учитываем валюту: сравниваем только планы с одинаковой валютой
             const existing = unlimitedMap.get(key);
-            if (plan.priceValue < existing.priceValue) {
+            const existingPrice = typeof existing.priceValue === 'number' ? existing.priceValue : parseFloat(existing.priceValue) || 0;
+            
+            // Если валюта одинаковая, выбираем минимальную цену
+            // Если валюта разная, оставляем USD или первую найденную
+            if (plan.currency === existing.currency) {
+                if (priceValue < existingPrice) {
+                    unlimitedMap.set(key, plan);
+                }
+            } else if (plan.currency === 'USD' && existing.currency !== 'USD') {
+                // Предпочитаем USD если есть выбор
+                unlimitedMap.set(key, plan);
+            } else if (existing.currency === 'USD' && plan.currency !== 'USD') {
+                // Оставляем существующий USD план
+                // Ничего не делаем
+            } else if (priceValue < existingPrice) {
+                // Если валюты разные и обе не USD, выбираем минимальную цену
                 unlimitedMap.set(key, plan);
             }
         }
@@ -93,6 +113,11 @@ function groupBundlesIntoPlans(bundles) {
     // Преобразуем Map обратно в массив и сортируем
     plans.unlimited = Array.from(unlimitedMap.values()).sort((a, b) => {
         return a.durationDays - b.durationDays;
+    });
+    
+    console.log('Unlimited plans after deduplication:', {
+        count: plans.unlimited.length,
+        plans: plans.unlimited.map(p => ({ duration: p.durationDays, price: p.priceValue, currency: p.currency }))
     });
     
     return plans;
