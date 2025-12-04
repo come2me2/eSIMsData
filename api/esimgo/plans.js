@@ -75,7 +75,23 @@ function groupBundlesIntoPlans(bundles) {
         return a.dataAmount - b.dataAmount;
     });
     
-    plans.unlimited.sort((a, b) => {
+    // Дедупликация безлимитных планов: оставляем только один вариант с минимальной ценой для каждой длительности
+    const unlimitedMap = new Map();
+    plans.unlimited.forEach(plan => {
+        const key = plan.durationDays;
+        if (!unlimitedMap.has(key)) {
+            unlimitedMap.set(key, plan);
+        } else {
+            // Если уже есть план с такой длительностью, выбираем с минимальной ценой
+            const existing = unlimitedMap.get(key);
+            if (plan.priceValue < existing.priceValue) {
+                unlimitedMap.set(key, plan);
+            }
+        }
+    });
+    
+    // Преобразуем Map обратно в массив и сортируем
+    plans.unlimited = Array.from(unlimitedMap.values()).sort((a, b) => {
         return a.durationDays - b.durationDays;
     });
     
