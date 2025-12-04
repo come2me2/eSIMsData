@@ -25,37 +25,78 @@ module.exports = async function handler(req, res) {
         // Получаем полный каталог
         const catalogue = await esimgoClient.getCatalogue(null);
         
-        if (!catalogue || !catalogue.data) {
+        console.log('Catalogue structure:', {
+            isArray: Array.isArray(catalogue),
+            hasBundles: !!catalogue?.bundles,
+            hasData: !!catalogue?.data,
+            keys: catalogue && !Array.isArray(catalogue) ? Object.keys(catalogue) : []
+        });
+        
+        // Извлекаем bundles - структура может быть разной
+        const bundles = Array.isArray(catalogue) 
+            ? catalogue 
+            : (catalogue?.bundles || catalogue?.data || []);
+        
+        if (!bundles || bundles.length === 0) {
+            console.warn('No bundles found in catalogue');
             return res.status(200).json({
                 success: true,
                 data: []
             });
         }
+        
+        console.log('Processing bundles:', { count: bundles.length });
 
         // Извлекаем уникальные страны
         const countriesMap = new Map();
         
-        catalogue.data.forEach(bundle => {
-            const countryCode = bundle.country?.toUpperCase();
-            if (!countryCode) return;
+        bundles.forEach(bundle => {
+            // Обрабатываем разные варианты: одна страна или массив стран
+            let countryCodes = [];
             
-            if (!countriesMap.has(countryCode)) {
-                countriesMap.set(countryCode, {
-                    code: countryCode,
-                    name: bundle.country_name || countryCode,
-                    bundlesCount: 0
-                });
+            // Вариант 1: массив стран в поле countries
+            if (bundle.countries && Array.isArray(bundle.countries)) {
+                countryCodes = bundle.countries.map(c => 
+                    (typeof c === 'string' ? c : c.code || c.country || c.iso)?.toUpperCase()
+                ).filter(Boolean);
+            }
+            // Вариант 2: одна страна в поле country
+            else {
+                const countryCode = (bundle.country || bundle.countryCode || bundle.iso)?.toUpperCase();
+                if (countryCode) {
+                    countryCodes = [countryCode];
+                }
             }
             
-            const country = countriesMap.get(countryCode);
-            country.bundlesCount++;
+            // Если нет кодов стран, пропускаем этот bundle
+            if (countryCodes.length === 0) {
+                return;
+            }
+            
+            // Получаем название страны из разных возможных полей
+            const countryName = bundle.country_name || bundle.countryName || bundle.name;
+            
+            // Добавляем каждую страну в карту
+            countryCodes.forEach(countryCode => {
+                if (!countriesMap.has(countryCode)) {
+                    countriesMap.set(countryCode, {
+                        code: countryCode,
+                        name: countryName || countryCode, // Используем название из bundle или код
+                        bundlesCount: 0
+                    });
+                }
+                
+                const country = countriesMap.get(countryCode);
+                country.bundlesCount++;
+            });
         });
         
         const countries = Array.from(countriesMap.values())
             .sort((a, b) => a.name.localeCompare(b.name));
         
         console.log('Countries fetched:', {
-            total: countries.length
+            total: countries.length,
+            sample: countries.slice(0, 5).map(c => ({ code: c.code, name: c.name }))
         });
         
         return res.status(200).json({
