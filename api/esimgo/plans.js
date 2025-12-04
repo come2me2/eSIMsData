@@ -10,7 +10,13 @@
  * Возвращает структурированные планы с реальными ценами из каталога
  */
 
-const esimgoClient = require('./client');
+let esimgoClient;
+try {
+    esimgoClient = require('./client');
+} catch (clientError) {
+    console.error('Failed to load esimgo client:', clientError);
+    // Продолжаем, но вернем ошибку при вызове
+}
 
 /**
  * Группировка bundles в планы
@@ -82,6 +88,20 @@ module.exports = async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
     
+    // Проверяем наличие API ключа сразу
+    if (!process.env.ESIMGO_API_KEY) {
+        console.error('ESIMGO_API_KEY not found in environment variables');
+        return res.status(500).json({
+            success: false,
+            error: 'ESIMGO_API_KEY not configured',
+            data: {
+                standard: [],
+                unlimited: [],
+                total: 0
+            }
+        });
+    }
+    
     try {
         const { country, region, perPage = 1000 } = req.query;
         
@@ -104,6 +124,11 @@ module.exports = async function handler(req, res) {
         
         console.log('Calling getCatalogue with:', { countryCode, options: catalogueOptions });
         
+        // Проверяем, что client загружен
+        if (!esimgoClient) {
+            throw new Error('eSIM Go client not loaded');
+        }
+        
         let catalogue;
         try {
             catalogue = await esimgoClient.getCatalogue(countryCode, catalogueOptions);
@@ -113,7 +138,11 @@ module.exports = async function handler(req, res) {
                 bundlesCount: Array.isArray(catalogue) ? catalogue.length : (catalogue?.bundles?.length || 0)
             });
         } catch (catalogueError) {
-            console.error('Error getting catalogue:', catalogueError);
+            console.error('Error getting catalogue:', {
+                message: catalogueError.message,
+                stack: catalogueError.stack,
+                name: catalogueError.name
+            });
             throw new Error(`Failed to get catalogue: ${catalogueError.message}`);
         }
         
