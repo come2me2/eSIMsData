@@ -52,6 +52,13 @@ async function loadPlansFromAPI(countryCode) {
         const response = await fetch(apiUrl);
         console.log('🔵 Response status:', response.status, response.statusText);
         
+        // Если ошибка, читаем текст для отладки
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ API Error Response:', errorText);
+            throw new Error(`API returned ${response.status}: ${errorText.substring(0, 100)}`);
+        }
+        
         const result = await response.json();
         console.log('🔵 API response:', result);
         

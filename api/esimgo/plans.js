@@ -86,6 +86,7 @@ module.exports = async function handler(req, res) {
         const { country, region, perPage = 1000 } = req.query;
         
         console.log('Plans API request:', { country, region, perPage });
+        console.log('ESIMGO_API_KEY exists:', !!process.env.ESIMGO_API_KEY);
         
         // Получаем каталог
         const catalogueOptions = {
@@ -100,7 +101,21 @@ module.exports = async function handler(req, res) {
         // countryCode - строка или null
         // options - объект с дополнительными параметрами
         const countryCode = country ? country.toUpperCase() : null;
-        const catalogue = await esimgoClient.getCatalogue(countryCode, catalogueOptions);
+        
+        console.log('Calling getCatalogue with:', { countryCode, options: catalogueOptions });
+        
+        let catalogue;
+        try {
+            catalogue = await esimgoClient.getCatalogue(countryCode, catalogueOptions);
+            console.log('Catalogue received:', {
+                isArray: Array.isArray(catalogue),
+                hasBundles: !!catalogue?.bundles,
+                bundlesCount: Array.isArray(catalogue) ? catalogue.length : (catalogue?.bundles?.length || 0)
+            });
+        } catch (catalogueError) {
+            console.error('Error getting catalogue:', catalogueError);
+            throw new Error(`Failed to get catalogue: ${catalogueError.message}`);
+        }
         
         // Извлекаем bundles
         const bundles = Array.isArray(catalogue) 
@@ -153,14 +168,15 @@ module.exports = async function handler(req, res) {
             message: error.message,
             stack: error.stack,
             country: req.query.country,
-            region: req.query.region
+            region: req.query.region,
+            name: error.name
         });
         
-        // Возвращаем пустой список планов вместо ошибки
-        // Это позволит использовать fallback на клиенте
-        return res.status(200).json({
+        // Возвращаем ошибку с деталями для отладки
+        return res.status(500).json({
             success: false,
             error: error.message || 'Failed to get plans',
+            errorType: error.name || 'UnknownError',
             data: {
                 standard: [],
                 unlimited: [],
@@ -169,7 +185,8 @@ module.exports = async function handler(req, res) {
             meta: {
                 country: req.query.country || null,
                 region: req.query.region || null,
-                error: true
+                error: true,
+                debug: process.env.NODE_ENV === 'development' ? error.stack : undefined
             }
         });
     }
