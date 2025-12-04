@@ -30,25 +30,326 @@ const orderData = {
     planType: urlParams.get('planType') || 'standard'
 };
 
-// Plans data (same as in other files)
-const standardPlans = [
-    { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
-    { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
-    { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
-    { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
-];
+// Plans data - загружаются динамически из API
+let standardPlans = [];
+let unlimitedPlans = [];
 
-const unlimitedPlans = [
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-];
+/**
+ * Загрузка реальных планов из eSIM Go API
+ */
+async function loadPlansFromAPI(countryCode) {
+    console.log('🔵 loadPlansFromAPI called with countryCode:', countryCode);
+    
+    try {
+        const params = new URLSearchParams();
+        if (countryCode) {
+            params.append('country', countryCode);
+        }
+        
+        const apiUrl = `/api/esimgo/plans?${params.toString()}`;
+        console.log('🔵 Fetching plans from:', apiUrl);
+        
+        const response = await fetch(apiUrl);
+        console.log('🔵 Response status:', response.status, response.statusText);
+        
+        const result = await response.json();
+        console.log('🔵 API response:', result);
+        
+        if (result.success && result.data) {
+            standardPlans = result.data.standard || [];
+            unlimitedPlans = result.data.unlimited || [];
+            
+            // Добавляем ID для совместимости (если нет)
+            standardPlans.forEach((plan, index) => {
+                if (!plan.id) {
+                    plan.id = `plan${index + 1}`;
+                }
+            });
+            
+            unlimitedPlans.forEach((plan, index) => {
+                if (!plan.id) {
+                    plan.id = `unlimited${index + 1}`;
+                }
+            });
+            
+            console.log('Plans loaded from API:', {
+                standard: standardPlans.length,
+                unlimited: unlimitedPlans.length,
+                country: countryCode,
+                sampleStandard: standardPlans[0] || null,
+                sampleUnlimited: unlimitedPlans[0] || null
+            });
+            
+            // Логируем первые планы для отладки
+            if (standardPlans.length > 0) {
+                console.log('First standard plan:', standardPlans[0]);
+            }
+            if (unlimitedPlans.length > 0) {
+                console.log('First unlimited plan:', unlimitedPlans[0]);
+            }
+            
+            return true;
+        } else {
+            console.warn('❌ Failed to load plans from API - result.success is false or no data');
+            console.warn('Result:', result);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error loading plans from API:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
+        // Fallback к захардкоженным планам
+        standardPlans = [
+            { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
+            { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
+            { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
+            { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
+        ];
+        
+        unlimitedPlans = [
+            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
+            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
+            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
+            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
+        ];
+        console.warn('⚠️ Using fallback plans (hardcoded)');
+        return false;
+    }
+}
 
 // Store original price and discount state
 let originalPrice = '';
 let isPromoApplied = false;
 let discountPercent = 0;
+
+/**
+ * Поиск bundle name по параметрам
+ */
+async function findBundleName(countryCode, dataAmount, duration, unlimited = false) {
+    try {
+        const params = new URLSearchParams({
+            country: countryCode,
+            dataAmount: dataAmount.toString(),
+            duration: duration.toString(),
+            unlimited: unlimited.toString()
+        });
+        
+        const response = await fetch(`/api/esimgo/find-bundle?${params.toString()}`);
+        const data = await response.json();
+        
+        if (!data.success || !data.data?.bundleName) {
+            throw new Error(data.error || 'Bundle not found');
+        }
+        
+        return data.data.bundleName;
+    } catch (error) {
+        console.error('Error finding bundle:', error);
+        throw error;
+    }
+}
+
+/**
+ * Обработка покупки
+ */
+async function processPurchase(orderWithUser, auth, tg) {
+    const purchaseBtn = document.getElementById('purchaseBtn');
+    const originalText = purchaseBtn.textContent;
+    
+    try {
+        purchaseBtn.textContent = 'Processing...';
+        purchaseBtn.disabled = true;
+        
+        if (tg) {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+        
+        // Определяем параметры плана
+        const selectedPlan = orderWithUser.planType === 'unlimited' 
+            ? unlimitedPlans.find(p => p.id === orderWithUser.planId || p.bundle_name === orderWithUser.planId)
+            : standardPlans.find(p => p.id === orderWithUser.planId || p.bundle_name === orderWithUser.planId);
+        
+        if (!selectedPlan) {
+            throw new Error('Plan not found');
+        }
+        
+        // Если у плана есть bundle_name (из API), используем его напрямую
+        let bundleName;
+        if (selectedPlan.bundle_name) {
+            bundleName = selectedPlan.bundle_name;
+            console.log('Using bundle_name from plan:', bundleName);
+        } else {
+            // Fallback: парсим данные и ищем bundle
+            const dataMatch = selectedPlan.data.match(/(\d+)/);
+            const durationMatch = selectedPlan.duration.match(/(\d+)/);
+            
+            if (!dataMatch || !durationMatch) {
+                throw new Error('Invalid plan format');
+            }
+            
+            const dataAmountMB = parseInt(dataMatch[1]) * 1000; // GB to MB
+            const durationDays = parseInt(durationMatch[1]);
+            const isUnlimited = orderWithUser.planType === 'unlimited';
+            
+            // Ищем bundle name
+            purchaseBtn.textContent = 'Finding bundle...';
+            bundleName = await findBundleName(
+                orderWithUser.code,
+                dataAmountMB,
+                durationDays,
+                isUnlimited
+            );
+            console.log('Found bundle:', bundleName);
+        }
+        
+        // Проверяем режим тестирования (можно установить через localStorage или URL параметр)
+        const urlParams = new URLSearchParams(window.location.search);
+        const testMode = urlParams.get('test') === 'true' || 
+                        localStorage.getItem('esimgo_test_mode') === 'true' ||
+                        false; // По умолчанию false (реальный заказ)
+        
+        if (testMode) {
+            console.warn('⚠️ TEST MODE: Order will be validated but not created');
+        }
+        
+        // Создаем заказ
+        purchaseBtn.textContent = testMode ? 'Validating order...' : 'Creating order...';
+        const orderResponse = await fetch('/api/esimgo/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bundle_name: bundleName,
+                telegram_user_id: orderWithUser.telegram_user_id,
+                telegram_username: orderWithUser.telegram_username,
+                user_name: orderWithUser.user_name,
+                country_code: orderWithUser.code,
+                country_name: orderWithUser.name,
+                plan_id: orderWithUser.planId,
+                plan_type: orderWithUser.planType,
+                test_mode: testMode // Передаем режим тестирования
+            })
+        });
+        
+        const orderResult = await orderResponse.json();
+        
+        if (!orderResult.success) {
+            throw new Error(orderResult.error || 'Failed to create order');
+        }
+        
+        // Проверяем режим тестирования
+        if (orderResult.test_mode) {
+            console.log('✅ Order validated (TEST MODE):', orderResult.data);
+            
+            // В тестовом режиме показываем информацию о валидации
+            if (tg) {
+                tg.showAlert(
+                    `✅ Validation successful!\n\n` +
+                    `Price: ${orderResult.data.currency} ${orderResult.data.total}\n` +
+                    `Bundle: ${bundleName}\n\n` +
+                    `This was a test. No real order was created.\n` +
+                    `Remove ?test=true from URL to create real orders.`
+                );
+            } else {
+                alert(
+                    `✅ Validation successful!\n\n` +
+                    `Price: ${orderResult.data.currency} ${orderResult.data.total}\n` +
+                    `Bundle: ${bundleName}\n\n` +
+                    `This was a test. No real order was created.`
+                );
+            }
+            
+            purchaseBtn.textContent = originalText;
+            purchaseBtn.disabled = false;
+            return; // Не продолжаем с получением QR кода в тестовом режиме
+        }
+        
+        console.log('Order created:', orderResult.data);
+        
+        // Если есть assignments (QR код), показываем их
+        if (orderResult.data.assignments) {
+            showOrderSuccess(orderResult.data, tg);
+        } else if (orderResult.data.orderReference) {
+            // Если assignments не получены сразу, получаем их отдельно
+            purchaseBtn.textContent = 'Getting QR code...';
+            await getAndShowAssignments(orderResult.data.orderReference, tg);
+        } else {
+            throw new Error('Order created but no eSIM data received');
+        }
+        
+        if (tg) {
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+        
+    } catch (error) {
+        console.error('Purchase failed:', error);
+        
+        purchaseBtn.textContent = originalText;
+        purchaseBtn.disabled = false;
+        
+        if (tg) {
+            tg.HapticFeedback.notificationOccurred('error');
+            tg.showAlert('Purchase failed: ' + error.message);
+        } else {
+            alert('Purchase failed: ' + error.message);
+        }
+    }
+}
+
+/**
+ * Получить и показать assignments (QR код)
+ */
+async function getAndShowAssignments(orderReference, tg) {
+    try {
+        const response = await fetch(`/api/esimgo/assignments?reference=${orderReference}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to get assignments');
+        }
+        
+        showOrderSuccess({ assignments: data.data, orderReference }, tg);
+    } catch (error) {
+        console.error('Failed to get assignments:', error);
+        throw error;
+    }
+}
+
+/**
+ * Показать успешный заказ с QR кодом
+ */
+function showOrderSuccess(orderData, tg) {
+    // TODO: Создать страницу или модальное окно для показа QR кода
+    // Пока просто перенаправляем на страницу успеха
+    const assignments = orderData.assignments;
+    
+    if (assignments && assignments.iccid) {
+        // Сохраняем в localStorage для отображения в my-esims
+        const orderInfo = {
+            iccid: assignments.iccid,
+            matchingId: assignments.matchingId,
+            smdpAddress: assignments.smdpAddress,
+            orderReference: orderData.orderReference,
+            createdAt: new Date().toISOString()
+        };
+        
+        // Получаем существующие заказы
+        const existingOrders = JSON.parse(localStorage.getItem('esim_orders') || '[]');
+        existingOrders.push(orderInfo);
+        localStorage.setItem('esim_orders', JSON.stringify(existingOrders));
+        
+        // Перенаправляем на страницу успеха или my-esims
+        if (tg) {
+            tg.showAlert('Order successful! Check "My eSIMs" for QR code.');
+            setTimeout(() => {
+                window.location.href = 'my-esims.html';
+            }, 2000);
+        } else {
+            alert('Order successful! Check "My eSIMs" for QR code.');
+            window.location.href = 'my-esims.html';
+        }
+    }
+}
 
 // Region icon file mapping
 const regionIconMap = {
@@ -76,7 +377,7 @@ function getFlagPath(countryCode) {
 }
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Telegram Auth - проверка авторизации перед оформлением заказа
     const auth = window.telegramAuth;
     if (auth && auth.isAuthenticated()) {
@@ -88,9 +389,27 @@ document.addEventListener('DOMContentLoaded', () => {
         // Можно показать предупреждение или перенаправить
     }
     
+    // Загружаем реальные планы из API
+    console.log('🔵 DOMContentLoaded - orderData:', orderData);
+    const countryCode = orderData?.code || null;
+    console.log('🔵 Loading plans for country:', countryCode);
+    
+    const plansLoaded = await loadPlansFromAPI(countryCode);
+    
+    console.log('🔵 Plans loaded status:', plansLoaded, {
+        standardCount: standardPlans.length,
+        unlimitedCount: unlimitedPlans.length,
+        firstPlan: standardPlans[0] || unlimitedPlans[0]
+    });
+    
     setupOrderDetails();
     setupPromoCode();
     setupPurchaseButton();
+    
+    // Если планы загрузились, обновляем отображение
+    if (plansLoaded && (standardPlans.length > 0 || unlimitedPlans.length > 0)) {
+        updateOrderDetailsWithRealPlans();
+    }
 });
 
 // Setup order details
@@ -127,18 +446,78 @@ function setupOrderDetails() {
     
     // Setup plan details
     const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
+    
+    // Если планы еще не загружены, используем fallback
+    if (plans.length === 0) {
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">Loading...</span>
+            <span class="checkout-plan-duration">Loading...</span>
+        `;
+        originalPrice = '$ 9.99';
+        return; // Выходим, updateOrderDetailsWithRealPlans обновит позже
+    }
+    
     const selectedPlan = plans.find(p => p.id === orderData.planId) || plans[0];
     
-    planDetailsElement.innerHTML = `
-        <span class="checkout-plan-amount">${selectedPlan.data}</span>
-        <span class="checkout-plan-duration">${selectedPlan.duration}</span>
-    `;
-    
-    // Store original price
-    originalPrice = selectedPlan.price;
+    if (selectedPlan) {
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">${selectedPlan.data}</span>
+            <span class="checkout-plan-duration">${selectedPlan.duration}</span>
+        `;
+        
+        // Store original price (используем реальную цену из API или fallback)
+        originalPrice = selectedPlan.price || '$ 9.99';
+        
+        console.log('Setup order details with plan:', {
+            planId: orderData.planId,
+            selectedPlan: selectedPlan,
+            price: originalPrice
+        });
+    } else {
+        // Fallback если план не найден
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">Loading...</span>
+            <span class="checkout-plan-duration">Loading...</span>
+        `;
+        originalPrice = '$ 9.99';
+    }
     
     // Update total price
     updateTotalPrice();
+}
+
+/**
+ * Обновление деталей заказа с реальными планами из API
+ */
+function updateOrderDetailsWithRealPlans() {
+    const planDetailsElement = document.getElementById('checkoutPlanDetails');
+    const totalPriceElement = document.getElementById('checkoutTotalPrice');
+    
+    if (!planDetailsElement || !totalPriceElement) {
+        return;
+    }
+    
+    // Находим выбранный план
+    const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
+    const selectedPlan = plans.find(p => p.id === orderData.planId) || plans[0];
+    
+    if (selectedPlan) {
+        // Обновляем детали плана
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">${selectedPlan.data}</span>
+            <span class="checkout-plan-duration">${selectedPlan.duration}</span>
+        `;
+        
+        // Обновляем цену
+        originalPrice = selectedPlan.price || '$ 9.99';
+        updateTotalPrice();
+        
+        console.log('Order details updated with real plan:', {
+            plan: selectedPlan.data,
+            duration: selectedPlan.duration,
+            price: selectedPlan.price
+        });
+    }
 }
 
 // Update total price display with discount if applicable
@@ -151,19 +530,16 @@ function updateTotalPrice() {
         if (priceMatch) {
             const originalPriceValue = parseFloat(priceMatch[1]);
             const discountedPrice = originalPriceValue * (1 - discountPercent / 100);
-            const newPrice = `$ ${discountedPrice.toFixed(2)}`;
-            
-            totalPriceElement.innerHTML = `
-                <span class="checkout-total-price-old">${originalPrice}</span>
-                <span class="checkout-total-price-new">${newPrice}</span>
-            `;
+            totalPriceElement.textContent = `$ ${discountedPrice.toFixed(2)}`;
+        } else {
+            totalPriceElement.textContent = originalPrice;
         }
     } else {
         totalPriceElement.textContent = originalPrice;
     }
 }
 
-// Setup promo code button
+// Setup promo code
 function setupPromoCode() {
     const promoBtn = document.getElementById('promoBtn');
     const promoInput = document.getElementById('promoInput');
@@ -295,23 +671,12 @@ function setupPurchaseButton() {
             if (tg && tg.showConfirm) {
                 tg.showConfirm('Confirm purchase?', async (confirmed) => {
                     if (confirmed) {
-                        // Отправка заказа на сервер с initData для повторной проверки
-                        try {
-                            // const result = await auth.secureRequest('/api/orders', orderWithUser);
-                            // console.log('Order created:', result);
-                            console.log('Payment confirmed for validated user:', auth.getUserId());
-                            
-                            if (tg) {
-                                tg.HapticFeedback.notificationOccurred('success');
-                            }
-                        } catch (error) {
-                            console.error('Order creation failed:', error);
-                            if (tg) {
-                                tg.showAlert('Order failed: ' + error.message);
-                            }
-                        }
+                        await processPurchase(orderWithUser, auth, tg);
                     }
                 });
+            } else {
+                // Если showConfirm недоступен, сразу обрабатываем покупку
+                await processPurchase(orderWithUser, auth, tg);
             }
             
         } catch (error) {
@@ -330,4 +695,3 @@ function setupPurchaseButton() {
         }
     });
 }
-
