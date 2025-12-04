@@ -66,13 +66,54 @@ function groupBundlesIntoPlans(bundles) {
         }
     });
     
-    // Сортируем планы
-    plans.standard.sort((a, b) => {
+    // Дедупликация стандартных планов: оставляем только один вариант с минимальной ценой для каждой комбинации длительности и объема данных
+    const standardMap = new Map();
+    plans.standard.forEach(plan => {
+        // Убеждаемся, что priceValue - это число
+        const priceValue = typeof plan.priceValue === 'number' ? plan.priceValue : parseFloat(plan.priceValue) || 0;
+        plan.priceValue = priceValue; // Обновляем значение на случай, если оно было строкой
+        
+        // Ключ: комбинация длительности и объема данных
+        const key = `${plan.durationDays}_${plan.dataAmount}`;
+        
+        if (!standardMap.has(key)) {
+            standardMap.set(key, plan);
+        } else {
+            // Если уже есть план с такой комбинацией, выбираем с минимальной ценой
+            const existing = standardMap.get(key);
+            const existingPrice = typeof existing.priceValue === 'number' ? existing.priceValue : parseFloat(existing.priceValue) || 0;
+            
+            // Если валюта одинаковая, выбираем минимальную цену
+            // Если валюта разная, оставляем USD или первую найденную
+            if (plan.currency === existing.currency) {
+                if (priceValue < existingPrice) {
+                    standardMap.set(key, plan);
+                }
+            } else if (plan.currency === 'USD' && existing.currency !== 'USD') {
+                // Предпочитаем USD если есть выбор
+                standardMap.set(key, plan);
+            } else if (existing.currency === 'USD' && plan.currency !== 'USD') {
+                // Оставляем существующий USD план
+                // Ничего не делаем
+            } else if (priceValue < existingPrice) {
+                // Если валюты разные и обе не USD, выбираем минимальную цену
+                standardMap.set(key, plan);
+            }
+        }
+    });
+    
+    // Преобразуем Map обратно в массив и сортируем
+    plans.standard = Array.from(standardMap.values()).sort((a, b) => {
         // Сначала по длительности, потом по объему данных
         if (a.durationDays !== b.durationDays) {
             return a.durationDays - b.durationDays;
         }
         return a.dataAmount - b.dataAmount;
+    });
+    
+    console.log('Standard plans after deduplication:', {
+        count: plans.standard.length,
+        plans: plans.standard.map(p => ({ duration: p.durationDays, data: p.dataAmount, price: p.priceValue, currency: p.currency }))
     });
     
     // Дедупликация безлимитных планов: оставляем только один вариант с минимальной ценой для каждой длительности
