@@ -169,28 +169,115 @@ const regionData = {
     name: urlParams.get('region') || 'Africa'
 };
 
-// Plans data
-const standardPlans = [
-    { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
-    { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
-    { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
-    { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
-];
+// Plans data - загружаются динамически из API
+let standardPlans = [];
+let unlimitedPlans = [];
 
-const unlimitedPlans = [
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-];
+// Функция загрузки планов из API
+async function loadPlansFromAPI(regionName) {
+    console.log('🔵 loadPlansFromAPI called with region:', regionName);
+    
+    try {
+        const params = new URLSearchParams();
+        if (regionName) {
+            params.append('region', regionName);
+        }
+        
+        const apiUrl = `/api/esimgo/plans?${params.toString()}`;
+        console.log('🔵 Fetching plans from:', apiUrl);
+        
+        const response = await fetch(apiUrl);
+        console.log('🔵 Response status:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ API Error Response:', errorText);
+            throw new Error(`API returned ${response.status}: ${errorText.substring(0, 100)}`);
+        }
+        
+        const result = await response.json();
+        console.log('🔵 API response:', result);
+        
+        if (result.success && result.data) {
+            standardPlans = result.data.standard || [];
+            unlimitedPlans = result.data.unlimited || [];
+            
+            // Добавляем ID для совместимости
+            standardPlans.forEach((plan, index) => {
+                if (!plan.id) {
+                    plan.id = `plan${index + 1}`;
+                }
+            });
+            
+            unlimitedPlans.forEach((plan, index) => {
+                if (!plan.id) {
+                    plan.id = `unlimited${index + 1}`;
+                }
+            });
+            
+            console.log('Plans loaded from API:', {
+                standard: standardPlans.length,
+                unlimited: unlimitedPlans.length,
+                region: regionName,
+                sampleStandard: standardPlans[0] || null,
+                sampleUnlimited: unlimitedPlans[0] || null
+            });
+            
+            if (standardPlans.length > 0) {
+                console.log('First standard plan:', standardPlans[0]);
+            }
+            if (unlimitedPlans.length > 0) {
+                console.log('First unlimited plan:', unlimitedPlans[0]);
+            }
+            
+            return true;
+        } else {
+            console.warn('❌ Failed to load plans from API - result.success is false or no data');
+            console.warn('Result:', result);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error loading plans from API:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
+        // Fallback к захардкоженным планам
+        standardPlans = [
+            { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
+            { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
+            { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
+            { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
+        ];
+        
+        unlimitedPlans = [
+            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
+            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
+            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
+            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
+        ];
+        console.warn('⚠️ Using fallback plans (hardcoded)');
+        return false;
+    }
+}
 
 let currentPlanType = 'standard';
 let selectedPlanId = 'plan2'; // Default selected for standard
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     setupRegionInfo();
     setupSegmentedControl();
+    
+    // Получаем название региона из URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const regionName = urlParams.get('region') || 'Africa';
+    
+    // Загружаем реальные планы из API для региона
+    console.log('🔵 Loading plans for region:', regionName);
+    await loadPlansFromAPI(regionName);
+    
+    // Рендерим планы после загрузки
     renderPlans();
     updateInfoBox();
     setupNextButton();
