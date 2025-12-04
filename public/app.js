@@ -236,14 +236,49 @@ function getFlagPath(countryCode) {
     return `/flags/${code}.svg?${FLAG_VERSION}`;
 }
 
-// Country data
-const countries = [
+// Country data - будет загружено из API
+let countries = [
     { name: 'Afghanistan', code: 'AF' },
     { name: 'Thailand', code: 'TH' },
     { name: 'China', code: 'CN' },
     { name: 'Spain', code: 'ES' },
     { name: 'Indonesia', code: 'ID' },
-];
+]; // Fallback список
+
+// Загрузка списка стран из API
+async function loadCountriesFromAPI() {
+    try {
+        console.log('🔄 Загрузка списка стран из API...');
+        const response = await fetch('/api/esimgo/countries');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data && Array.isArray(result.data)) {
+            // Преобразуем данные из API в нужный формат
+            countries = result.data.map(country => ({
+                name: country.name,
+                code: country.code
+            }));
+            
+            console.log(`✅ Загружено ${countries.length} стран из API`);
+            
+            // Обновляем отображение, если мы на вкладке local
+            if (currentSegment === 'local') {
+                renderCountries();
+            }
+        } else {
+            console.warn('⚠️ API вернул неожиданный формат данных, используем fallback');
+        }
+    } catch (error) {
+        console.error('❌ Ошибка при загрузке стран из API:', error);
+        console.log('📋 Используем fallback список стран');
+        // Используем fallback список, который уже определен выше
+    }
+}
 
 // Region icon file mapping
 const regionIconMap = {
@@ -312,6 +347,9 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.remove('active');
         }
     });
+    
+    // Загружаем список стран из API
+    loadCountriesFromAPI();
     
     updateContent();
     setupSegmentedControl();
