@@ -242,9 +242,25 @@ function setupSegmentedControl() {
 // Render plans list
 function renderPlans() {
     const plansList = document.getElementById('plansList');
+    if (!plansList) {
+        console.error('plansList element not found');
+        return;
+    }
+    
     plansList.innerHTML = '';
     
     const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
+    
+    console.log('Rendering plans:', {
+        type: currentPlanType,
+        count: plans.length,
+        plans: plans
+    });
+    
+    if (plans.length === 0) {
+        plansList.innerHTML = '<div class="no-plans">No plans available</div>';
+        return;
+    }
     
     plans.forEach(plan => {
         const planItem = document.createElement('div');
