@@ -85,20 +85,22 @@ module.exports = async function handler(req, res) {
     try {
         const { country, region, perPage = 1000 } = req.query;
         
+        console.log('Plans API request:', { country, region, perPage });
+        
         // Получаем каталог
         const catalogueOptions = {
             perPage: parseInt(perPage)
         };
         
-        if (country) {
-            catalogueOptions.country = country.toUpperCase();
-        }
-        
         if (region) {
             catalogueOptions.region = region;
         }
         
-        const catalogue = await esimgoClient.getCatalogue(catalogueOptions.country || null, catalogueOptions);
+        // getCatalogue принимает (countryCode, options)
+        // countryCode - строка или null
+        // options - объект с дополнительными параметрами
+        const countryCode = country ? country.toUpperCase() : null;
+        const catalogue = await esimgoClient.getCatalogue(countryCode, catalogueOptions);
         
         // Извлекаем bundles
         const bundles = Array.isArray(catalogue) 
@@ -147,12 +149,28 @@ module.exports = async function handler(req, res) {
         });
         
     } catch (error) {
-        console.error('Plans API error:', error);
+        console.error('Plans API error:', {
+            message: error.message,
+            stack: error.stack,
+            country: req.query.country,
+            region: req.query.region
+        });
         
-        return res.status(500).json({
+        // Возвращаем пустой список планов вместо ошибки
+        // Это позволит использовать fallback на клиенте
+        return res.status(200).json({
             success: false,
             error: error.message || 'Failed to get plans',
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            data: {
+                standard: [],
+                unlimited: [],
+                total: 0
+            },
+            meta: {
+                country: req.query.country || null,
+                region: req.query.region || null,
+                error: true
+            }
         });
     }
 };
