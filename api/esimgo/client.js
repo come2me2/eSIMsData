@@ -299,6 +299,25 @@ async function createESIM(esimData = {}) {
     });
 }
 
+/**
+ * Получить детали установки eSIM (QR код, SMDP+ адрес)
+ * @param {string} reference - Order Reference или Apply Reference
+ * @param {string} additionalFields - Дополнительные поля (например: "appleInstallUrl")
+ * @returns {Promise<Object>} Детали установки eSIM
+ * Документация: https://docs.esim-go.com/api/v2_4/#tag/eSIMs
+ */
+async function getESIMAssignments(reference, additionalFields = null) {
+    const params = new URLSearchParams();
+    params.append('reference', reference);
+    
+    if (additionalFields) {
+        params.append('additionalFields', additionalFields);
+    }
+    
+    const endpoint = `/esims/assignments?${params.toString()}`;
+    return makeRequest(endpoint);
+}
+
 module.exports = {
     getCatalogue,
     getESIMs,
