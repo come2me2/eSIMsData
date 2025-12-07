@@ -166,8 +166,20 @@ module.exports = async function handler(req, res) {
             
             // Добавляем каждую страну в карту
             countryCodes.forEach(countryCode => {
+                // Фильтруем: оставляем только валидные ISO коды стран (2 буквы) из нашего маппинга
+                // Исключаем регионы и невалидные коды
+                if (!countryCode || countryCode.length !== 2) {
+                    return; // Пропускаем коды, которые не являются 2-буквенными ISO кодами
+                }
+                
+                // Проверяем, что код есть в нашем маппинге (валидная страна)
+                if (!isoToCountryName[countryCode]) {
+                    console.log(`Skipping invalid country code: ${countryCode}`);
+                    return; // Пропускаем коды, которых нет в маппинге (регионы и т.д.)
+                }
+                
                 // Получаем название страны из маппинга по ISO коду
-                const countryName = isoToCountryName[countryCode] || countryCode;
+                const countryName = isoToCountryName[countryCode];
                 
                 if (!countriesMap.has(countryCode)) {
                     countriesMap.set(countryCode, {
