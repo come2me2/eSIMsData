@@ -77,20 +77,56 @@ module.exports = async function handler(req, res) {
     }
     
     try {
-        // Получаем полный каталог
-        const catalogue = await esimgoClient.getCatalogue(null);
+        // Получаем полный каталог с максимальным количеством результатов
+        // Используем большой perPage, чтобы получить все страны
+        // Если API поддерживает пагинацию, делаем несколько запросов
+        let allBundles = [];
+        let page = 1;
+        const perPage = 1000;
+        let hasMore = true;
         
-        console.log('Catalogue structure:', {
-            isArray: Array.isArray(catalogue),
-            hasBundles: !!catalogue?.bundles,
-            hasData: !!catalogue?.data,
-            keys: catalogue && !Array.isArray(catalogue) ? Object.keys(catalogue) : []
-        });
+        while (hasMore) {
+            const catalogue = await esimgoClient.getCatalogue(null, { 
+                perPage: perPage,
+                page: page
+            });
+            
+            console.log(`Fetching catalogue page ${page}:`, {
+                isArray: Array.isArray(catalogue),
+                hasBundles: !!catalogue?.bundles,
+                hasData: !!catalogue?.data,
+                keys: catalogue && !Array.isArray(catalogue) ? Object.keys(catalogue) : []
+            });
+            
+            // Извлекаем bundles - структура может быть разной
+            const bundles = Array.isArray(catalogue) 
+                ? catalogue 
+                : (catalogue?.bundles || catalogue?.data || []);
+            
+            if (bundles && bundles.length > 0) {
+                allBundles = allBundles.concat(bundles);
+                
+                // Проверяем, есть ли еще страницы
+                // Если количество bundles меньше perPage, значит это последняя страница
+                if (bundles.length < perPage) {
+                    hasMore = false;
+                } else {
+                    page++;
+                }
+            } else {
+                hasMore = false;
+            }
+            
+            // Защита от бесконечного цикла
+            if (page > 100) {
+                console.warn('Reached maximum page limit (100), stopping pagination');
+                hasMore = false;
+            }
+        }
         
-        // Извлекаем bundles - структура может быть разной
-        const bundles = Array.isArray(catalogue) 
-            ? catalogue 
-            : (catalogue?.bundles || catalogue?.data || []);
+        console.log('Total bundles fetched:', allBundles.length);
+        
+        const bundles = allBundles;
         
         if (!bundles || bundles.length === 0) {
             console.warn('No bundles found in catalogue');
@@ -147,11 +183,14 @@ module.exports = async function handler(req, res) {
         });
         
         const countries = Array.from(countriesMap.values())
-            .sort((a, b) => a.name.localeCompare(b.name));
+            .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
         
         console.log('Countries fetched:', {
             total: countries.length,
-            sample: countries.slice(0, 5).map(c => ({ code: c.code, name: c.name }))
+            first: countries[0] ? { code: countries[0].code, name: countries[0].name } : null,
+            last: countries[countries.length - 1] ? { code: countries[countries.length - 1].code, name: countries[countries.length - 1].name } : null,
+            sample: countries.slice(0, 5).map(c => ({ code: c.code, name: c.name })),
+            sampleEnd: countries.slice(-5).map(c => ({ code: c.code, name: c.name }))
         });
         
         return res.status(200).json({
