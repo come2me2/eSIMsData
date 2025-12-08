@@ -336,6 +336,11 @@ module.exports = async function handler(req, res) {
             ? catalogue 
             : (catalogue?.bundles || catalogue?.data || []);
         
+        console.log('Bundles extracted from catalogue:', {
+            total: bundles.length,
+            category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all'))
+        });
+        
         // Логируем структуру первого bundle для отладки
         if (bundles.length > 0) {
             const sampleCountry = bundles[0].countries?.[0];
@@ -353,6 +358,25 @@ module.exports = async function handler(req, res) {
                 unlimited: bundles[0].unlimited,
                 bundleKeys: Object.keys(bundles[0])
             });
+            
+            // Для Global логируем примеры bundles с разным количеством стран
+            if (isGlobal) {
+                const bundlesByCountryCount = {};
+                bundles.forEach(b => {
+                    const count = b.countries?.length || 0;
+                    if (!bundlesByCountryCount[count]) {
+                        bundlesByCountryCount[count] = [];
+                    }
+                    if (bundlesByCountryCount[count].length < 2) {
+                        bundlesByCountryCount[count].push({
+                            name: b.name,
+                            countriesCount: count,
+                            firstCountry: b.countries?.[0]
+                        });
+                    }
+                });
+                console.log('Bundles by country count (for Global):', bundlesByCountryCount);
+            }
         }
         
         // Фильтруем bundles по категории
