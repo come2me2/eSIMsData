@@ -53,8 +53,11 @@ function getFlagPath(countryCode) {
     };
     
     // Если есть специальный файл, используем его
+    // Кодируем пробелы и специальные символы в URL
     if (specialFlagFiles[code]) {
-        return `/flags/${specialFlagFiles[code]}`;
+        const fileName = specialFlagFiles[code];
+        const encodedFileName = encodeURIComponent(fileName);
+        return `/flags/${encodedFileName}`;
     }
     
     return `/flags/${code}.svg`;

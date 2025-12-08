@@ -363,7 +363,7 @@ const regionIconMap = {
 };
 
 // Version for cache busting - increment when flags are updated
-const FLAG_VERSION = 'v5'; // Updated: added missing flags and fixed special files
+const FLAG_VERSION = 'v6'; // Updated: fixed URL encoding for files with spaces
 
 // Function to get flag image URL from local flags folder
 function getFlagPath(countryCode) {
@@ -380,8 +380,11 @@ function getFlagPath(countryCode) {
     };
     
     // Если есть специальный файл, используем его
+    // Кодируем пробелы и специальные символы в URL
     if (specialFlagFiles[code]) {
-        return `/flags/${specialFlagFiles[code]}?${FLAG_VERSION}`;
+        const fileName = specialFlagFiles[code];
+        const encodedFileName = encodeURIComponent(fileName);
+        return `/flags/${encodedFileName}?${FLAG_VERSION}`;
     }
     
     return `/flags/${code}.svg?${FLAG_VERSION}`;
