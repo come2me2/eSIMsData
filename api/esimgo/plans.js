@@ -359,9 +359,10 @@ module.exports = async function handler(req, res) {
                 bundleKeys: Object.keys(bundles[0])
             });
             
-            // Для Global логируем примеры bundles с разным количеством стран
+            // Для Global логируем примеры bundles с разным количеством стран и проверяем groups
             if (isGlobal) {
                 const bundlesByCountryCount = {};
+                const bundlesWithGroups = [];
                 bundles.forEach(b => {
                     const count = b.countries?.length || 0;
                     if (!bundlesByCountryCount[count]) {
@@ -374,8 +375,34 @@ module.exports = async function handler(req, res) {
                             firstCountry: b.countries?.[0]
                         });
                     }
+                    // Проверяем groups для Global
+                    if (b.groups && Array.isArray(b.groups) && b.groups.length > 0) {
+                        if (bundlesWithGroups.length < 5) {
+                            bundlesWithGroups.push({
+                                name: b.name,
+                                groups: b.groups,
+                                description: b.description
+                            });
+                        }
+                    }
                 });
                 console.log('Bundles by country count (for Global):', bundlesByCountryCount);
+                console.log('Sample bundles with groups:', bundlesWithGroups);
+                
+                // Проверяем, есть ли bundles с "global" в названии или описании
+                const globalNamedBundles = bundles.filter(b => {
+                    const name = (b.name || '').toLowerCase();
+                    const desc = (b.description || '').toLowerCase();
+                    return name.includes('global') || desc.includes('global');
+                });
+                console.log('Bundles with "global" in name/description:', globalNamedBundles.length);
+                if (globalNamedBundles.length > 0) {
+                    console.log('Sample global-named bundles:', globalNamedBundles.slice(0, 3).map(b => ({
+                        name: b.name,
+                        description: b.description,
+                        groups: b.groups
+                    })));
+                }
             }
         }
         
@@ -404,19 +431,29 @@ module.exports = async function handler(req, res) {
                 return false;
             });
         } else if (isGlobal) {
-            // Global: bundles с множеством стран (countries.length > 1) или без конкретной страны
+            // Global: bundles определяются по названию, описанию или группам, а не по количеству стран
+            // Согласно требованиям: Global = bundles где country column = "Global" в Excel
+            // В API это может быть: название содержит "global", описание содержит "global", 
+            // или специальная группа
             const bundlesBeforeFilter = bundles.length;
             bundles = bundles.filter(bundle => {
-                const countries = bundle.countries || [];
-                const bundleCountry = bundle.country || bundle.countryCode || bundle.iso;
+                const name = (bundle.name || '').toLowerCase();
+                const desc = (bundle.description || '').toLowerCase();
+                const groups = bundle.groups || [];
                 
-                // Global = множество стран (больше 1) или специальный признак Global в названии
-                const hasMultipleCountries = countries.length > 1;
-                const hasGlobalInName = bundle.name?.toLowerCase().includes('global');
+                // Проверяем различные признаки Global bundle
+                const hasGlobalInName = name.includes('global');
+                const hasGlobalInDesc = desc.includes('global');
+                const hasGlobalGroup = Array.isArray(groups) && groups.some(g => 
+                    String(g).toLowerCase().includes('global')
+                );
                 
-                // Если countries - массив объектов, проверяем количество
-                // Если countries - массив строк, проверяем количество
-                const isGlobalBundle = hasMultipleCountries || hasGlobalInName;
+                // Также проверяем, может быть в названии есть паттерны типа "RGBS" (Global bundles)
+                // или другие индикаторы многострановых bundles
+                const hasGlobalPattern = name.includes('rgbs') || name.includes('rgb') || 
+                                         name.includes('world') || name.includes('worldwide');
+                
+                const isGlobalBundle = hasGlobalInName || hasGlobalInDesc || hasGlobalGroup || hasGlobalPattern;
                 
                 return isGlobalBundle;
             });
@@ -425,10 +462,11 @@ module.exports = async function handler(req, res) {
                 beforeFilter: bundlesBeforeFilter,
                 afterFilter: bundles.length,
                 filteredOut: bundlesBeforeFilter - bundles.length,
-                sampleFiltered: bundles.slice(0, 3).map(b => ({
+                sampleFiltered: bundles.slice(0, 5).map(b => ({
                     name: b.name,
-                    countriesCount: b.countries?.length || 0,
-                    firstCountry: b.countries?.[0]
+                    description: b.description?.substring(0, 50),
+                    groups: b.groups,
+                    countriesCount: b.countries?.length || 0
                 }))
             });
         }
