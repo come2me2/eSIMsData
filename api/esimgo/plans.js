@@ -291,50 +291,158 @@ module.exports = async function handler(req, res) {
             catalogueOptions.region = region;
         }
         
+        // Для Global запрашиваем bundles из двух групп: "Standard Fixed" и "Standard Unlimited Essential"
         // Для Local запрашиваем конкретную страну
-        // Для Global запрашиваем все (без country)
-        const requestCountryCode = isLocal ? countryCode : null;
+        // Для Region используем параметр region
+        let bundles = [];
         
-        console.log('Calling getCatalogue with:', { 
-            countryCode: requestCountryCode, 
-            options: catalogueOptions,
-            category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all'))
-        });
-        
-        // Проверяем, что client загружен
-        if (!esimgoClient) {
-            const errorMsg = 'eSIM Go client module failed to load. Check server logs for details.';
-            console.error(errorMsg);
-            throw new Error(errorMsg);
-        }
-        
-        if (typeof esimgoClient.getCatalogue !== 'function') {
-            const errorMsg = 'getCatalogue function not found in client module';
-            console.error(errorMsg, { clientKeys: Object.keys(esimgoClient) });
-            throw new Error(errorMsg);
-        }
-        
-        let catalogue;
-        try {
-            catalogue = await esimgoClient.getCatalogue(requestCountryCode, catalogueOptions);
-            console.log('Catalogue received:', {
-                isArray: Array.isArray(catalogue),
-                hasBundles: !!catalogue?.bundles,
-                bundlesCount: Array.isArray(catalogue) ? catalogue.length : (catalogue?.bundles?.length || 0)
+        if (isGlobal) {
+            // Global: запрашиваем из двух групп отдельно
+            console.log('Fetching Global bundles from groups: Standard Fixed and Standard Unlimited Essential');
+            
+            // Проверяем, что client загружен
+            if (!esimgoClient) {
+                const errorMsg = 'eSIM Go client module failed to load. Check server logs for details.';
+                console.error(errorMsg);
+                throw new Error(errorMsg);
+            }
+            
+            if (typeof esimgoClient.getCatalogue !== 'function') {
+                const errorMsg = 'getCatalogue function not found in client module';
+                console.error(errorMsg, { clientKeys: Object.keys(esimgoClient) });
+                throw new Error(errorMsg);
+            }
+            
+            // Запрос 1: Standard Fixed (fixed трафик)
+            try {
+                const fixedOptions = {
+                    ...catalogueOptions,
+                    group: 'Standard Fixed'
+                };
+                console.log('Fetching Standard Fixed bundles for Global...');
+                const fixedCatalogue = await esimgoClient.getCatalogue(null, fixedOptions);
+                const fixedBundles = Array.isArray(fixedCatalogue) 
+                    ? fixedCatalogue 
+                    : (fixedCatalogue?.bundles || fixedCatalogue?.data || []);
+                console.log('Standard Fixed bundles received:', fixedBundles.length);
+                
+                // Фильтруем по country = "Global"
+                const globalFixedBundles = fixedBundles.filter(bundle => {
+                    return isGlobalBundle(bundle);
+                });
+                console.log('Global Fixed bundles after filter:', globalFixedBundles.length);
+                bundles = bundles.concat(globalFixedBundles);
+            } catch (error) {
+                console.error('Error fetching Standard Fixed bundles:', error.message);
+            }
+            
+            // Запрос 2: Standard Unlimited Essential (unlimited трафик)
+            try {
+                const unlimitedOptions = {
+                    ...catalogueOptions,
+                    group: 'Standard Unlimited Essential'
+                };
+                console.log('Fetching Standard Unlimited Essential bundles for Global...');
+                const unlimitedCatalogue = await esimgoClient.getCatalogue(null, unlimitedOptions);
+                const unlimitedBundles = Array.isArray(unlimitedCatalogue) 
+                    ? unlimitedCatalogue 
+                    : (unlimitedCatalogue?.bundles || unlimitedCatalogue?.data || []);
+                console.log('Standard Unlimited Essential bundles received:', unlimitedBundles.length);
+                
+                // Фильтруем по country = "Global"
+                const globalUnlimitedBundles = unlimitedBundles.filter(bundle => {
+                    return isGlobalBundle(bundle);
+                });
+                console.log('Global Unlimited bundles after filter:', globalUnlimitedBundles.length);
+                bundles = bundles.concat(globalUnlimitedBundles);
+            } catch (error) {
+                console.error('Error fetching Standard Unlimited Essential bundles:', error.message);
+            }
+            
+            console.log('Total Global bundles:', bundles.length);
+        } else {
+            // Local или Region: обычный запрос
+            const requestCountryCode = isLocal ? countryCode : null;
+            
+            console.log('Calling getCatalogue with:', { 
+                countryCode: requestCountryCode, 
+                options: catalogueOptions,
+                category: isLocal ? 'local' : (region ? 'region' : 'all')
             });
-        } catch (catalogueError) {
-            console.error('Error getting catalogue:', {
-                message: catalogueError.message,
-                stack: catalogueError.stack,
-                name: catalogueError.name
-            });
-            throw new Error(`Failed to get catalogue: ${catalogueError.message}`);
+            
+            // Проверяем, что client загружен
+            if (!esimgoClient) {
+                const errorMsg = 'eSIM Go client module failed to load. Check server logs for details.';
+                console.error(errorMsg);
+                throw new Error(errorMsg);
+            }
+            
+            if (typeof esimgoClient.getCatalogue !== 'function') {
+                const errorMsg = 'getCatalogue function not found in client module';
+                console.error(errorMsg, { clientKeys: Object.keys(esimgoClient) });
+                throw new Error(errorMsg);
+            }
+            
+            let catalogue;
+            try {
+                catalogue = await esimgoClient.getCatalogue(requestCountryCode, catalogueOptions);
+                console.log('Catalogue received:', {
+                    isArray: Array.isArray(catalogue),
+                    hasBundles: !!catalogue?.bundles,
+                    bundlesCount: Array.isArray(catalogue) ? catalogue.length : (catalogue?.bundles?.length || 0)
+                });
+            } catch (catalogueError) {
+                console.error('Error getting catalogue:', {
+                    message: catalogueError.message,
+                    stack: catalogueError.stack,
+                    name: catalogueError.name
+                });
+                throw new Error(`Failed to get catalogue: ${catalogueError.message}`);
+            }
+            
+            // Извлекаем bundles
+            bundles = Array.isArray(catalogue) 
+                ? catalogue 
+                : (catalogue?.bundles || catalogue?.data || []);
         }
         
-        // Извлекаем bundles
-        let bundles = Array.isArray(catalogue) 
-            ? catalogue 
-            : (catalogue?.bundles || catalogue?.data || []);
+        // Функция для проверки, является ли bundle Global
+        function isGlobalBundle(bundle) {
+            const countries = bundle.countries || [];
+            const name = (bundle.name || '').toLowerCase();
+            const desc = (bundle.description || '').toLowerCase();
+            
+            // Проверяем, есть ли "Global" в названии или описании
+            if (name.includes('global') || desc.includes('global')) {
+                return true;
+            }
+            
+            // Проверяем countries - возможно, есть специальное значение "Global"
+            if (countries.length > 0) {
+                // Если countries - массив объектов, проверяем name или iso
+                const hasGlobalCountry = countries.some(country => {
+                    if (typeof country === 'string') {
+                        return country.toUpperCase() === 'GLOBAL';
+                    } else if (typeof country === 'object' && country !== null) {
+                        const countryName = (country.name || '').toLowerCase();
+                        const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
+                        return countryName === 'global' || countryIso === 'GLOBAL';
+                    }
+                    return false;
+                });
+                if (hasGlobalCountry) {
+                    return true;
+                }
+            }
+            
+            // Проверяем паттерны в названии (RGBS, RGB - Global bundles)
+            if (name.includes('rgbs') || name.includes('rgb') || 
+                name.includes('world') || name.includes('worldwide')) {
+                return true;
+            }
+            
+            return false;
+        }
         
         console.log('Bundles extracted from catalogue:', {
             total: bundles.length,
@@ -431,44 +539,9 @@ module.exports = async function handler(req, res) {
                 return false;
             });
         } else if (isGlobal) {
-            // Global: bundles определяются по названию, описанию или группам, а не по количеству стран
-            // Согласно требованиям: Global = bundles где country column = "Global" в Excel
-            // В API это может быть: название содержит "global", описание содержит "global", 
-            // или специальная группа
-            const bundlesBeforeFilter = bundles.length;
-            bundles = bundles.filter(bundle => {
-                const name = (bundle.name || '').toLowerCase();
-                const desc = (bundle.description || '').toLowerCase();
-                const groups = bundle.groups || [];
-                
-                // Проверяем различные признаки Global bundle
-                const hasGlobalInName = name.includes('global');
-                const hasGlobalInDesc = desc.includes('global');
-                const hasGlobalGroup = Array.isArray(groups) && groups.some(g => 
-                    String(g).toLowerCase().includes('global')
-                );
-                
-                // Также проверяем, может быть в названии есть паттерны типа "RGBS" (Global bundles)
-                // или другие индикаторы многострановых bundles
-                const hasGlobalPattern = name.includes('rgbs') || name.includes('rgb') || 
-                                         name.includes('world') || name.includes('worldwide');
-                
-                const isGlobalBundle = hasGlobalInName || hasGlobalInDesc || hasGlobalGroup || hasGlobalPattern;
-                
-                return isGlobalBundle;
-            });
-            
-            console.log('Global bundles filter:', {
-                beforeFilter: bundlesBeforeFilter,
-                afterFilter: bundles.length,
-                filteredOut: bundlesBeforeFilter - bundles.length,
-                sampleFiltered: bundles.slice(0, 5).map(b => ({
-                    name: b.name,
-                    description: b.description?.substring(0, 50),
-                    groups: b.groups,
-                    countriesCount: b.countries?.length || 0
-                }))
-            });
+            // Global bundles уже получены из групп "Standard Fixed" и "Standard Unlimited Essential"
+            // и отфильтрованы по isGlobalBundle
+            console.log('Global bundles already filtered from groups:', bundles.length);
         }
         // Region: уже фильтруется через параметр region в API
         
