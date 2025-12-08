@@ -193,161 +193,34 @@ module.exports = async function handler(req, res) {
     }
     
     try {
-        const { country, region, perPage = 1000, useExcel } = req.query;
+        const { country, region, perPage = 1000, category } = req.query;
         
-        console.log('Plans API request:', { country, region, perPage, useExcel });
+        console.log('Plans API request:', { country, region, perPage, category });
         console.log('ESIMGO_API_KEY exists:', !!process.env.ESIMGO_API_KEY);
         
         const countryCode = country ? country.toUpperCase() : null;
-        const isGlobal = req.query.global === 'true' || req.query.global === true;
+        const isGlobal = category === 'global' || req.query.global === 'true';
+        const isLocal = category === 'local' || (countryCode && !region);
         
-        // Для Global категории (когда нет country и нет region, или явно указан global=true)
-        // Global = множество стран, может быть fixed или unlimited
-        if (isGlobal || (!countryCode && !region)) {
-            try {
-                const { getGlobalPlansFromExcel } = require('../_lib/esimgo/parse-excel');
-                const excelPlans = getGlobalPlansFromExcel();
-                
-                // Преобразуем Excel планы в формат API
-                const standard = excelPlans.standard.map(plan => ({
-                    id: plan.sku || `excel-global-${plan.dataAmount}-${plan.duration}`,
-                    bundle_name: plan.sku || '',
-                    data: `${plan.dataAmount / 1000} GB`,
-                    dataAmount: plan.dataAmount,
-                    duration: `${plan.duration} Days`,
-                    durationDays: plan.duration,
-                    price: `$ ${plan.price.toFixed(2)}`,
-                    priceValue: plan.price,
-                    currency: plan.currency,
-                    unlimited: false,
-                    countries: [], // Global = множество стран, список может быть пустым или содержать все страны
-                    description: plan.profile || '',
-                    source: 'excel',
-                    isGlobal: true
-                }));
-                
-                const unlimited = excelPlans.unlimited.map(plan => ({
-                    id: plan.sku || `excel-global-unlimited-${plan.duration}`,
-                    bundle_name: plan.sku || '',
-                    data: '∞ GB',
-                    dataAmount: 0,
-                    duration: `${plan.duration} Days`,
-                    durationDays: plan.duration,
-                    price: `$ ${plan.price.toFixed(2)}`,
-                    priceValue: plan.price,
-                    currency: plan.currency,
-                    unlimited: true,
-                    countries: [], // Global = множество стран
-                    description: plan.profile || '',
-                    source: 'excel',
-                    isGlobal: true
-                }));
-                
-                // Применяем дедупликацию
-                const plans = groupBundlesIntoPlans([...standard, ...unlimited]);
-                
-                console.log('Global plans from Excel:', {
-                    standardPlans: plans.standard.length,
-                    unlimitedPlans: plans.unlimited.length
-                });
-                
-                return res.status(200).json({
-                    success: true,
-                    data: {
-                        standard: plans.standard,
-                        unlimited: plans.unlimited,
-                        total: plans.standard.length + plans.unlimited.length
-                    },
-                    meta: {
-                        category: 'global',
-                        source: 'excel',
-                        message: 'Global plans loaded from Excel file'
-                    }
-                });
-            } catch (excelError) {
-                console.warn('Failed to load Global plans from Excel, falling back to API:', excelError.message);
-                // Продолжаем с API как fallback
-            }
-        }
-        
-        // Для Local категории (когда передан country код без region) используем данные из Excel
-        // Local = одна страна, может быть fixed или unlimited
-        if (countryCode && !region) {
-            try {
-                const { getLocalPlansFromExcel } = require('../_lib/esimgo/parse-excel');
-                const excelPlans = getLocalPlansFromExcel(countryCode);
-                
-                // Преобразуем Excel планы в формат API
-                const standard = excelPlans.standard.map(plan => ({
-                    id: plan.sku || `excel-${countryCode}-${plan.dataAmount}-${plan.duration}`,
-                    bundle_name: plan.sku || '',
-                    data: `${plan.dataAmount / 1000} GB`,
-                    dataAmount: plan.dataAmount,
-                    duration: `${plan.duration} Days`,
-                    durationDays: plan.duration,
-                    price: `$ ${plan.price.toFixed(2)}`,
-                    priceValue: plan.price,
-                    currency: plan.currency,
-                    unlimited: false,
-                    countries: [countryCode],
-                    description: plan.profile || '',
-                    source: 'excel'
-                }));
-                
-                const unlimited = excelPlans.unlimited.map(plan => ({
-                    id: plan.sku || `excel-${countryCode}-unlimited-${plan.duration}`,
-                    bundle_name: plan.sku || '',
-                    data: '∞ GB',
-                    dataAmount: 0,
-                    duration: `${plan.duration} Days`,
-                    durationDays: plan.duration,
-                    price: `$ ${plan.price.toFixed(2)}`,
-                    priceValue: plan.price,
-                    currency: plan.currency,
-                    unlimited: true,
-                    countries: [countryCode],
-                    description: plan.profile || '',
-                    source: 'excel'
-                }));
-                
-                // Применяем дедупликацию
-                const plans = groupBundlesIntoPlans([...standard, ...unlimited]);
-                
-                console.log('Plans from Excel:', {
-                    country: countryCode,
-                    standardPlans: plans.standard.length,
-                    unlimitedPlans: plans.unlimited.length
-                });
-                
-                return res.status(200).json({
-                    success: true,
-                    data: {
-                        standard: plans.standard,
-                        unlimited: plans.unlimited,
-                        total: plans.standard.length + plans.unlimited.length
-                    },
-                    meta: {
-                        country: countryCode,
-                        source: 'excel',
-                        message: 'Plans loaded from Excel file'
-                    }
-                });
-            } catch (excelError) {
-                console.warn('Failed to load plans from Excel, falling back to API:', excelError.message);
-                // Продолжаем с API как fallback
-            }
-        }
-        
-        // Получаем каталог из API
+        // Получаем каталог из API eSIM Go
         const catalogueOptions = {
             perPage: parseInt(perPage)
         };
         
+        // Для Region используем параметр region
         if (region) {
             catalogueOptions.region = region;
         }
         
-        console.log('Calling getCatalogue with:', { countryCode, options: catalogueOptions });
+        // Для Local запрашиваем конкретную страну
+        // Для Global запрашиваем все (без country)
+        const requestCountryCode = isLocal ? countryCode : null;
+        
+        console.log('Calling getCatalogue with:', { 
+            countryCode: requestCountryCode, 
+            options: catalogueOptions,
+            category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all'))
+        });
         
         // Проверяем, что client загружен
         if (!esimgoClient) {
@@ -364,7 +237,7 @@ module.exports = async function handler(req, res) {
         
         let catalogue;
         try {
-            catalogue = await esimgoClient.getCatalogue(countryCode, catalogueOptions);
+            catalogue = await esimgoClient.getCatalogue(requestCountryCode, catalogueOptions);
             console.log('Catalogue received:', {
                 isArray: Array.isArray(catalogue),
                 hasBundles: !!catalogue?.bundles,
@@ -380,9 +253,40 @@ module.exports = async function handler(req, res) {
         }
         
         // Извлекаем bundles
-        const bundles = Array.isArray(catalogue) 
+        let bundles = Array.isArray(catalogue) 
             ? catalogue 
             : (catalogue?.bundles || catalogue?.data || []);
+        
+        // Фильтруем bundles по категории
+        if (isLocal && countryCode) {
+            // Local: только bundles для одной страны
+            bundles = bundles.filter(bundle => {
+                const countries = bundle.countries || [];
+                const bundleCountry = bundle.country || bundle.countryCode || bundle.iso;
+                
+                // Bundle должен содержать только одну страну и это должна быть запрошенная страна
+                if (countries.length === 1) {
+                    return countries[0].toUpperCase() === countryCode || 
+                           (typeof countries[0] === 'object' && countries[0].code?.toUpperCase() === countryCode);
+                }
+                if (bundleCountry) {
+                    return bundleCountry.toUpperCase() === countryCode;
+                }
+                return false;
+            });
+        } else if (isGlobal) {
+            // Global: bundles с множеством стран (countries.length > 1) или без конкретной страны
+            bundles = bundles.filter(bundle => {
+                const countries = bundle.countries || [];
+                const bundleCountry = bundle.country || bundle.countryCode || bundle.iso;
+                
+                // Global = множество стран или специальный признак Global
+                return countries.length > 1 || 
+                       (!bundleCountry && countries.length === 0) ||
+                       bundle.name?.toLowerCase().includes('global');
+            });
+        }
+        // Region: уже фильтруется через параметр region в API
         
         if (!bundles || bundles.length === 0) {
             return res.status(200).json({
@@ -395,6 +299,7 @@ module.exports = async function handler(req, res) {
                 meta: {
                     country: country || null,
                     region: region || null,
+                    category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all')),
                     message: 'No bundles found'
                 }
             });
@@ -406,6 +311,7 @@ module.exports = async function handler(req, res) {
         console.log('Plans grouped:', {
             country: country || 'all',
             region: region || 'all',
+            category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all')),
             standardPlans: plans.standard.length,
             unlimitedPlans: plans.unlimited.length,
             totalBundles: bundles.length
@@ -421,7 +327,9 @@ module.exports = async function handler(req, res) {
             meta: {
                 country: country || null,
                 region: region || null,
-                totalBundles: bundles.length
+                category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all')),
+                totalBundles: bundles.length,
+                source: 'api'
             }
         });
         
