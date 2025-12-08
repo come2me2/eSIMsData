@@ -205,9 +205,9 @@ async function getAllStandardFixedBundles() {
  */
 function filterBundlesByRegion(bundles, apiRegion) {
     // Маппинг регионов API на возможные значения в bundle
-    // В bundle регион может быть указан как "Europe", а не "EU Lite"
+    // В bundle регион может быть указан как "Europe Lite", "Europe" или "EU Lite"
     const regionAliases = {
-        'EU Lite': ['EU Lite', 'Europe', 'EU'], // Europe в bundle соответствует EU Lite в API
+        'EU Lite': ['Europe Lite', 'EU Lite', 'Europe', 'EU', 'EUL'], // Europe Lite - правильное название в bundle
         'Americas': ['Americas', 'America', 'LATAM', 'Latin America'],
         'Caribbean': ['Caribbean', 'Carib'],
         'CENAM': ['CENAM', 'Central America'],
@@ -270,14 +270,23 @@ function filterBundlesByRegion(bundles, apiRegion) {
                             return true;
                         }
                         
-                        // Для Europe также проверяем region (может быть "Europe" в поле region)
-                        // Это нужно для случаев, когда региональный bundle имеет region="Europe", 
+                                        // Для Europe также проверяем region (может быть "Europe Lite" или "Europe" в поле region)
+                        // Это нужно для случаев, когда региональный bundle имеет region="Europe Lite", 
                         // но name/iso указывают на конкретную страну
-                        if (apiRegion === 'EU Lite' && countryRegion === 'europe') {
-                            // Но только если это не стандартный ISO код страны (2 символа)
-                            // Региональные bundles обычно имеют нестандартные ISO коды
-                            if (countryIso.length > 2 || countryIso === 'EU' || countryIso === 'EUROPE') {
-                                return true;
+                        if (apiRegion === 'EU Lite') {
+                            // Проверяем region на "Europe Lite", "Europe" или "EU Lite"
+                            if (countryRegion === 'europe lite' || 
+                                countryRegion === 'europe' || 
+                                countryRegion === 'eu lite') {
+                                // Но только если это не стандартный ISO код страны (2 символа)
+                                // Региональные bundles обычно имеют нестандартные ISO коды
+                                if (countryIso.length > 2 || 
+                                    countryIso === 'EU' || 
+                                    countryIso === 'EUROPE' ||
+                                    countryIso === 'EUL' ||
+                                    countryIso === 'EUROPE LITE') {
+                                    return true;
+                                }
                             }
                         }
                     }
@@ -295,7 +304,7 @@ function filterBundlesByRegion(bundles, apiRegion) {
         const regionCodes = {
             'Africa': ['AFRICA', '_AF_', '_AFR_'],
             'Asia': ['ASIA', '_AS_', '_ASI_'],
-            'EU Lite': ['EUROPE', '_EU_', '_EUL_'],
+            'EU Lite': ['EUROPELITE', 'EUROPE_LITE', '_EUL_', '_EU_', 'EUROPE'],
             'Americas': ['AMERICAS', '_AM_', '_AME_'],
             'Caribbean': ['CARIBBEAN', '_CB_', '_CAR_'],
             'CENAM': ['CENAM', '_CE_', '_CEN_'],
@@ -350,26 +359,27 @@ function filterBundlesByRegion(bundles, apiRegion) {
         console.log(`No bundles found for region ${apiRegion}. Looking for:`, possibleRegionNames);
         console.log(`Sample bundles from all Standard Fixed:`, sampleBundles);
         
-        // Для Europe дополнительно проверяем, есть ли bundles с region='Europe'
+        // Для Europe дополнительно проверяем, есть ли bundles с "Europe Lite"
         if (apiRegion === 'EU Lite') {
-            const europeBundles = bundles.filter(bundle => {
+            const europeLiteBundles = bundles.filter(bundle => {
                 const countries = bundle.countries || [];
+                const name = (bundle.name || '').toUpperCase();
                 return countries.some(country => {
                     if (typeof country === 'object' && country !== null) {
-                        const region = country.region || country.Region || country.REGION;
+                        const region = (country.region || country.Region || country.REGION || '').toLowerCase();
                         const countryName = (country.name || '').toLowerCase();
                         const countryIso = (country.iso || '').toUpperCase();
-                        return region === 'Europe' || 
-                               countryName === 'europe' || 
-                               countryIso === 'EUROPE' ||
-                               countryIso === 'EU';
+                        return region === 'europe lite' || 
+                               countryName === 'europe lite' || 
+                               countryIso === 'EUROPE LITE' ||
+                               countryIso === 'EUL';
                     }
                     return false;
-                });
+                }) || name.includes('EUROPELITE') || name.includes('EUROPE_LITE');
             });
-            console.log(`Found ${europeBundles.length} bundles with region='Europe' (not EU Lite)`);
-            if (europeBundles.length > 0) {
-                console.log('Sample Europe bundles:', europeBundles.slice(0, 3).map(b => ({
+            console.log(`Found ${europeLiteBundles.length} bundles with "Europe Lite"`);
+            if (europeLiteBundles.length > 0) {
+                console.log('Sample Europe Lite bundles:', europeLiteBundles.slice(0, 3).map(b => ({
                     name: b.name,
                     countries: b.countries,
                     price: b.price
