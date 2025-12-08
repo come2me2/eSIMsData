@@ -124,39 +124,68 @@ function deduplicateLatinAmerica(bundles) {
 /**
  * Получить все bundles из группы "Standard Fixed"
  * Регионы определяются по полю country/countries, а не по параметру region
+ * Использует пагинацию для получения всех bundles
  * @returns {Promise<Array>}
  */
 async function getAllStandardFixedBundles() {
     try {
         console.log('Fetching all bundles from group "Standard Fixed"');
         
-        // Запрашиваем все bundles из группы Standard Fixed без параметра region
-        const catalogue = await esimgoClient.getCatalogue(null, {
-            group: 'Standard Fixed',
-            perPage: 1000
-        });
+        let allBundles = [];
+        let page = 1;
+        const perPage = 1000;
+        let hasMore = true;
         
-        const bundles = Array.isArray(catalogue) 
-            ? catalogue 
-            : (catalogue?.bundles || catalogue?.data || []);
-        
-        console.log(`Received ${bundles.length} bundles from Standard Fixed group`);
-        
-        // Логируем структуру первого bundle для отладки
-        if (bundles.length > 0) {
-            const sampleBundle = bundles[0];
-            console.log('Sample Standard Fixed bundle structure:', {
-                name: sampleBundle.name,
-                country: sampleBundle.country,
-                countries: sampleBundle.countries,
-                countriesType: typeof sampleBundle.countries,
-                countriesLength: Array.isArray(sampleBundle.countries) ? sampleBundle.countries.length : 0,
-                firstCountry: Array.isArray(sampleBundle.countries) ? sampleBundle.countries[0] : null
+        // Запрашиваем все bundles из группы Standard Fixed с пагинацией
+        while (hasMore) {
+            const catalogue = await esimgoClient.getCatalogue(null, {
+                group: 'Standard Fixed',
+                perPage: perPage,
+                page: page
             });
+            
+            const bundles = Array.isArray(catalogue) 
+                ? catalogue 
+                : (catalogue?.bundles || catalogue?.data || []);
+            
+            if (bundles.length > 0) {
+                allBundles = allBundles.concat(bundles);
+                
+                // Логируем структуру первого bundle только для первой страницы
+                if (page === 1 && bundles.length > 0) {
+                    const sampleBundle = bundles[0];
+                    console.log('Sample Standard Fixed bundle structure:', {
+                        name: sampleBundle.name,
+                        country: sampleBundle.country,
+                        countries: sampleBundle.countries,
+                        countriesType: typeof sampleBundle.countries,
+                        countriesLength: Array.isArray(sampleBundle.countries) ? sampleBundle.countries.length : 0,
+                        firstCountry: Array.isArray(sampleBundle.countries) ? sampleBundle.countries[0] : null
+                    });
+                }
+                
+                // Проверяем, есть ли еще страницы
+                const pageCount = catalogue?.pageCount || 0;
+                const rows = catalogue?.rows || 0;
+                
+                if (pageCount > 0 && page >= pageCount) {
+                    hasMore = false;
+                } else if (rows > 0 && allBundles.length >= rows) {
+                    hasMore = false;
+                } else if (bundles.length < perPage) {
+                    hasMore = false;
+                } else {
+                    page++;
+                }
+            } else {
+                hasMore = false;
+            }
         }
         
+        console.log(`Received ${allBundles.length} bundles from Standard Fixed group (${page} page(s))`);
+        
         // Фильтруем только fixed тарифы (не unlimited) - дополнительная проверка
-        const fixedBundles = bundles.filter(bundle => !bundle.unlimited);
+        const fixedBundles = allBundles.filter(bundle => !bundle.unlimited);
         
         console.log(`Filtered to ${fixedBundles.length} fixed bundles`);
         
