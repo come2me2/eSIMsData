@@ -124,10 +124,21 @@ async function loadPlansFromAPI(countryCode) {
                 console.error('This might indicate a problem with price parsing from API');
             }
             
+            // Если планы загружены, но все без цен - это проблема
+            if (standardPlans.length === 0 && unlimitedPlans.length === 0) {
+                console.warn('⚠️ API returned success but no plans found');
+                console.warn('This might mean: 1) No bundles for this country, 2) All bundles filtered out, 3) API issue');
+                // НЕ используем fallback - показываем пустой список
+                return true;
+            }
+            
             return true;
         } else {
             console.warn('❌ Failed to load plans from API - result.success is false or no data');
             console.warn('Result:', result);
+            // НЕ используем fallback - показываем пустой список
+            standardPlans = [];
+            unlimitedPlans = [];
             return false;
         }
     } catch (error) {
@@ -136,21 +147,10 @@ async function loadPlansFromAPI(countryCode) {
             message: error.message,
             stack: error.stack
         });
-        // Fallback к захардкоженным планам
-        standardPlans = [
-            { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
-            { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
-            { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
-            { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
-        ];
-        
-        unlimitedPlans = [
-            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-        ];
-        console.warn('⚠️ Using fallback plans (hardcoded)');
+        // НЕ используем fallback - показываем пустой список вместо 9.99$
+        standardPlans = [];
+        unlimitedPlans = [];
+        console.warn('⚠️ API error - showing empty plans list instead of fallback');
         return false;
     }
 }
