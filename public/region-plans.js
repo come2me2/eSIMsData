@@ -198,8 +198,10 @@ async function loadPlansFromAPI(regionName) {
             params.append('region', regionName);
         }
         
-        const apiUrl = `/api/esimgo/plans?${params.toString()}`;
-        console.log('🔵 Fetching plans from:', apiUrl);
+        // Используем новый endpoint для региональных тарифов
+        // Он возвращает только fixed тарифы (без unlimited) для регионов
+        const apiUrl = `/api/esimgo/region-plans?${params.toString()}`;
+        console.log('🔵 Fetching region plans from:', apiUrl);
         
         const response = await fetch(apiUrl);
         console.log('🔵 Response status:', response.status, response.statusText);
@@ -215,7 +217,7 @@ async function loadPlansFromAPI(regionName) {
         
         if (result.success && result.data) {
             standardPlans = result.data.standard || [];
-            unlimitedPlans = result.data.unlimited || [];
+            unlimitedPlans = []; // Для регионов всегда пустой массив (только fixed тарифы)
             
             // Добавляем ID для совместимости
             standardPlans.forEach((plan, index) => {
