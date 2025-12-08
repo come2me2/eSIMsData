@@ -204,14 +204,34 @@ async function getAllStandardFixedBundles() {
  * @returns {Array} - отфильтрованные bundles
  */
 function filterBundlesByRegion(bundles, apiRegion) {
+    // Маппинг регионов API на возможные значения в bundle
+    // В bundle регион может быть указан как "Europe", а не "EU Lite"
+    const regionAliases = {
+        'EU Lite': ['EU Lite', 'Europe', 'EU'], // Europe в bundle соответствует EU Lite в API
+        'Americas': ['Americas', 'America', 'LATAM', 'Latin America'],
+        'Caribbean': ['Caribbean', 'Carib'],
+        'CENAM': ['CENAM', 'Central America'],
+        'Asia': ['Asia', 'ASIA'],
+        'Africa': ['Africa'],
+        'North America': ['North America', 'NorthAmerica'],
+        'Oceania': ['Oceania'],
+        'Balkanas': ['Balkanas', 'Balkans'],
+        'CIS': ['CIS', 'Central Eurasia']
+    };
+    
+    // Получаем список возможных значений для региона
+    const possibleRegionNames = regionAliases[apiRegion] || [apiRegion];
+    
     const filtered = bundles.filter(bundle => {
         const countries = bundle.countries || [];
         
         // Проверяем поле country (если это строка)
         if (bundle.country) {
             const countryStr = String(bundle.country);
-            if (countryStr === apiRegion || countryStr.toLowerCase() === apiRegion.toLowerCase()) {
-                return true;
+            for (const regionName of possibleRegionNames) {
+                if (countryStr === regionName || countryStr.toLowerCase() === regionName.toLowerCase()) {
+                    return true;
+                }
             }
         }
         
@@ -220,19 +240,32 @@ function filterBundlesByRegion(bundles, apiRegion) {
             const hasRegion = countries.some(country => {
                 if (typeof country === 'string') {
                     // Если country - строка, проверяем напрямую
-                    return country === apiRegion || country.toLowerCase() === apiRegion.toLowerCase();
+                    for (const regionName of possibleRegionNames) {
+                        if (country === regionName || country.toLowerCase() === regionName.toLowerCase()) {
+                            return true;
+                        }
+                    }
+                    return false;
                 } else if (typeof country === 'object' && country !== null) {
                     // Если country - объект, проверяем поле region
                     const countryRegion = country.region || country.Region || country.REGION;
                     if (countryRegion) {
-                        return countryRegion === apiRegion || 
-                               countryRegion.toLowerCase() === apiRegion.toLowerCase();
+                        for (const regionName of possibleRegionNames) {
+                            if (countryRegion === regionName || 
+                                countryRegion.toLowerCase() === regionName.toLowerCase()) {
+                                return true;
+                            }
+                        }
                     }
                     // Также проверяем поле name (может быть название региона)
                     const countryName = country.name || country.Name || country.NAME;
                     if (countryName) {
-                        return countryName === apiRegion || 
-                               countryName.toLowerCase() === apiRegion.toLowerCase();
+                        for (const regionName of possibleRegionNames) {
+                            if (countryName === regionName || 
+                                countryName.toLowerCase() === regionName.toLowerCase()) {
+                                return true;
+                            }
+                        }
                     }
                 }
                 return false;
@@ -253,6 +286,15 @@ function filterBundlesByRegion(bundles, apiRegion) {
             country: b.country,
             countries: b.countries
         })));
+    } else if (filtered.length === 0) {
+        // Логируем примеры bundles для отладки, если ничего не найдено
+        const sampleBundles = bundles.slice(0, 5).map(b => ({
+            name: b.name,
+            country: b.country,
+            countries: b.countries,
+            countryRegions: b.countries?.map(c => c?.region).filter(Boolean) || []
+        }));
+        console.log(`No bundles found for region ${apiRegion}. Sample bundles:`, sampleBundles);
     }
     
     return filtered;
