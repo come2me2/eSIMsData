@@ -434,7 +434,20 @@ module.exports = async function handler(req, res) {
         }
         // Region: уже фильтруется через параметр region в API
         
+        console.log('Bundles after filtering:', {
+            count: bundles.length,
+            category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all'))
+        });
+        
         if (!bundles || bundles.length === 0) {
+            console.warn('No bundles found after filtering:', {
+                category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all')),
+                country: countryCode,
+                region: region,
+                originalBundlesCount: Array.isArray(catalogue) 
+                    ? catalogue.length 
+                    : (catalogue?.bundles?.length || catalogue?.data?.length || 0)
+            });
             return res.status(200).json({
                 success: true,
                 data: {
