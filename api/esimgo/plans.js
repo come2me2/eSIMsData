@@ -361,11 +361,18 @@ module.exports = async function handler(req, res) {
                 
                 // Bundle должен содержать только одну страну и это должна быть запрошенная страна
                 if (countries.length === 1) {
-                    return countries[0].toUpperCase() === countryCode || 
-                           (typeof countries[0] === 'object' && countries[0].code?.toUpperCase() === countryCode);
+                    const country = countries[0];
+                    // countries может быть массивом строк (ISO кодов) или объектов {name, region, iso}
+                    if (typeof country === 'string') {
+                        return country.toUpperCase() === countryCode;
+                    } else if (typeof country === 'object' && country !== null) {
+                        // Объект с полями iso, ISO, code
+                        const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
+                        return countryIso === countryCode;
+                    }
                 }
                 if (bundleCountry) {
-                    return bundleCountry.toUpperCase() === countryCode;
+                    return String(bundleCountry).toUpperCase() === countryCode;
                 }
                 return false;
             });
