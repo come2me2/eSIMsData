@@ -221,7 +221,7 @@ const countryFlagMap = {
 
 // Function to get flag image URL from local flags folder
 // Version for cache busting - increment when flags are updated
-const FLAG_VERSION = 'v6'; // Updated: fixed URL encoding for files with spaces
+const FLAG_VERSION = 'v7'; // Updated: force refresh for missing flags (AX, BM, etc.)
 
 function getFlagPath(countryCode) {
     if (!countryCode) {
@@ -415,12 +415,23 @@ function renderCountries(filteredCountries = countries) {
             flagImg.alt = `${country.name} flag`;
             flagImg.className = 'country-flag';
             
-            // Обработка ошибки загрузки - заменяем на эмодзи флаг
+            // Обработка ошибки загрузки - пробуем загрузить без версии кэша, затем заменяем на эмодзи
+            let retryCount = 0;
             flagImg.onerror = function() {
-                console.error(`❌ Failed to load flag: ${flagPath}`);
+                retryCount++;
+                console.error(`❌ Failed to load flag (attempt ${retryCount}): ${flagPath}`);
                 console.error(`   Country: ${country.name} (${country.code})`);
                 console.error(`   Full URL: ${window.location.origin}${flagPath}`);
-                console.error(`   Current pathname: ${window.location.pathname}`);
+                
+                // Пробуем загрузить без версии кэша (на случай, если файл не развернут с новой версией)
+                if (retryCount === 1) {
+                    const pathWithoutVersion = flagPath.split('?')[0];
+                    console.log(`🔄 Retrying without cache version: ${pathWithoutVersion}`);
+                    this.src = pathWithoutVersion + '?t=' + Date.now();
+                    return; // Не заменяем элемент, пробуем еще раз
+                }
+                
+                // Если повторная попытка не помогла, заменяем на эмодзи
                 const emojiFlag = document.createElement('span');
                 emojiFlag.className = 'country-flag';
                 emojiFlag.textContent = '🏳️';
