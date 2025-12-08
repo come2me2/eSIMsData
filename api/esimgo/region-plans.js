@@ -222,8 +222,11 @@ function filterBundlesByRegion(bundles, apiRegion) {
     // Получаем список возможных значений для региона
     const possibleRegionNames = regionAliases[apiRegion] || [apiRegion];
     
+    // Для региональных bundles ищем, где country.name или country.iso = название региона
+    // Это bundles, которые покрывают весь регион, а не отдельные страны
     const filtered = bundles.filter(bundle => {
         const countries = bundle.countries || [];
+        const bundleName = (bundle.name || '').toUpperCase();
         
         // Проверяем поле country (если это строка)
         if (bundle.country) {
@@ -235,9 +238,10 @@ function filterBundlesByRegion(bundles, apiRegion) {
             }
         }
         
-        // Проверяем массив countries - ищем регион в поле region каждого объекта
+        // Проверяем массив countries - ищем региональные bundles
+        // Региональный bundle: country.name или country.iso = название региона
         if (countries.length > 0) {
-            const hasRegion = countries.some(country => {
+            const isRegionalBundle = countries.some(country => {
                 if (typeof country === 'string') {
                     // Если country - строка, проверяем напрямую
                     for (const regionName of possibleRegionNames) {
@@ -247,31 +251,47 @@ function filterBundlesByRegion(bundles, apiRegion) {
                     }
                     return false;
                 } else if (typeof country === 'object' && country !== null) {
-                    // Если country - объект, проверяем поле region
-                    const countryRegion = country.region || country.Region || country.REGION;
-                    if (countryRegion) {
-                        for (const regionName of possibleRegionNames) {
-                            if (countryRegion === regionName || 
-                                countryRegion.toLowerCase() === regionName.toLowerCase()) {
-                                return true;
-                            }
-                        }
-                    }
-                    // Также проверяем поле name (может быть название региона)
-                    const countryName = country.name || country.Name || country.NAME;
-                    if (countryName) {
-                        for (const regionName of possibleRegionNames) {
-                            if (countryName === regionName || 
-                                countryName.toLowerCase() === regionName.toLowerCase()) {
-                                return true;
-                            }
+                    const countryName = (country.name || country.Name || country.NAME || '').toLowerCase();
+                    const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
+                    
+                    // Региональный bundle: name или iso = название региона
+                    for (const regionName of possibleRegionNames) {
+                        const regionNameLower = regionName.toLowerCase();
+                        const regionNameUpper = regionName.toUpperCase();
+                        
+                        if (countryName === regionNameLower || 
+                            countryIso === regionNameUpper ||
+                            countryIso === regionName) {
+                            return true;
                         }
                     }
                 }
                 return false;
             });
             
-            if (hasRegion) {
+            if (isRegionalBundle) {
+                return true;
+            }
+        }
+        
+        // Также проверяем название bundle (может содержать код региона)
+        // Например: esim_1GB_7D_AFRICA_V2 или esim_1GB_7D_AF_V2
+        const regionCodes = {
+            'Africa': ['AFRICA', '_AF_', '_AFR_'],
+            'Asia': ['ASIA', '_AS_', '_ASI_'],
+            'EU Lite': ['EUROPE', '_EU_', '_EUL_'],
+            'Americas': ['AMERICAS', '_AM_', '_AME_'],
+            'Caribbean': ['CARIBBEAN', '_CB_', '_CAR_'],
+            'CENAM': ['CENAM', '_CE_', '_CEN_'],
+            'North America': ['NORTHAMERICA', '_NA_', '_NAM_'],
+            'Oceania': ['OCEANIA', '_OC_', '_OCE_'],
+            'Balkanas': ['BALKANAS', '_BK_', '_BAL_'],
+            'CIS': ['CIS', '_CIS_']
+        };
+        
+        const codes = regionCodes[apiRegion] || [];
+        for (const code of codes) {
+            if (bundleName.includes(code)) {
                 return true;
             }
         }
