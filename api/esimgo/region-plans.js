@@ -253,16 +253,32 @@ function filterBundlesByRegion(bundles, apiRegion) {
                 } else if (typeof country === 'object' && country !== null) {
                     const countryName = (country.name || country.Name || country.NAME || '').toLowerCase();
                     const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
+                    const countryRegion = (country.region || country.Region || country.REGION || '').toLowerCase();
                     
                     // Региональный bundle: name или iso = название региона
                     for (const regionName of possibleRegionNames) {
                         const regionNameLower = regionName.toLowerCase();
                         const regionNameUpper = regionName.toUpperCase();
                         
-                        if (countryName === regionNameLower || 
-                            countryIso === regionNameUpper ||
-                            countryIso === regionName) {
+                        // Проверяем name
+                        if (countryName === regionNameLower) {
                             return true;
+                        }
+                        
+                        // Проверяем iso
+                        if (countryIso === regionNameUpper || countryIso === regionName) {
+                            return true;
+                        }
+                        
+                        // Для Europe также проверяем region (может быть "Europe" в поле region)
+                        // Это нужно для случаев, когда региональный bundle имеет region="Europe", 
+                        // но name/iso указывают на конкретную страну
+                        if (apiRegion === 'EU Lite' && countryRegion === 'europe') {
+                            // Но только если это не стандартный ISO код страны (2 символа)
+                            // Региональные bundles обычно имеют нестандартные ISO коды
+                            if (countryIso.length > 2 || countryIso === 'EU' || countryIso === 'EUROPE') {
+                                return true;
+                            }
                         }
                     }
                 }
