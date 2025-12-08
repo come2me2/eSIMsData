@@ -28,16 +28,34 @@ module.exports = async function handler(req, res) {
             ? catalogue 
             : (catalogue?.bundles || catalogue?.data || []);
         
-        // Фильтруем bundles для Africa
+        // Фильтруем bundles для Africa - ищем региональные bundles
+        // Региональные bundles могут иметь:
+        // 1. country.name === 'Africa' (сам регион как страна)
+        // 2. country.region === 'Africa' и country.iso === 'Africa' или подобное
+        // 3. Название bundle содержит 'AFRICA' или 'AF'
         const africaBundles = bundles.filter(bundle => {
             const countries = bundle.countries || [];
+            const name = (bundle.name || '').toUpperCase();
+            
+            // Проверяем, является ли это региональным bundle (не для конкретной страны)
             return countries.some(country => {
                 if (typeof country === 'object' && country !== null) {
+                    const countryName = (country.name || '').toLowerCase();
+                    const countryIso = (country.iso || '').toUpperCase();
                     const region = country.region || country.Region || country.REGION;
-                    return region === 'Africa' || region?.toLowerCase() === 'africa';
+                    
+                    // Региональный bundle: name или iso = 'Africa'
+                    if (countryName === 'africa' || countryIso === 'AFRICA' || countryIso === 'AF') {
+                        return true;
+                    }
+                    
+                    // Или region = 'Africa' и это не стандартный ISO код страны
+                    if (region === 'Africa' && countryIso.length > 2) {
+                        return true;
+                    }
                 }
                 return false;
-            });
+            }) || name.includes('AFRICA') || name.includes('_AF_');
         });
         
         // Берем первые 5 bundles для анализа
