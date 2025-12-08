@@ -37,9 +37,42 @@ function groupBundlesIntoPlans(bundles) {
     
     // Группируем по типу (unlimited или нет)
     bundles.forEach(bundle => {
-        // Форматируем цену правильно
-        const priceValue = bundle.price || bundle.pricePerUnit || 0;
-        const currency = bundle.currency || 'USD';
+        // Извлекаем цену из разных возможных форматов
+        let priceValue = 0;
+        let currency = 'USD';
+        
+        if (bundle.price) {
+            if (typeof bundle.price === 'number') {
+                // Цена как число (в центах или долларах)
+                priceValue = bundle.price;
+            } else if (typeof bundle.price === 'object' && bundle.price.amount) {
+                // Цена как объект { amount, currency }
+                priceValue = typeof bundle.price.amount === 'number' 
+                    ? bundle.price.amount 
+                    : parseFloat(bundle.price.amount) || 0;
+                currency = bundle.price.currency || 'USD';
+            } else if (typeof bundle.price === 'string') {
+                // Цена как строка
+                priceValue = parseFloat(bundle.price) || 0;
+            }
+        } else if (bundle.pricePerUnit) {
+            priceValue = typeof bundle.pricePerUnit === 'number' 
+                ? bundle.pricePerUnit 
+                : parseFloat(bundle.pricePerUnit) || 0;
+        }
+        
+        // Если цена в центах (больше 100), конвертируем в доллары
+        if (priceValue > 100 && priceValue < 100000) {
+            priceValue = priceValue / 100;
+        }
+        
+        // Получаем валюту из bundle
+        if (bundle.currency) {
+            currency = bundle.currency;
+        } else if (bundle.price && typeof bundle.price === 'object' && bundle.price.currency) {
+            currency = bundle.price.currency;
+        }
+        
         const priceFormatted = currency === 'USD' 
             ? `$ ${priceValue.toFixed(2)}`
             : `${currency} ${priceValue.toFixed(2)}`;
