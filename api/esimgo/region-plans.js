@@ -122,18 +122,17 @@ function deduplicateLatinAmerica(bundles) {
 }
 
 /**
- * Получить bundles из API для региона
- * Запрашивает из группы "Standard Fixed" с параметром region
- * @param {string} apiRegion - регион API
+ * Получить все bundles из группы "Standard Fixed"
+ * Регионы определяются по полю country/countries, а не по параметру region
  * @returns {Promise<Array>}
  */
-async function getBundlesForAPIRegion(apiRegion) {
+async function getAllStandardFixedBundles() {
     try {
-        console.log(`Fetching bundles for API region: ${apiRegion} from group "Standard Fixed"`);
+        console.log('Fetching all bundles from group "Standard Fixed"');
         
+        // Запрашиваем все bundles из группы Standard Fixed без параметра region
         const catalogue = await esimgoClient.getCatalogue(null, {
-            region: apiRegion,
-            group: 'Standard Fixed', // Запрашиваем только из группы Standard Fixed
+            group: 'Standard Fixed',
             perPage: 1000
         });
         
@@ -141,18 +140,69 @@ async function getBundlesForAPIRegion(apiRegion) {
             ? catalogue 
             : (catalogue?.bundles || catalogue?.data || []);
         
-        console.log(`Received ${bundles.length} bundles for region ${apiRegion}`);
+        console.log(`Received ${bundles.length} bundles from Standard Fixed group`);
         
         // Фильтруем только fixed тарифы (не unlimited) - дополнительная проверка
         const fixedBundles = bundles.filter(bundle => !bundle.unlimited);
         
-        console.log(`Filtered to ${fixedBundles.length} fixed bundles for region ${apiRegion}`);
+        console.log(`Filtered to ${fixedBundles.length} fixed bundles`);
         
         return fixedBundles;
     } catch (error) {
-        console.error(`Error fetching bundles for region ${apiRegion}:`, error);
+        console.error('Error fetching Standard Fixed bundles:', error);
         return [];
     }
+}
+
+/**
+ * Фильтровать bundles по региону API
+ * Регион определяется по полю country/countries в bundle
+ * @param {Array} bundles - все bundles из Standard Fixed
+ * @param {string} apiRegion - регион API (Africa, Asia, EU Lite, North America, Americas, Caribbean, CENAM, Oceania, Balkanas, CIS)
+ * @returns {Array} - отфильтрованные bundles
+ */
+function filterBundlesByRegion(bundles, apiRegion) {
+    return bundles.filter(bundle => {
+        const countries = bundle.countries || [];
+        
+        // Проверяем поле country (если это строка)
+        if (bundle.country) {
+            const countryStr = String(bundle.country);
+            if (countryStr === apiRegion || countryStr.toLowerCase() === apiRegion.toLowerCase()) {
+                return true;
+            }
+        }
+        
+        // Проверяем массив countries - ищем регион в поле region каждого объекта
+        if (countries.length > 0) {
+            const hasRegion = countries.some(country => {
+                if (typeof country === 'string') {
+                    // Если country - строка, проверяем напрямую
+                    return country === apiRegion || country.toLowerCase() === apiRegion.toLowerCase();
+                } else if (typeof country === 'object' && country !== null) {
+                    // Если country - объект, проверяем поле region
+                    const countryRegion = country.region || country.Region || country.REGION;
+                    if (countryRegion) {
+                        return countryRegion === apiRegion || 
+                               countryRegion.toLowerCase() === apiRegion.toLowerCase();
+                    }
+                    // Также проверяем поле name (может быть название региона)
+                    const countryName = country.name || country.Name || country.NAME;
+                    if (countryName) {
+                        return countryName === apiRegion || 
+                               countryName.toLowerCase() === apiRegion.toLowerCase();
+                    }
+                }
+                return false;
+            });
+            
+            if (hasRegion) {
+                return true;
+            }
+        }
+        
+        return false;
+    });
 }
 
 /**
@@ -298,17 +348,25 @@ module.exports = async function handler(req, res) {
             });
         }
         
-        // Получаем bundles из всех соответствующих регионов API
+        // Получаем все bundles из группы Standard Fixed один раз
+        const allStandardFixedBundles = await getAllStandardFixedBundles();
+        
+        // Фильтруем bundles по регионам API (регионы указаны в поле country/countries)
         let allBundles = [];
         
         for (const apiRegion of apiRegions) {
-            const bundles = await getBundlesForAPIRegion(apiRegion);
+            console.log(`Filtering bundles for API region: ${apiRegion}`);
+            const bundles = filterBundlesByRegion(allStandardFixedBundles, apiRegion);
+            console.log(`Found ${bundles.length} bundles for region ${apiRegion}`);
+            
             // Добавляем информацию о регионе API к каждому bundle
             bundles.forEach(bundle => {
                 bundle.apiRegion = apiRegion;
             });
             allBundles = allBundles.concat(bundles);
         }
+        
+        console.log(`Total bundles after filtering by regions: ${allBundles.length}`);
         
         // Для Latin America делаем дедупликацию по минимальной цене
         if (isLatinAmerica(region)) {
