@@ -310,27 +310,65 @@ function groupBundlesIntoPlans(bundles) {
     
     bundles.forEach(bundle => {
         // Извлекаем цену из разных возможных форматов
+        // API может возвращать base price и user price - нужно использовать user price
         let priceValue = 0;
         let currency = 'USD';
         
-        if (bundle.price) {
-            if (typeof bundle.price === 'number') {
-                priceValue = bundle.price;
-            } else if (typeof bundle.price === 'object' && bundle.price.amount) {
-                priceValue = typeof bundle.price.amount === 'number' 
-                    ? bundle.price.amount 
-                    : parseFloat(bundle.price.amount) || 0;
-                currency = bundle.price.currency || 'USD';
-            } else if (typeof bundle.price === 'string') {
-                priceValue = parseFloat(bundle.price) || 0;
+        // Пробуем разные поля для цены (приоритет: userPrice > pricePerUnit > price > basePrice)
+        const priceFields = [
+            bundle.userPrice,
+            bundle.pricePerUnit,
+            bundle.price,
+            bundle.basePrice,
+            bundle.cost,
+            bundle.amount,
+            bundle.fee,
+            bundle.totalPrice
+        ];
+        
+        for (const priceField of priceFields) {
+            if (priceField !== undefined && priceField !== null) {
+                if (typeof priceField === 'number' && priceField > 0) {
+                    priceValue = priceField;
+                    break;
+                } else if (typeof priceField === 'object' && priceField.amount) {
+                    priceValue = typeof priceField.amount === 'number' 
+                        ? priceField.amount 
+                        : parseFloat(priceField.amount) || 0;
+                    currency = priceField.currency || 'USD';
+                    if (priceValue > 0) break;
+                } else if (typeof priceField === 'string') {
+                    const parsed = parseFloat(priceField);
+                    if (!isNaN(parsed) && parsed > 0) {
+                        priceValue = parsed;
+                        break;
+                    }
+                }
             }
-        } else if (bundle.pricePerUnit) {
-            priceValue = typeof bundle.pricePerUnit === 'number' 
-                ? bundle.pricePerUnit 
-                : parseFloat(bundle.pricePerUnit) || 0;
+        }
+        
+        // Логируем структуру цены для первых нескольких bundles (для отладки)
+        if (bundles.indexOf(bundle) < 3) {
+            console.log('Bundle price structure:', {
+                name: bundle.name,
+                price: bundle.price,
+                pricePerUnit: bundle.pricePerUnit,
+                userPrice: bundle.userPrice,
+                basePrice: bundle.basePrice,
+                cost: bundle.cost,
+                amount: bundle.amount,
+                extractedPrice: priceValue,
+                bundleKeys: Object.keys(bundle).filter(k => 
+                    k.toLowerCase().includes('price') || 
+                    k.toLowerCase().includes('cost') || 
+                    k.toLowerCase().includes('amount') ||
+                    k.toLowerCase().includes('fee')
+                )
+            });
         }
         
         // Если цена в центах (больше 100 и меньше 100000), конвертируем в доллары
+        // Но только если это целое число (признак центов)
         if (priceValue > 100 && priceValue < 100000 && priceValue % 1 === 0) {
             priceValue = priceValue / 100;
         }
