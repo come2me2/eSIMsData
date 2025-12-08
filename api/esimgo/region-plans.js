@@ -14,6 +14,7 @@ const { getAPIRegions, isLatinAmerica } = require('../_lib/esimgo/region-mapping
 /**
  * Дедупликация тарифов для Latin America
  * Выбирает тариф с минимальной ценой для каждой комбинации страны/данных/длительности
+ * Пример: El Salvador (SV) - если есть тарифы из Americas ($9.99) и CENAM ($9.79), выбирается CENAM
  * @param {Array} bundles - массив bundles из разных регионов API
  * @returns {Array} - дедуплицированный массив bundles
  */
@@ -23,58 +24,116 @@ function deduplicateLatinAmerica(bundles) {
     
     bundles.forEach(bundle => {
         // Получаем коды стран из bundle
+        // countries может быть массивом строк (ISO кодов) или объектов {name, region, iso}
         const countries = bundle.countries || [];
+        let countryCodes = [];
+        
         if (countries.length === 0) {
+            // Если countries пустой, пробуем получить из других полей
             const countryCode = bundle.country || bundle.countryCode || bundle.iso;
             if (countryCode) {
-                countries.push(countryCode);
+                countryCodes.push(String(countryCode).toUpperCase());
             }
+        } else {
+            // Обрабатываем массив countries
+            countries.forEach(country => {
+                if (typeof country === 'string') {
+                    countryCodes.push(country.toUpperCase());
+                } else if (typeof country === 'object' && country !== null) {
+                    // Объект с полями iso, ISO, code
+                    const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
+                    if (countryIso) {
+                        countryCodes.push(countryIso);
+                    }
+                }
+            });
         }
         
-        // Для каждой страны создаем ключ
-        countries.forEach(countryCode => {
+        // Извлекаем цену
+        let priceValue = 0;
+        if (bundle.price) {
+            if (typeof bundle.price === 'number') {
+                priceValue = bundle.price;
+            } else if (typeof bundle.price === 'object' && bundle.price.amount) {
+                priceValue = typeof bundle.price.amount === 'number' 
+                    ? bundle.price.amount 
+                    : parseFloat(bundle.price.amount) || 0;
+            } else if (typeof bundle.price === 'string') {
+                priceValue = parseFloat(bundle.price) || 0;
+            }
+        } else if (bundle.pricePerUnit) {
+            priceValue = typeof bundle.pricePerUnit === 'number' 
+                ? bundle.pricePerUnit 
+                : parseFloat(bundle.pricePerUnit) || 0;
+        }
+        
+        // Если цена в центах (больше 100 и меньше 100000), конвертируем в доллары
+        if (priceValue > 100 && priceValue < 100000 && priceValue % 1 === 0) {
+            priceValue = priceValue / 100;
+        }
+        
+        // Для каждой страны создаем ключ и проверяем минимальную цену
+        countryCodes.forEach(countryCode => {
             const dataAmount = bundle.dataAmount || 0;
             const duration = bundle.duration || 0;
             const key = `${countryCode}_${dataAmount}_${duration}`;
-            
-            const priceValue = typeof bundle.price === 'number' 
-                ? bundle.price 
-                : parseFloat(bundle.price) || 0;
             
             if (!plansMap.has(key)) {
                 plansMap.set(key, {
                     ...bundle,
                     countryCode: countryCode,
-                    priceValue: priceValue
+                    priceValue: priceValue,
+                    apiRegion: bundle.apiRegion // Сохраняем информацию о регионе API
                 });
             } else {
                 const existing = plansMap.get(key);
                 const existingPrice = existing.priceValue || 0;
                 
                 // Выбираем bundle с минимальной ценой
+                // Если цены равны, предпочитаем USD
                 if (priceValue < existingPrice) {
                     plansMap.set(key, {
                         ...bundle,
                         countryCode: countryCode,
-                        priceValue: priceValue
+                        priceValue: priceValue,
+                        apiRegion: bundle.apiRegion
                     });
+                } else if (priceValue === existingPrice) {
+                    // Если цены равны, предпочитаем USD
+                    const bundleCurrency = bundle.currency || 'USD';
+                    const existingCurrency = existing.currency || 'USD';
+                    if (bundleCurrency === 'USD' && existingCurrency !== 'USD') {
+                        plansMap.set(key, {
+                            ...bundle,
+                            countryCode: countryCode,
+                            priceValue: priceValue,
+                            apiRegion: bundle.apiRegion
+                        });
+                    }
                 }
             }
         });
     });
     
-    return Array.from(plansMap.values());
+    const deduplicated = Array.from(plansMap.values());
+    console.log(`Latin America deduplication: ${bundles.length} bundles -> ${deduplicated.length} bundles`);
+    
+    return deduplicated;
 }
 
 /**
  * Получить bundles из API для региона
+ * Запрашивает из группы "Standard Fixed" с параметром region
  * @param {string} apiRegion - регион API
  * @returns {Promise<Array>}
  */
 async function getBundlesForAPIRegion(apiRegion) {
     try {
+        console.log(`Fetching bundles for API region: ${apiRegion} from group "Standard Fixed"`);
+        
         const catalogue = await esimgoClient.getCatalogue(null, {
             region: apiRegion,
+            group: 'Standard Fixed', // Запрашиваем только из группы Standard Fixed
             perPage: 1000
         });
         
@@ -82,8 +141,14 @@ async function getBundlesForAPIRegion(apiRegion) {
             ? catalogue 
             : (catalogue?.bundles || catalogue?.data || []);
         
-        // Фильтруем только fixed тарифы (не unlimited)
-        return bundles.filter(bundle => !bundle.unlimited);
+        console.log(`Received ${bundles.length} bundles for region ${apiRegion}`);
+        
+        // Фильтруем только fixed тарифы (не unlimited) - дополнительная проверка
+        const fixedBundles = bundles.filter(bundle => !bundle.unlimited);
+        
+        console.log(`Filtered to ${fixedBundles.length} fixed bundles for region ${apiRegion}`);
+        
+        return fixedBundles;
     } catch (error) {
         console.error(`Error fetching bundles for region ${apiRegion}:`, error);
         return [];
@@ -99,8 +164,39 @@ function groupBundlesIntoPlans(bundles) {
     };
     
     bundles.forEach(bundle => {
-        const priceValue = bundle.price || bundle.pricePerUnit || 0;
-        const currency = bundle.currency || 'USD';
+        // Извлекаем цену из разных возможных форматов
+        let priceValue = 0;
+        let currency = 'USD';
+        
+        if (bundle.price) {
+            if (typeof bundle.price === 'number') {
+                priceValue = bundle.price;
+            } else if (typeof bundle.price === 'object' && bundle.price.amount) {
+                priceValue = typeof bundle.price.amount === 'number' 
+                    ? bundle.price.amount 
+                    : parseFloat(bundle.price.amount) || 0;
+                currency = bundle.price.currency || 'USD';
+            } else if (typeof bundle.price === 'string') {
+                priceValue = parseFloat(bundle.price) || 0;
+            }
+        } else if (bundle.pricePerUnit) {
+            priceValue = typeof bundle.pricePerUnit === 'number' 
+                ? bundle.pricePerUnit 
+                : parseFloat(bundle.pricePerUnit) || 0;
+        }
+        
+        // Если цена в центах (больше 100 и меньше 100000), конвертируем в доллары
+        if (priceValue > 100 && priceValue < 100000 && priceValue % 1 === 0) {
+            priceValue = priceValue / 100;
+        }
+        
+        // Получаем валюту из bundle
+        if (bundle.currency) {
+            currency = bundle.currency;
+        } else if (bundle.price && typeof bundle.price === 'object' && bundle.price.currency) {
+            currency = bundle.price.currency;
+        }
+        
         const priceFormatted = currency === 'USD' 
             ? `$ ${priceValue.toFixed(2)}`
             : `${currency} ${priceValue.toFixed(2)}`;
@@ -118,7 +214,7 @@ function groupBundlesIntoPlans(bundles) {
             unlimited: false,
             countries: bundle.countries || [],
             description: bundle.description || '',
-            region: bundle.region || null
+            region: bundle.region || bundle.apiRegion || null
         };
         
         plans.standard.push(plan);
