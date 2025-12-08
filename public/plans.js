@@ -60,16 +60,31 @@ async function loadPlansFromAPI(countryCode) {
             standardPlans = result.data.standard || [];
             unlimitedPlans = result.data.unlimited || [];
             
+            // Проверяем, что планы имеют цены
+            const plansWithoutPrice = [...standardPlans, ...unlimitedPlans].filter(p => !p.price || p.priceValue === 0 || p.price === '$ 0.00');
+            if (plansWithoutPrice.length > 0) {
+                console.warn('⚠️ Found plans without valid prices:', plansWithoutPrice.length);
+                console.warn('Sample plans without price:', plansWithoutPrice.slice(0, 3));
+            }
+            
             // Добавляем ID для совместимости
             standardPlans.forEach((plan, index) => {
                 if (!plan.id) {
                     plan.id = `plan${index + 1}`;
+                }
+                // Проверяем, что цена есть
+                if (!plan.price || plan.priceValue === 0) {
+                    console.error('❌ Plan without price:', plan);
                 }
             });
             
             unlimitedPlans.forEach((plan, index) => {
                 if (!plan.id) {
                     plan.id = `unlimited${index + 1}`;
+                }
+                // Проверяем, что цена есть
+                if (!plan.price || plan.priceValue === 0) {
+                    console.error('❌ Unlimited plan without price:', plan);
                 }
             });
             
@@ -78,15 +93,35 @@ async function loadPlansFromAPI(countryCode) {
                 unlimited: unlimitedPlans.length,
                 country: countryCode,
                 sampleStandard: standardPlans[0] || null,
-                sampleUnlimited: unlimitedPlans[0] || null
+                sampleUnlimited: unlimitedPlans[0] || null,
+                plansWithoutPrice: plansWithoutPrice.length
             });
             
-            // Логируем первые планы для отладки
+            // Логируем первые планы для отладки с ценами
             if (standardPlans.length > 0) {
-                console.log('First standard plan:', standardPlans[0]);
+                console.log('✅ First standard plan:', {
+                    name: standardPlans[0].bundle_name,
+                    price: standardPlans[0].price,
+                    priceValue: standardPlans[0].priceValue,
+                    currency: standardPlans[0].currency,
+                    data: standardPlans[0].data,
+                    duration: standardPlans[0].duration
+                });
             }
             if (unlimitedPlans.length > 0) {
-                console.log('First unlimited plan:', unlimitedPlans[0]);
+                console.log('✅ First unlimited plan:', {
+                    name: unlimitedPlans[0].bundle_name,
+                    price: unlimitedPlans[0].price,
+                    priceValue: unlimitedPlans[0].priceValue,
+                    currency: unlimitedPlans[0].currency,
+                    duration: unlimitedPlans[0].duration
+                });
+            }
+            
+            // Если планы загружены, но все без цен - это проблема
+            if (standardPlans.length > 0 && plansWithoutPrice.length === standardPlans.length + unlimitedPlans.length) {
+                console.error('❌ CRITICAL: All plans loaded but none have valid prices!');
+                console.error('This might indicate a problem with price parsing from API');
             }
             
             return true;

@@ -73,6 +73,17 @@ function groupBundlesIntoPlans(bundles) {
             currency = bundle.price.currency;
         }
         
+        // Пропускаем bundles без цены или с нулевой ценой
+        if (priceValue <= 0) {
+            console.warn('Skipping bundle with zero or missing price:', {
+                name: bundle.name,
+                price: bundle.price,
+                pricePerUnit: bundle.pricePerUnit,
+                priceType: typeof bundle.price
+            });
+            return;
+        }
+        
         const priceFormatted = currency === 'USD' 
             ? `$ ${priceValue.toFixed(2)}`
             : `${currency} ${priceValue.toFixed(2)}`;
