@@ -142,6 +142,19 @@ async function getAllStandardFixedBundles() {
         
         console.log(`Received ${bundles.length} bundles from Standard Fixed group`);
         
+        // Логируем структуру первого bundle для отладки
+        if (bundles.length > 0) {
+            const sampleBundle = bundles[0];
+            console.log('Sample Standard Fixed bundle structure:', {
+                name: sampleBundle.name,
+                country: sampleBundle.country,
+                countries: sampleBundle.countries,
+                countriesType: typeof sampleBundle.countries,
+                countriesLength: Array.isArray(sampleBundle.countries) ? sampleBundle.countries.length : 0,
+                firstCountry: Array.isArray(sampleBundle.countries) ? sampleBundle.countries[0] : null
+            });
+        }
+        
         // Фильтруем только fixed тарифы (не unlimited) - дополнительная проверка
         const fixedBundles = bundles.filter(bundle => !bundle.unlimited);
         
@@ -162,7 +175,7 @@ async function getAllStandardFixedBundles() {
  * @returns {Array} - отфильтрованные bundles
  */
 function filterBundlesByRegion(bundles, apiRegion) {
-    return bundles.filter(bundle => {
+    const filtered = bundles.filter(bundle => {
         const countries = bundle.countries || [];
         
         // Проверяем поле country (если это строка)
@@ -203,6 +216,17 @@ function filterBundlesByRegion(bundles, apiRegion) {
         
         return false;
     });
+    
+    // Логируем примеры найденных bundles для отладки
+    if (filtered.length > 0 && filtered.length <= 3) {
+        console.log(`Sample bundles for region ${apiRegion}:`, filtered.map(b => ({
+            name: b.name,
+            country: b.country,
+            countries: b.countries
+        })));
+    }
+    
+    return filtered;
 }
 
 /**
