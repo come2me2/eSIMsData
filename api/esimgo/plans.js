@@ -290,6 +290,22 @@ module.exports = async function handler(req, res) {
             ? catalogue 
             : (catalogue?.bundles || catalogue?.data || []);
         
+        // Логируем структуру первого bundle для отладки
+        if (bundles.length > 0) {
+            console.log('Sample bundle structure:', {
+                name: bundles[0].name,
+                price: bundles[0].price,
+                priceType: typeof bundles[0].price,
+                pricePerUnit: bundles[0].pricePerUnit,
+                currency: bundles[0].currency,
+                countries: bundles[0].countries?.length || 0,
+                dataAmount: bundles[0].dataAmount,
+                duration: bundles[0].duration,
+                unlimited: bundles[0].unlimited,
+                bundleKeys: Object.keys(bundles[0])
+            });
+        }
+        
         // Фильтруем bundles по категории
         if (isLocal && countryCode) {
             // Local: только bundles для одной страны
@@ -340,6 +356,27 @@ module.exports = async function handler(req, res) {
         
         // Группируем в планы
         const plans = groupBundlesIntoPlans(bundles);
+        
+        // Логируем примеры планов для отладки цен
+        if (plans.standard.length > 0) {
+            console.log('Sample standard plans:', plans.standard.slice(0, 3).map(p => ({
+                name: p.bundle_name,
+                price: p.price,
+                priceValue: p.priceValue,
+                currency: p.currency,
+                data: p.data,
+                duration: p.duration
+            })));
+        }
+        if (plans.unlimited.length > 0) {
+            console.log('Sample unlimited plans:', plans.unlimited.slice(0, 3).map(p => ({
+                name: p.bundle_name,
+                price: p.price,
+                priceValue: p.priceValue,
+                currency: p.currency,
+                duration: p.duration
+            })));
+        }
         
         console.log('Plans grouped:', {
             country: country || 'all',
