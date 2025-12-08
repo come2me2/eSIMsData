@@ -85,9 +85,18 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
             success: true,
             data: {
-                totalBundles: africaBundles.length,
+                totalBundlesWithRegionAfrica: allAfricaRegionBundles.length,
+                regionalBundlesCount: africaBundles.length,
+                countryBundlesCount: allAfricaRegionBundles.length - africaBundles.length,
+                regionalBundles: regionalBundles.map(b => ({
+                    name: b.name,
+                    dataAmount: b.dataAmount,
+                    duration: b.duration,
+                    price: b.price,
+                    countries: b.countries
+                })),
                 sampleBundles: sampleBundles,
-                message: 'Check priceFields in sampleBundles to find correct price field'
+                message: 'Regional bundles should have country.name=Africa or country.iso=AFRICA'
             }
         });
         
