@@ -10,13 +10,14 @@ const esimgoClient = require('./client');
 // Маппинг ISO кода страны на название
 const isoToCountryName = {
     'AD': 'Andorra', 'AE': 'United Arab Emirates', 'AF': 'Afghanistan', 'AG': 'Antigua and Barbuda',
-    'AI': 'Anguilla', 'AL': 'Albania', 'AM': 'Armenia', 'AO': 'Angola', 'AQ': 'Antarctica',
+    'AI': 'Anguilla', 'AL': 'Albania', 'AM': 'Armenia', 'AN': 'Netherlands Antilles', 'AO': 'Angola', 'AQ': 'Antarctica',
     'AR': 'Argentina', 'AS': 'American Samoa', 'AT': 'Austria', 'AU': 'Australia', 'AW': 'Aruba',
     'AX': 'Åland Islands', 'AZ': 'Azerbaijan', 'BA': 'Bosnia and Herzegovina', 'BB': 'Barbados',
     'BD': 'Bangladesh', 'BE': 'Belgium', 'BF': 'Burkina Faso', 'BG': 'Bulgaria', 'BH': 'Bahrain',
     'BI': 'Burundi', 'BJ': 'Benin', 'BL': 'Saint Barthélemy', 'BM': 'Bermuda', 'BN': 'Brunei',
     'BO': 'Bolivia', 'BQ': 'Caribbean Netherlands', 'BR': 'Brazil', 'BS': 'Bahamas', 'BT': 'Bhutan',
     'BV': 'Bouvet Island', 'BW': 'Botswana', 'BY': 'Belarus', 'BZ': 'Belize', 'CA': 'Canada',
+    'CYP': 'Northern Cyprus', // Northern Cyprus специальный код
     'CC': 'Cocos Islands', 'CD': 'Congo, Democratic Republic', 'CF': 'Central African Republic',
     'CG': 'Congo', 'CH': 'Switzerland', 'CI': 'Côte d\'Ivoire', 'CK': 'Cook Islands', 'CL': 'Chile',
     'CM': 'Cameroon', 'CN': 'China', 'CO': 'Colombia', 'CR': 'Costa Rica', 'CU': 'Cuba',
@@ -28,7 +29,7 @@ const isoToCountryName = {
     'GA': 'Gabon', 'GB': 'United Kingdom', 'GD': 'Grenada', 'GE': 'Georgia', 'GF': 'French Guiana',
     'GG': 'Guernsey', 'GH': 'Ghana', 'GI': 'Gibraltar', 'GL': 'Greenland', 'GM': 'Gambia',
     'GN': 'Guinea', 'GP': 'Guadeloupe', 'GQ': 'Equatorial Guinea', 'GR': 'Greece', 'GS': 'South Georgia',
-    'GT': 'Guatemala', 'GU': 'Guam', 'GW': 'Guinea-Bissau', 'GY': 'Guyana', 'HK': 'Hong Kong',
+    'GT': 'Guatemala', 'GU': 'Guam', 'GW': 'Guinea-Bissau', 'GY': 'Guyana', 'HK': 'Hong Kong', 'IC': 'Canary Islands',
     'HM': 'Heard Island', 'HN': 'Honduras', 'HR': 'Croatia', 'HT': 'Haiti', 'HU': 'Hungary',
     'ID': 'Indonesia', 'IE': 'Ireland', 'IL': 'Israel', 'IM': 'Isle of Man', 'IN': 'India',
     'IO': 'British Indian Ocean Territory', 'IQ': 'Iraq', 'IR': 'Iran', 'IS': 'Iceland', 'IT': 'Italy',
@@ -56,9 +57,9 @@ const isoToCountryName = {
     'TF': 'French Southern Territories', 'TG': 'Togo', 'TH': 'Thailand', 'TJ': 'Tajikistan', 'TK': 'Tokelau',
     'TL': 'Timor-Leste', 'TM': 'Turkmenistan', 'TN': 'Tunisia', 'TO': 'Tonga', 'TR': 'Turkey',
     'TT': 'Trinidad and Tobago', 'TV': 'Tuvalu', 'TW': 'Taiwan', 'TZ': 'Tanzania', 'UA': 'Ukraine',
-    'UG': 'Uganda', 'UM': 'United States Minor Outlying Islands', 'US': 'United States', 'UY': 'Uruguay', 'UZ': 'Uzbekistan',
+    'UG': 'Uganda', 'UM': 'United States Minor Outlying Islands', 'US': 'United States', 'US-HI': 'Hawaii', 'UY': 'Uruguay', 'UZ': 'Uzbekistan',
     'VA': 'Vatican City', 'VC': 'Saint Vincent and the Grenadines', 'VE': 'Venezuela', 'VG': 'British Virgin Islands', 'VI': 'U.S. Virgin Islands',
-    'VN': 'Vietnam', 'VU': 'Vanuatu', 'WF': 'Wallis and Futuna', 'WS': 'Samoa', 'YE': 'Yemen',
+    'VN': 'Vietnam', 'VU': 'Vanuatu', 'WF': 'Wallis and Futuna', 'WS': 'Samoa', 'XK': 'Kosovo', 'YE': 'Yemen',
     'YT': 'Mayotte', 'ZA': 'South Africa', 'ZM': 'Zambia', 'ZW': 'Zimbabwe'
 };
 
@@ -147,14 +148,26 @@ module.exports = async function handler(req, res) {
             
             // Вариант 1: массив стран в поле countries
             if (bundle.countries && Array.isArray(bundle.countries)) {
-                countryCodes = bundle.countries.map(c => 
-                    (typeof c === 'string' ? c : c.code || c.country || c.iso)?.toUpperCase()
-                ).filter(Boolean);
+                countryCodes = bundle.countries.map(c => {
+                    let code = (typeof c === 'string' ? c : c.code || c.country || c.iso)?.toUpperCase();
+                    // Специальная обработка для Northern Cyprus
+                    const countryName = (typeof c === 'object' ? c.name : '') || bundle.country_name || bundle.countryName || '';
+                    if (code === 'CY' && countryName.toLowerCase().includes('northern cyprus')) {
+                        code = 'CYP';
+                    }
+                    return code;
+                }).filter(Boolean);
             }
             // Вариант 2: одна страна в поле country
             else {
-                const countryCode = (bundle.country || bundle.countryCode || bundle.iso)?.toUpperCase();
+                let countryCode = (bundle.country || bundle.countryCode || bundle.iso)?.toUpperCase();
                 if (countryCode) {
+                    // Специальная обработка для Northern Cyprus
+                    // Если код CY и название содержит "Northern Cyprus", используем CYP
+                    const countryName = bundle.country_name || bundle.countryName || '';
+                    if (countryCode === 'CY' && countryName.toLowerCase().includes('northern cyprus')) {
+                        countryCode = 'CYP';
+                    }
                     countryCodes = [countryCode];
                 }
             }
@@ -166,13 +179,13 @@ module.exports = async function handler(req, res) {
             
             // Добавляем каждую страну в карту
             countryCodes.forEach(countryCode => {
-                // Фильтруем: оставляем только валидные ISO коды стран (2 буквы) из нашего маппинга
-                // Исключаем регионы и невалидные коды
-                if (!countryCode || countryCode.length !== 2) {
-                    return; // Пропускаем коды, которые не являются 2-буквенными ISO кодами
+                // Фильтруем: оставляем только валидные коды из нашего маппинга
+                // Разрешаем коды длиной 2-5 символов (стандартные ISO + специальные: CYP, US-HI)
+                if (!countryCode || countryCode.length < 2 || countryCode.length > 5) {
+                    return; // Пропускаем коды неправильной длины
                 }
                 
-                // Проверяем, что код есть в нашем маппинге (валидная страна)
+                // Проверяем, что код есть в нашем маппинге (валидная страна/регион)
                 if (!isoToCountryName[countryCode]) {
                     console.log(`Skipping invalid country code: ${countryCode}`);
                     return; // Пропускаем коды, которых нет в маппинге (регионы и т.д.)
