@@ -38,31 +38,47 @@ function groupBundlesIntoPlans(bundles) {
     // Группируем по типу (unlimited или нет)
     bundles.forEach(bundle => {
         // Извлекаем цену из разных возможных форматов
+        // API eSIM Go может возвращать цену в разных полях: price, pricePerUnit, cost, amount
         let priceValue = 0;
         let currency = 'USD';
         
-        if (bundle.price) {
-            if (typeof bundle.price === 'number') {
-                // Цена как число (в центах или долларах)
-                priceValue = bundle.price;
-            } else if (typeof bundle.price === 'object' && bundle.price.amount) {
-                // Цена как объект { amount, currency }
-                priceValue = typeof bundle.price.amount === 'number' 
-                    ? bundle.price.amount 
-                    : parseFloat(bundle.price.amount) || 0;
-                currency = bundle.price.currency || 'USD';
-            } else if (typeof bundle.price === 'string') {
-                // Цена как строка
-                priceValue = parseFloat(bundle.price) || 0;
+        // Пробуем разные поля для цены
+        const priceFields = [
+            bundle.price,
+            bundle.pricePerUnit,
+            bundle.cost,
+            bundle.amount,
+            bundle.fee,
+            bundle.totalPrice,
+            bundle.userPrice
+        ];
+        
+        for (const priceField of priceFields) {
+            if (priceField !== undefined && priceField !== null) {
+                if (typeof priceField === 'number' && priceField > 0) {
+                    priceValue = priceField;
+                    break;
+                } else if (typeof priceField === 'object' && priceField.amount) {
+                    priceValue = typeof priceField.amount === 'number' 
+                        ? priceField.amount 
+                        : parseFloat(priceField.amount) || 0;
+                    currency = priceField.currency || 'USD';
+                    if (priceValue > 0) break;
+                } else if (typeof priceField === 'string') {
+                    const parsed = parseFloat(priceField);
+                    if (!isNaN(parsed) && parsed > 0) {
+                        priceValue = parsed;
+                        break;
+                    }
+                }
             }
-        } else if (bundle.pricePerUnit) {
-            priceValue = typeof bundle.pricePerUnit === 'number' 
-                ? bundle.pricePerUnit 
-                : parseFloat(bundle.pricePerUnit) || 0;
         }
         
-        // Если цена в центах (больше 100), конвертируем в доллары
-        if (priceValue > 100 && priceValue < 100000) {
+        // Если цена в центах (больше 100 и меньше 100000), конвертируем в доллары
+        // Но только если это выглядит как цена в центах (например, 999 для $9.99)
+        if (priceValue > 100 && priceValue < 100000 && priceValue % 1 === 0) {
+            // Проверяем, не является ли это уже ценой в долларах (например, 9.99)
+            // Если цена целое число и больше 100, вероятно это центы
             priceValue = priceValue / 100;
         }
         
@@ -71,6 +87,25 @@ function groupBundlesIntoPlans(bundles) {
             currency = bundle.currency;
         } else if (bundle.price && typeof bundle.price === 'object' && bundle.price.currency) {
             currency = bundle.price.currency;
+        } else if (bundle.priceCurrency) {
+            currency = bundle.priceCurrency;
+        }
+        
+        // Логируем, если цена не найдена
+        if (priceValue <= 0) {
+            console.warn('Price extraction failed for bundle:', {
+                name: bundle.name,
+                availableFields: Object.keys(bundle).filter(k => 
+                    k.toLowerCase().includes('price') || 
+                    k.toLowerCase().includes('cost') || 
+                    k.toLowerCase().includes('amount') ||
+                    k.toLowerCase().includes('fee')
+                ),
+                price: bundle.price,
+                pricePerUnit: bundle.pricePerUnit,
+                cost: bundle.cost,
+                amount: bundle.amount
+            });
         }
         
         // Пропускаем bundles без цены или с нулевой ценой
