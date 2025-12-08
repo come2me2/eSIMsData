@@ -193,12 +193,81 @@ module.exports = async function handler(req, res) {
     }
     
     try {
-        const { country, region, perPage = 1000 } = req.query;
+        const { country, region, perPage = 1000, useExcel } = req.query;
         
-        console.log('Plans API request:', { country, region, perPage });
+        console.log('Plans API request:', { country, region, perPage, useExcel });
         console.log('ESIMGO_API_KEY exists:', !!process.env.ESIMGO_API_KEY);
         
-        // Получаем каталог
+        const countryCode = country ? country.toUpperCase() : null;
+        
+        // Для Local категории (когда передан country код) используем данные из Excel
+        if (countryCode && (useExcel === 'true' || useExcel === true)) {
+            try {
+                const { getLocalPlansFromExcel } = require('../_lib/esimgo/parse-excel');
+                const excelPlans = getLocalPlansFromExcel(countryCode);
+                
+                // Преобразуем Excel планы в формат API
+                const standard = excelPlans.standard.map(plan => ({
+                    id: plan.sku || `excel-${countryCode}-${plan.dataAmount}-${plan.duration}`,
+                    bundle_name: plan.sku || '',
+                    data: `${plan.dataAmount / 1000} GB`,
+                    dataAmount: plan.dataAmount,
+                    duration: `${plan.duration} Days`,
+                    durationDays: plan.duration,
+                    price: `$ ${plan.price.toFixed(2)}`,
+                    priceValue: plan.price,
+                    currency: plan.currency,
+                    unlimited: false,
+                    countries: [countryCode],
+                    description: plan.profile || '',
+                    source: 'excel'
+                }));
+                
+                const unlimited = excelPlans.unlimited.map(plan => ({
+                    id: plan.sku || `excel-${countryCode}-unlimited-${plan.duration}`,
+                    bundle_name: plan.sku || '',
+                    data: '∞ GB',
+                    dataAmount: 0,
+                    duration: `${plan.duration} Days`,
+                    durationDays: plan.duration,
+                    price: `$ ${plan.price.toFixed(2)}`,
+                    priceValue: plan.price,
+                    currency: plan.currency,
+                    unlimited: true,
+                    countries: [countryCode],
+                    description: plan.profile || '',
+                    source: 'excel'
+                }));
+                
+                // Применяем дедупликацию
+                const plans = groupBundlesIntoPlans([...standard, ...unlimited]);
+                
+                console.log('Plans from Excel:', {
+                    country: countryCode,
+                    standardPlans: plans.standard.length,
+                    unlimitedPlans: plans.unlimited.length
+                });
+                
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        standard: plans.standard,
+                        unlimited: plans.unlimited,
+                        total: plans.standard.length + plans.unlimited.length
+                    },
+                    meta: {
+                        country: countryCode,
+                        source: 'excel',
+                        message: 'Plans loaded from Excel file'
+                    }
+                });
+            } catch (excelError) {
+                console.warn('Failed to load plans from Excel, falling back to API:', excelError.message);
+                // Продолжаем с API как fallback
+            }
+        }
+        
+        // Получаем каталог из API
         const catalogueOptions = {
             perPage: parseInt(perPage)
         };
@@ -206,11 +275,6 @@ module.exports = async function handler(req, res) {
         if (region) {
             catalogueOptions.region = region;
         }
-        
-        // getCatalogue принимает (countryCode, options)
-        // countryCode - строка или null
-        // options - объект с дополнительными параметрами
-        const countryCode = country ? country.toUpperCase() : null;
         
         console.log('Calling getCatalogue with:', { countryCode, options: catalogueOptions });
         
