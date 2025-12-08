@@ -58,8 +58,28 @@ module.exports = async function handler(req, res) {
             }) || name.includes('AFRICA') || name.includes('_AF_');
         });
         
-        // Берем первые 5 bundles для анализа
-        const sampleBundles = africaBundles.slice(0, 5).map(bundle => {
+        // Также получаем все bundles с region=Africa (включая отдельные страны)
+        const allAfricaRegionBundles = bundles.filter(bundle => {
+            const countries = bundle.countries || [];
+            return countries.some(country => {
+                if (typeof country === 'object' && country !== null) {
+                    const region = country.region || country.Region || country.REGION;
+                    return region === 'Africa' || region?.toLowerCase() === 'africa';
+                }
+                return false;
+            });
+        });
+        
+        console.log('Total bundles with region=Africa:', allAfricaRegionBundles.length);
+        console.log('Regional Africa bundles (country.name=Africa):', africaBundles.length);
+        
+        // Берем региональные bundles (если есть) и первые bundles по странам
+        const regionalBundles = africaBundles.slice(0, 10);
+        const countryBundles = allAfricaRegionBundles
+            .filter(b => !africaBundles.includes(b))
+            .slice(0, 5);
+        
+        const sampleBundles = [...regionalBundles, ...countryBundles].map(bundle => {
             // Собираем все возможные поля с ценами
             const priceFields = {};
             Object.keys(bundle).forEach(key => {
