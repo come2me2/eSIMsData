@@ -381,14 +381,31 @@ module.exports = async function handler(req, res) {
             });
         } else if (isGlobal) {
             // Global: bundles с множеством стран (countries.length > 1) или без конкретной страны
+            const bundlesBeforeFilter = bundles.length;
             bundles = bundles.filter(bundle => {
                 const countries = bundle.countries || [];
                 const bundleCountry = bundle.country || bundle.countryCode || bundle.iso;
                 
-                // Global = множество стран или специальный признак Global
-                return countries.length > 1 || 
-                       (!bundleCountry && countries.length === 0) ||
-                       bundle.name?.toLowerCase().includes('global');
+                // Global = множество стран (больше 1) или специальный признак Global в названии
+                const hasMultipleCountries = countries.length > 1;
+                const hasGlobalInName = bundle.name?.toLowerCase().includes('global');
+                
+                // Если countries - массив объектов, проверяем количество
+                // Если countries - массив строк, проверяем количество
+                const isGlobalBundle = hasMultipleCountries || hasGlobalInName;
+                
+                return isGlobalBundle;
+            });
+            
+            console.log('Global bundles filter:', {
+                beforeFilter: bundlesBeforeFilter,
+                afterFilter: bundles.length,
+                filteredOut: bundlesBeforeFilter - bundles.length,
+                sampleFiltered: bundles.slice(0, 3).map(b => ({
+                    name: b.name,
+                    countriesCount: b.countries?.length || 0,
+                    firstCountry: b.countries?.[0]
+                }))
             });
         }
         // Region: уже фильтруется через параметр region в API
