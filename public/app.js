@@ -229,7 +229,18 @@ function getFlagPath(countryCode) {
     }
     // Use local SVG flags from flags folder
     // Format: flags/{CODE}.svg - файлы в верхнем регистре!
-    const code = countryCode.toUpperCase();
+    let code = countryCode.toUpperCase();
+    
+    // Специальная обработка для файлов с пробелами или специальными символами
+    const specialFlagFiles = {
+        'CYP': 'CYP;CY .svg',  // Northern Cyprus файл с пробелом
+        'US-HI': 'US-HI .svg'  // Hawaii файл с пробелом
+    };
+    
+    // Если есть специальный файл, используем его
+    if (specialFlagFiles[code]) {
+        return `/flags/${specialFlagFiles[code]}?${FLAG_VERSION}`;
+    }
     
     // Use absolute path from root - works on Vercel
     // Add version parameter to bust browser cache

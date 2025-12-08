@@ -26,7 +26,19 @@ function getFlagPath(countryCode) {
         return null;
     }
     // Файлы в верхнем регистре: AF.svg, TH.svg и т.д.
-    const code = countryCode.toUpperCase();
+    let code = countryCode.toUpperCase();
+    
+    // Специальная обработка для файлов с пробелами или специальными символами
+    const specialFlagFiles = {
+        'CYP': 'CYP;CY .svg',  // Northern Cyprus файл с пробелом
+        'US-HI': 'US-HI .svg'  // Hawaii файл с пробелом
+    };
+    
+    // Если есть специальный файл, используем его
+    if (specialFlagFiles[code]) {
+        return `/flags/${specialFlagFiles[code]}`;
+    }
+    
     return `/flags/${code}.svg`;
 }
 
