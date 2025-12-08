@@ -58,8 +58,8 @@ async function loadPlansFromAPI() {
     console.log('🔵 loadPlansFromAPI called for global plans');
     
     try {
-        // Для глобальных планов не передаем параметры - получаем все доступные
-        const apiUrl = `/api/esimgo/plans`;
+        // Для глобальных планов передаем параметр global=true для загрузки из Excel
+        const apiUrl = `/api/esimgo/plans?global=true`;
         console.log('🔵 Fetching global plans from:', apiUrl);
         
         const response = await fetch(apiUrl);

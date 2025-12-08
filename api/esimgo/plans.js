@@ -199,9 +199,80 @@ module.exports = async function handler(req, res) {
         console.log('ESIMGO_API_KEY exists:', !!process.env.ESIMGO_API_KEY);
         
         const countryCode = country ? country.toUpperCase() : null;
+        const isGlobal = req.query.global === 'true' || req.query.global === true;
         
-        // Для Local категории (когда передан country код) используем данные из Excel
-        if (countryCode && (useExcel === 'true' || useExcel === true)) {
+        // Для Global категории (когда нет country и нет region, или явно указан global=true)
+        // Global = множество стран, может быть fixed или unlimited
+        if (isGlobal || (!countryCode && !region)) {
+            try {
+                const { getGlobalPlansFromExcel } = require('../_lib/esimgo/parse-excel');
+                const excelPlans = getGlobalPlansFromExcel();
+                
+                // Преобразуем Excel планы в формат API
+                const standard = excelPlans.standard.map(plan => ({
+                    id: plan.sku || `excel-global-${plan.dataAmount}-${plan.duration}`,
+                    bundle_name: plan.sku || '',
+                    data: `${plan.dataAmount / 1000} GB`,
+                    dataAmount: plan.dataAmount,
+                    duration: `${plan.duration} Days`,
+                    durationDays: plan.duration,
+                    price: `$ ${plan.price.toFixed(2)}`,
+                    priceValue: plan.price,
+                    currency: plan.currency,
+                    unlimited: false,
+                    countries: [], // Global = множество стран, список может быть пустым или содержать все страны
+                    description: plan.profile || '',
+                    source: 'excel',
+                    isGlobal: true
+                }));
+                
+                const unlimited = excelPlans.unlimited.map(plan => ({
+                    id: plan.sku || `excel-global-unlimited-${plan.duration}`,
+                    bundle_name: plan.sku || '',
+                    data: '∞ GB',
+                    dataAmount: 0,
+                    duration: `${plan.duration} Days`,
+                    durationDays: plan.duration,
+                    price: `$ ${plan.price.toFixed(2)}`,
+                    priceValue: plan.price,
+                    currency: plan.currency,
+                    unlimited: true,
+                    countries: [], // Global = множество стран
+                    description: plan.profile || '',
+                    source: 'excel',
+                    isGlobal: true
+                }));
+                
+                // Применяем дедупликацию
+                const plans = groupBundlesIntoPlans([...standard, ...unlimited]);
+                
+                console.log('Global plans from Excel:', {
+                    standardPlans: plans.standard.length,
+                    unlimitedPlans: plans.unlimited.length
+                });
+                
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        standard: plans.standard,
+                        unlimited: plans.unlimited,
+                        total: plans.standard.length + plans.unlimited.length
+                    },
+                    meta: {
+                        category: 'global',
+                        source: 'excel',
+                        message: 'Global plans loaded from Excel file'
+                    }
+                });
+            } catch (excelError) {
+                console.warn('Failed to load Global plans from Excel, falling back to API:', excelError.message);
+                // Продолжаем с API как fallback
+            }
+        }
+        
+        // Для Local категории (когда передан country код без region) используем данные из Excel
+        // Local = одна страна, может быть fixed или unlimited
+        if (countryCode && !region) {
             try {
                 const { getLocalPlansFromExcel } = require('../_lib/esimgo/parse-excel');
                 const excelPlans = getLocalPlansFromExcel(countryCode);
