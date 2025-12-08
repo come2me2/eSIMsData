@@ -8,8 +8,8 @@
  * Возвращает только fixed тарифы (без unlimited) для региональных eSIM
  */
 
-const esimgoClient = require('./client');
-const { getAPIRegions, isLatinAmerica } = require('./region-mapping');
+const esimgoClient = require('../_lib/esimgo/client');
+const { getAPIRegions, isLatinAmerica } = require('../_lib/esimgo/region-mapping');
 
 /**
  * Дедупликация тарифов для Latin America

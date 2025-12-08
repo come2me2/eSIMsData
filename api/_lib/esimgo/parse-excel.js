@@ -7,7 +7,7 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 
-const EXCEL_FILE_PATH = path.join(__dirname, '../../Rate_Sheet_November_2025_Standard_babe40b098.xlsx');
+const EXCEL_FILE_PATH = path.join(__dirname, '../../../Rate_Sheet_November_2025_Standard_babe40b098.xlsx');
 
 /**
  * Парсинг вкладки "Regional Bundles"

@@ -8,7 +8,7 @@
  * - Обработанные тарифы с ценами
  */
 
-const esimgoClient = require('./client');
+const esimgoClient = require('../_lib/esimgo/client');
 
 /**
  * Группировка стран по регионам

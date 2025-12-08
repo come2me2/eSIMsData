@@ -4,7 +4,7 @@
  * Документация: https://docs.esim-go.com/api/v2_4/#tag/Catalogue
  */
 
-const esimgoClient = require('./client');
+const esimgoClient = require('../_lib/esimgo/client');
 
 module.exports = async function handler(req, res) {
     // CORS headers

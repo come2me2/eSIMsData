@@ -5,7 +5,7 @@
  * Возвращает список всех стран с доступными тарифами из eSIM Go
  */
 
-const esimgoClient = require('./client');
+const esimgoClient = require('../_lib/esimgo/client');
 
 // Маппинг ISO кода страны на название
 const isoToCountryName = {

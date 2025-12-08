@@ -13,7 +13,7 @@
 // Загружаем client модуль в начале файла
 let esimgoClient;
 try {
-    esimgoClient = require('./client');
+    esimgoClient = require('../_lib/esimgo/client');
     if (!esimgoClient || !esimgoClient.getCatalogue) {
         throw new Error('Client module loaded but getCatalogue function not found');
     }
