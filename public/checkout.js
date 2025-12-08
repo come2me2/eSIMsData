@@ -371,7 +371,7 @@ const regionIconMap = {
 };
 
 // Version for cache busting - increment when flags are updated
-const FLAG_VERSION = 'v3';
+const FLAG_VERSION = 'v4'; // Updated: added missing flags (Cameroon, etc.)
 
 // Function to get flag image URL from local flags folder
 function getFlagPath(countryCode) {

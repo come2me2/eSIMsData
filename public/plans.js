@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Version for cache busting - increment when flags are updated
-const FLAG_VERSION = 'v3';
+const FLAG_VERSION = 'v4'; // Updated: added missing flags (Cameroon, etc.)
 
 // Function to get flag image URL from local flags folder
 // Using SVG format for maximum quality (vector, scales perfectly)
