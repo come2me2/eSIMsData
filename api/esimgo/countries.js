@@ -96,6 +96,10 @@ module.exports = async function handler(req, res) {
                 isArray: Array.isArray(catalogue),
                 hasBundles: !!catalogue?.bundles,
                 hasData: !!catalogue?.data,
+                pageCount: catalogue?.pageCount,
+                rows: catalogue?.rows,
+                pageSize: catalogue?.pageSize,
+                currentPage: catalogue?.page,
                 keys: catalogue && !Array.isArray(catalogue) ? Object.keys(catalogue) : []
             });
             
@@ -108,14 +112,29 @@ module.exports = async function handler(req, res) {
                 allBundles = allBundles.concat(bundles);
                 
                 // Проверяем, есть ли еще страницы
-                // Если количество bundles меньше perPage, значит это последняя страница
-                if (bundles.length < perPage) {
+                // Используем метаданные пагинации, если они есть
+                const pageCount = catalogue?.pageCount;
+                const totalRows = catalogue?.rows;
+                const currentPage = catalogue?.page || page;
+                
+                if (pageCount && currentPage >= pageCount) {
+                    // Достигли последней страницы по метаданным
                     hasMore = false;
+                    console.log(`Reached last page according to metadata: ${currentPage}/${pageCount}`);
+                } else if (totalRows && allBundles.length >= totalRows) {
+                    // Получили все bundles по метаданным
+                    hasMore = false;
+                    console.log(`Fetched all bundles: ${allBundles.length}/${totalRows}`);
+                } else if (bundles.length < perPage) {
+                    // Если количество bundles меньше perPage, значит это последняя страница
+                    hasMore = false;
+                    console.log(`Last page: received ${bundles.length} bundles (less than perPage ${perPage})`);
                 } else {
                     page++;
                 }
             } else {
                 hasMore = false;
+                console.log(`No bundles on page ${page}, stopping pagination`);
             }
             
             // Защита от бесконечного цикла
