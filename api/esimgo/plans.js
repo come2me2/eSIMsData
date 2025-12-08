@@ -291,6 +291,44 @@ module.exports = async function handler(req, res) {
             catalogueOptions.region = region;
         }
         
+        // Функция для проверки, является ли bundle Global
+        function isGlobalBundle(bundle) {
+            const countries = bundle.countries || [];
+            const name = (bundle.name || '').toLowerCase();
+            const desc = (bundle.description || '').toLowerCase();
+            
+            // Проверяем, есть ли "Global" в названии или описании
+            if (name.includes('global') || desc.includes('global')) {
+                return true;
+            }
+            
+            // Проверяем countries - возможно, есть специальное значение "Global"
+            if (countries.length > 0) {
+                // Если countries - массив объектов, проверяем name или iso
+                const hasGlobalCountry = countries.some(country => {
+                    if (typeof country === 'string') {
+                        return country.toUpperCase() === 'GLOBAL';
+                    } else if (typeof country === 'object' && country !== null) {
+                        const countryName = (country.name || '').toLowerCase();
+                        const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
+                        return countryName === 'global' || countryIso === 'GLOBAL';
+                    }
+                    return false;
+                });
+                if (hasGlobalCountry) {
+                    return true;
+                }
+            }
+            
+            // Проверяем паттерны в названии (RGBS, RGB - Global bundles)
+            if (name.includes('rgbs') || name.includes('rgb') || 
+                name.includes('world') || name.includes('worldwide')) {
+                return true;
+            }
+            
+            return false;
+        }
+        
         // Для Global запрашиваем bundles из двух групп: "Standard Fixed" и "Standard Unlimited Essential"
         // Для Local запрашиваем конкретную страну
         // Для Region используем параметр region
@@ -404,44 +442,6 @@ module.exports = async function handler(req, res) {
             bundles = Array.isArray(catalogue) 
                 ? catalogue 
                 : (catalogue?.bundles || catalogue?.data || []);
-        }
-        
-        // Функция для проверки, является ли bundle Global
-        function isGlobalBundle(bundle) {
-            const countries = bundle.countries || [];
-            const name = (bundle.name || '').toLowerCase();
-            const desc = (bundle.description || '').toLowerCase();
-            
-            // Проверяем, есть ли "Global" в названии или описании
-            if (name.includes('global') || desc.includes('global')) {
-                return true;
-            }
-            
-            // Проверяем countries - возможно, есть специальное значение "Global"
-            if (countries.length > 0) {
-                // Если countries - массив объектов, проверяем name или iso
-                const hasGlobalCountry = countries.some(country => {
-                    if (typeof country === 'string') {
-                        return country.toUpperCase() === 'GLOBAL';
-                    } else if (typeof country === 'object' && country !== null) {
-                        const countryName = (country.name || '').toLowerCase();
-                        const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
-                        return countryName === 'global' || countryIso === 'GLOBAL';
-                    }
-                    return false;
-                });
-                if (hasGlobalCountry) {
-                    return true;
-                }
-            }
-            
-            // Проверяем паттерны в названии (RGBS, RGB - Global bundles)
-            if (name.includes('rgbs') || name.includes('rgb') || 
-                name.includes('world') || name.includes('worldwide')) {
-                return true;
-            }
-            
-            return false;
         }
         
         console.log('Bundles extracted from catalogue:', {
