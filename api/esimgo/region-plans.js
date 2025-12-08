@@ -300,21 +300,66 @@ function filterBundlesByRegion(bundles, apiRegion) {
     });
     
     // Логируем примеры найденных bundles для отладки
-    if (filtered.length > 0 && filtered.length <= 3) {
-        console.log(`Sample bundles for region ${apiRegion}:`, filtered.map(b => ({
-            name: b.name,
-            country: b.country,
-            countries: b.countries
-        })));
+    if (filtered.length > 0) {
+        console.log(`Found ${filtered.length} bundles for region ${apiRegion}`);
+        if (filtered.length <= 5) {
+            console.log(`Sample bundles for region ${apiRegion}:`, filtered.map(b => ({
+                name: b.name,
+                country: b.country,
+                countries: b.countries,
+                price: b.price
+            })));
+        }
     } else if (filtered.length === 0) {
         // Логируем примеры bundles для отладки, если ничего не найдено
-        const sampleBundles = bundles.slice(0, 5).map(b => ({
-            name: b.name,
-            country: b.country,
-            countries: b.countries,
-            countryRegions: b.countries?.map(c => c?.region).filter(Boolean) || []
-        }));
-        console.log(`No bundles found for region ${apiRegion}. Sample bundles:`, sampleBundles);
+        const sampleBundles = bundles.slice(0, 10).map(b => {
+            const countries = b.countries || [];
+            const countryRegions = countries.map(c => {
+                if (typeof c === 'object' && c !== null) {
+                    return {
+                        name: c.name,
+                        iso: c.iso,
+                        region: c.region
+                    };
+                }
+                return c;
+            });
+            return {
+                name: b.name,
+                country: b.country,
+                countries: countryRegions,
+                price: b.price
+            };
+        });
+        console.log(`No bundles found for region ${apiRegion}. Looking for:`, possibleRegionNames);
+        console.log(`Sample bundles from all Standard Fixed:`, sampleBundles);
+        
+        // Для Europe дополнительно проверяем, есть ли bundles с region='Europe'
+        if (apiRegion === 'EU Lite') {
+            const europeBundles = bundles.filter(bundle => {
+                const countries = bundle.countries || [];
+                return countries.some(country => {
+                    if (typeof country === 'object' && country !== null) {
+                        const region = country.region || country.Region || country.REGION;
+                        const countryName = (country.name || '').toLowerCase();
+                        const countryIso = (country.iso || '').toUpperCase();
+                        return region === 'Europe' || 
+                               countryName === 'europe' || 
+                               countryIso === 'EUROPE' ||
+                               countryIso === 'EU';
+                    }
+                    return false;
+                });
+            });
+            console.log(`Found ${europeBundles.length} bundles with region='Europe' (not EU Lite)`);
+            if (europeBundles.length > 0) {
+                console.log('Sample Europe bundles:', europeBundles.slice(0, 3).map(b => ({
+                    name: b.name,
+                    countries: b.countries,
+                    price: b.price
+                })));
+            }
+        }
     }
     
     return filtered;
