@@ -338,6 +338,7 @@ module.exports = async function handler(req, res) {
         
         // Логируем структуру первого bundle для отладки
         if (bundles.length > 0) {
+            const sampleCountry = bundles[0].countries?.[0];
             console.log('Sample bundle structure:', {
                 name: bundles[0].name,
                 price: bundles[0].price,
@@ -345,6 +346,8 @@ module.exports = async function handler(req, res) {
                 pricePerUnit: bundles[0].pricePerUnit,
                 currency: bundles[0].currency,
                 countries: bundles[0].countries?.length || 0,
+                firstCountry: sampleCountry,
+                firstCountryType: typeof sampleCountry,
                 dataAmount: bundles[0].dataAmount,
                 duration: bundles[0].duration,
                 unlimited: bundles[0].unlimited,
