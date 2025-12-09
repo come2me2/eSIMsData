@@ -398,14 +398,101 @@ module.exports = async function handler(req, res) {
             }
             
             console.log('Total Global bundles:', bundles.length);
+        } else if (isLocal && countryCode) {
+            // Local: запрашиваем из двух групп отдельно (как для Global)
+            console.log('Fetching Local bundles from groups: Standard Fixed and Standard Unlimited Essential');
+            
+            // Проверяем, что client загружен
+            if (!esimgoClient) {
+                const errorMsg = 'eSIM Go client module failed to load. Check server logs for details.';
+                console.error(errorMsg);
+                throw new Error(errorMsg);
+            }
+            
+            if (typeof esimgoClient.getCatalogue !== 'function') {
+                const errorMsg = 'getCatalogue function not found in client module';
+                console.error(errorMsg, { clientKeys: Object.keys(esimgoClient) });
+                throw new Error(errorMsg);
+            }
+            
+            // Функция для проверки, является ли bundle Local (для одной страны)
+            function isLocalBundle(bundle, targetCountryCode) {
+                const countries = bundle.countries || [];
+                const bundleCountry = bundle.country || bundle.countryCode || bundle.iso;
+                
+                // Bundle должен содержать только одну страну и это должна быть запрошенная страна
+                if (countries.length === 1) {
+                    const country = countries[0];
+                    // countries может быть массивом строк (ISO кодов) или объектов {name, region, iso}
+                    if (typeof country === 'string') {
+                        return country.toUpperCase() === targetCountryCode;
+                    } else if (typeof country === 'object' && country !== null) {
+                        // Объект с полями iso, ISO, code
+                        const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
+                        return countryIso === targetCountryCode;
+                    }
+                }
+                if (bundleCountry) {
+                    return String(bundleCountry).toUpperCase() === targetCountryCode;
+                }
+                return false;
+            }
+            
+            // Запрос 1: Standard Fixed (fixed трафик)
+            try {
+                const fixedOptions = {
+                    ...catalogueOptions,
+                    group: 'Standard Fixed'
+                };
+                console.log('Fetching Standard Fixed bundles for Local country:', countryCode);
+                const fixedCatalogue = await esimgoClient.getCatalogue(null, fixedOptions);
+                const fixedBundles = Array.isArray(fixedCatalogue) 
+                    ? fixedCatalogue 
+                    : (fixedCatalogue?.bundles || fixedCatalogue?.data || []);
+                console.log('Standard Fixed bundles received:', fixedBundles.length);
+                
+                // Фильтруем по countryCode (одна страна)
+                const localFixedBundles = fixedBundles.filter(bundle => {
+                    return isLocalBundle(bundle, countryCode);
+                });
+                console.log('Local Fixed bundles after filter:', localFixedBundles.length);
+                bundles = bundles.concat(localFixedBundles);
+            } catch (error) {
+                console.error('Error fetching Standard Fixed bundles for Local:', error.message);
+            }
+            
+            // Запрос 2: Standard Unlimited Essential (unlimited трафик)
+            try {
+                const unlimitedOptions = {
+                    ...catalogueOptions,
+                    group: 'Standard Unlimited Essential'
+                };
+                console.log('Fetching Standard Unlimited Essential bundles for Local country:', countryCode);
+                const unlimitedCatalogue = await esimgoClient.getCatalogue(null, unlimitedOptions);
+                const unlimitedBundles = Array.isArray(unlimitedCatalogue) 
+                    ? unlimitedCatalogue 
+                    : (unlimitedCatalogue?.bundles || unlimitedCatalogue?.data || []);
+                console.log('Standard Unlimited Essential bundles received:', unlimitedBundles.length);
+                
+                // Фильтруем по countryCode (одна страна)
+                const localUnlimitedBundles = unlimitedBundles.filter(bundle => {
+                    return isLocalBundle(bundle, countryCode);
+                });
+                console.log('Local Unlimited bundles after filter:', localUnlimitedBundles.length);
+                bundles = bundles.concat(localUnlimitedBundles);
+            } catch (error) {
+                console.error('Error fetching Standard Unlimited Essential bundles for Local:', error.message);
+            }
+            
+            console.log('Total Local bundles:', bundles.length);
         } else {
-            // Local или Region: обычный запрос
-            const requestCountryCode = isLocal ? countryCode : null;
+            // Region: обычный запрос
+            const requestCountryCode = null;
             
             console.log('Calling getCatalogue with:', { 
                 countryCode: requestCountryCode, 
                 options: catalogueOptions,
-                category: isLocal ? 'local' : (region ? 'region' : 'all')
+                category: region ? 'region' : 'all'
             });
             
             // Проверяем, что client загружен
@@ -516,28 +603,9 @@ module.exports = async function handler(req, res) {
         
         // Фильтруем bundles по категории
         if (isLocal && countryCode) {
-            // Local: только bundles для одной страны
-            bundles = bundles.filter(bundle => {
-                const countries = bundle.countries || [];
-                const bundleCountry = bundle.country || bundle.countryCode || bundle.iso;
-                
-                // Bundle должен содержать только одну страну и это должна быть запрошенная страна
-                if (countries.length === 1) {
-                    const country = countries[0];
-                    // countries может быть массивом строк (ISO кодов) или объектов {name, region, iso}
-                    if (typeof country === 'string') {
-                        return country.toUpperCase() === countryCode;
-                    } else if (typeof country === 'object' && country !== null) {
-                        // Объект с полями iso, ISO, code
-                        const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
-                        return countryIso === countryCode;
-                    }
-                }
-                if (bundleCountry) {
-                    return String(bundleCountry).toUpperCase() === countryCode;
-                }
-                return false;
-            });
+            // Local bundles уже получены из групп "Standard Fixed" и "Standard Unlimited Essential"
+            // и отфильтрованы по isLocalBundle
+            console.log('Local bundles already filtered from groups:', bundles.length);
         } else if (isGlobal) {
             // Global bundles уже получены из групп "Standard Fixed" и "Standard Unlimited Essential"
             // и отфильтрованы по isGlobalBundle
