@@ -421,12 +421,78 @@ module.exports = async function handler(req, res) {
                 const bundleCountry = bundle.country || bundle.countryCode || bundle.iso;
                 const bundleName = (bundle.name || '').toUpperCase();
                 
-                // Специальная обработка для Northern Cyprus (CYP)
-                // В API может быть как CY, так и CYP, или название "Northern Cyprus"
-                const countryNameMap = {
-                    'CYP': ['CYP', 'CY', 'NORTHERN CYPRUS', 'NORTHERN CYPRUS'],
-                    'CY': ['CY', 'CYP', 'CYPRUS']
-                };
+                // Специальная обработка для Northern Cyprus (CYP) - НЕ принимаем CY без "Northern"
+                // Для CYP принимаем только bundles с CYP или "Northern Cyprus", но НЕ CY
+                // Для CY принимаем только bundles с CY, но НЕ CYP
+                
+                // Строгая проверка для CYP: исключаем bundles с CY (Cyprus)
+                if (targetCountryCode === 'CYP') {
+                    // Проверяем, не является ли это bundle из Cyprus (CY без "Northern")
+                    const hasCY = bundleName.includes('_CY_') || bundleName.includes('_CY ') || 
+                                 bundleName.endsWith('_CY') || bundleName.startsWith('CY_');
+                    const hasCYP = bundleName.includes('_CYP_') || bundleName.includes('_CYP ') || 
+                                  bundleName.endsWith('_CYP') || bundleName.startsWith('CYP_');
+                    
+                    // Если есть CY, но нет CYP, и нет "NORTHERN" в названии - это Cyprus, не Northern Cyprus
+                    if (hasCY && !hasCYP && !bundleName.includes('NORTHERN')) {
+                        return false;
+                    }
+                    
+                    // Проверяем countries - если там CY без "Northern", это не Northern Cyprus
+                    if (countries.length === 1) {
+                        const country = countries[0];
+                        if (typeof country === 'string') {
+                            if (country.toUpperCase() === 'CY') {
+                                return false; // Это Cyprus, не Northern Cyprus
+                            }
+                        } else if (typeof country === 'object' && country !== null) {
+                            const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
+                            const countryName = (country.name || country.Name || '').toUpperCase();
+                            if (countryIso === 'CY' && !countryName.includes('NORTHERN')) {
+                                return false; // Это Cyprus, не Northern Cyprus
+                            }
+                        }
+                    }
+                    
+                    // Проверяем bundleCountry
+                    if (bundleCountry && String(bundleCountry).toUpperCase() === 'CY') {
+                        // Проверяем, есть ли в bundle указание на "Northern"
+                        const bundleCountryName = bundle.country_name || bundle.countryName || '';
+                        if (!bundleCountryName.toUpperCase().includes('NORTHERN')) {
+                            return false; // Это Cyprus, не Northern Cyprus
+                        }
+                    }
+                }
+                
+                // Строгая проверка для CY: исключаем bundles с CYP
+                if (targetCountryCode === 'CY') {
+                    const hasCYP = bundleName.includes('_CYP_') || bundleName.includes('_CYP ') || 
+                                  bundleName.endsWith('_CYP') || bundleName.startsWith('CYP_');
+                    if (hasCYP) {
+                        return false; // Это Northern Cyprus, не Cyprus
+                    }
+                    
+                    // Проверяем countries - если там CYP, это не Cyprus
+                    if (countries.length === 1) {
+                        const country = countries[0];
+                        if (typeof country === 'string') {
+                            if (country.toUpperCase() === 'CYP') {
+                                return false; // Это Northern Cyprus, не Cyprus
+                            }
+                        } else if (typeof country === 'object' && country !== null) {
+                            const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
+                            const countryName = (country.name || country.Name || '').toUpperCase();
+                            if (countryIso === 'CYP' || countryName.includes('NORTHERN')) {
+                                return false; // Это Northern Cyprus, не Cyprus
+                            }
+                        }
+                    }
+                    
+                    // Проверяем bundleCountry
+                    if (bundleCountry && String(bundleCountry).toUpperCase() === 'CYP') {
+                        return false; // Это Northern Cyprus, не Cyprus
+                    }
+                }
                 
                 // Универсальная проверка: если bundle содержит только одну страну И в названии есть код страны
                 // Это помогает находить bundles даже если структура данных нестандартная
@@ -449,20 +515,6 @@ module.exports = async function handler(req, res) {
                     return true;
                 }
                 
-                // Проверяем альтернативные коды для специальных стран
-                if (countryNameMap[targetCountryCode]) {
-                    const alternativeCodes = countryNameMap[targetCountryCode];
-                    for (const altCode of alternativeCodes) {
-                        if (bundleName.includes(`_${altCode}_`) || 
-                            bundleName.includes(`_${altCode} `) ||
-                            bundleName.endsWith(`_${altCode}`) ||
-                            bundleName.startsWith(`${altCode}_`)) {
-                            console.log('✅ Bundle найден по альтернативному коду:', bundle.name, altCode);
-                            return true;
-                        }
-                    }
-                }
-                
                 // Bundle должен содержать только одну страну и это должна быть запрошенная страна
                 if (countries.length === 1) {
                     const country = countries[0];
@@ -472,21 +524,12 @@ module.exports = async function handler(req, res) {
                         if (countryUpper === targetCountryCode) {
                             return true;
                         }
-                        // Проверяем альтернативные коды
-                        if (countryNameMap[targetCountryCode] && countryNameMap[targetCountryCode].includes(countryUpper)) {
-                            return true;
-                        }
                     } else if (typeof country === 'object' && country !== null) {
                         // Объект с полями iso, ISO, code, name
                         const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
                         const countryName = (country.name || country.Name || '').toUpperCase();
                         
                         if (countryIso === targetCountryCode) {
-                            return true;
-                        }
-                        
-                        // Проверяем альтернативные коды
-                        if (countryNameMap[targetCountryCode] && countryNameMap[targetCountryCode].includes(countryIso)) {
                             return true;
                         }
                         
@@ -504,53 +547,117 @@ module.exports = async function handler(req, res) {
                     if (bundleCountryUpper === targetCountryCode) {
                         return true;
                     }
-                    // Проверяем альтернативные коды
-                    if (countryNameMap[targetCountryCode] && countryNameMap[targetCountryCode].includes(bundleCountryUpper)) {
-                        return true;
-                    }
                 }
                 
                 return false;
             }
             
-            // Запрос 1: Standard Fixed (fixed трафик)
+            // Запрос 1: Standard Fixed (fixed трафик) с пагинацией
             try {
-                const fixedOptions = {
-                    ...catalogueOptions,
-                    group: 'Standard Fixed'
-                };
-                console.log('Fetching Standard Fixed bundles for Local country:', countryCode);
-                const fixedCatalogue = await esimgoClient.getCatalogue(null, fixedOptions);
-                const fixedBundles = Array.isArray(fixedCatalogue) 
-                    ? fixedCatalogue 
-                    : (fixedCatalogue?.bundles || fixedCatalogue?.data || []);
-                console.log('Standard Fixed bundles received:', fixedBundles.length);
+                let allFixedBundles = [];
+                let page = 1;
+                const perPage = 1000;
+                let hasMore = true;
+                
+                while (hasMore) {
+                    const fixedOptions = {
+                        ...catalogueOptions,
+                        group: 'Standard Fixed',
+                        perPage: perPage,
+                        page: page
+                    };
+                    console.log(`Fetching Standard Fixed bundles for Local country ${countryCode}, page ${page}...`);
+                    const fixedCatalogue = await esimgoClient.getCatalogue(null, fixedOptions);
+                    const fixedBundles = Array.isArray(fixedCatalogue) 
+                        ? fixedCatalogue 
+                        : (fixedCatalogue?.bundles || fixedCatalogue?.data || []);
+                    
+                    allFixedBundles = allFixedBundles.concat(fixedBundles);
+                    console.log(`Standard Fixed bundles received on page ${page}:`, fixedBundles.length);
+                    
+                    // Проверяем, есть ли еще страницы
+                    if (fixedCatalogue?.pageCount && page < fixedCatalogue.pageCount) {
+                        page++;
+                    } else if (fixedCatalogue?.rows && allFixedBundles.length < fixedCatalogue.rows) {
+                        page++;
+                    } else if (fixedBundles.length < perPage) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                    
+                    // Защита от бесконечного цикла
+                    if (page > 50) {
+                        console.warn('⚠️ Превышен лимит страниц (50), останавливаем пагинацию');
+                        hasMore = false;
+                    }
+                }
+                
+                console.log('Total Standard Fixed bundles received:', allFixedBundles.length);
                 
                 // Фильтруем по countryCode (одна страна)
-                const localFixedBundles = fixedBundles.filter(bundle => {
+                const localFixedBundles = allFixedBundles.filter(bundle => {
                     return isLocalBundle(bundle, countryCode);
                 });
                 console.log('Local Fixed bundles after filter:', localFixedBundles.length);
+                if (localFixedBundles.length > 0) {
+                    console.log('Sample Local Fixed bundles:', localFixedBundles.slice(0, 5).map(b => ({
+                        name: b.name,
+                        dataAmount: b.dataAmount,
+                        price: b.price,
+                        countries: b.countries
+                    })));
+                }
                 bundles = bundles.concat(localFixedBundles);
             } catch (error) {
                 console.error('Error fetching Standard Fixed bundles for Local:', error.message);
             }
             
-            // Запрос 2: Standard Unlimited Essential (unlimited трафик)
+            // Запрос 2: Standard Unlimited Essential (unlimited трафик) с пагинацией
             try {
-                const unlimitedOptions = {
-                    ...catalogueOptions,
-                    group: 'Standard Unlimited Essential'
-                };
-                console.log('Fetching Standard Unlimited Essential bundles for Local country:', countryCode);
-                const unlimitedCatalogue = await esimgoClient.getCatalogue(null, unlimitedOptions);
-                const unlimitedBundles = Array.isArray(unlimitedCatalogue) 
-                    ? unlimitedCatalogue 
-                    : (unlimitedCatalogue?.bundles || unlimitedCatalogue?.data || []);
-                console.log('Standard Unlimited Essential bundles received:', unlimitedBundles.length);
+                let allUnlimitedBundles = [];
+                let page = 1;
+                const perPage = 1000;
+                let hasMore = true;
+                
+                while (hasMore) {
+                    const unlimitedOptions = {
+                        ...catalogueOptions,
+                        group: 'Standard Unlimited Essential',
+                        perPage: perPage,
+                        page: page
+                    };
+                    console.log(`Fetching Standard Unlimited Essential bundles for Local country ${countryCode}, page ${page}...`);
+                    const unlimitedCatalogue = await esimgoClient.getCatalogue(null, unlimitedOptions);
+                    const unlimitedBundles = Array.isArray(unlimitedCatalogue) 
+                        ? unlimitedCatalogue 
+                        : (unlimitedCatalogue?.bundles || unlimitedCatalogue?.data || []);
+                    
+                    allUnlimitedBundles = allUnlimitedBundles.concat(unlimitedBundles);
+                    console.log(`Standard Unlimited Essential bundles received on page ${page}:`, unlimitedBundles.length);
+                    
+                    // Проверяем, есть ли еще страницы
+                    if (unlimitedCatalogue?.pageCount && page < unlimitedCatalogue.pageCount) {
+                        page++;
+                    } else if (unlimitedCatalogue?.rows && allUnlimitedBundles.length < unlimitedCatalogue.rows) {
+                        page++;
+                    } else if (unlimitedBundles.length < perPage) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                    
+                    // Защита от бесконечного цикла
+                    if (page > 50) {
+                        console.warn('⚠️ Превышен лимит страниц (50), останавливаем пагинацию');
+                        hasMore = false;
+                    }
+                }
+                
+                console.log('Total Standard Unlimited Essential bundles received:', allUnlimitedBundles.length);
                 
                 // Фильтруем по countryCode (одна страна)
-                const localUnlimitedBundles = unlimitedBundles.filter(bundle => {
+                const localUnlimitedBundles = allUnlimitedBundles.filter(bundle => {
                     return isLocalBundle(bundle, countryCode);
                 });
                 console.log('Local Unlimited bundles after filter:', localUnlimitedBundles.length);
