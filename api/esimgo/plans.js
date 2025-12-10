@@ -284,6 +284,61 @@ module.exports = async function handler(req, res) {
         const isGlobal = category === 'global' || req.query.global === 'true';
         const isLocal = category === 'local' || (countryCode && !region);
         
+        // Маппинг ISO кодов на названия стран (используется для Global и Local)
+        const isoToCountryName = {
+            'AD': 'Andorra', 'AE': 'United Arab Emirates', 'AF': 'Afghanistan', 'AG': 'Antigua and Barbuda',
+            'AI': 'Anguilla', 'AL': 'Albania', 'AM': 'Armenia', 'AN': 'Netherlands Antilles', 'AO': 'Angola', 'AQ': 'Antarctica',
+            'AR': 'Argentina', 'AS': 'American Samoa', 'AT': 'Austria', 'AU': 'Australia', 'AW': 'Aruba',
+            'AX': 'Åland Islands', 'AZ': 'Azerbaijan', 'BA': 'Bosnia and Herzegovina', 'BB': 'Barbados',
+            'BD': 'Bangladesh', 'BE': 'Belgium', 'BF': 'Burkina Faso', 'BG': 'Bulgaria', 'BH': 'Bahrain',
+            'BI': 'Burundi', 'BJ': 'Benin', 'BL': 'Saint Barthélemy', 'BM': 'Bermuda', 'BN': 'Brunei',
+            'BO': 'Bolivia', 'BQ': 'Caribbean Netherlands', 'BR': 'Brazil', 'BS': 'Bahamas', 'BT': 'Bhutan',
+            'BV': 'Bouvet Island', 'BW': 'Botswana', 'BY': 'Belarus', 'BZ': 'Belize', 'CA': 'Canada',
+            'CYP': 'Northern Cyprus', 'CC': 'Cocos Islands', 'CD': 'Congo, Democratic Republic', 'CF': 'Central African Republic',
+            'CG': 'Congo', 'CH': 'Switzerland', 'CI': 'Côte d\'Ivoire', 'CK': 'Cook Islands', 'CL': 'Chile',
+            'CM': 'Cameroon', 'CN': 'China', 'CO': 'Colombia', 'CR': 'Costa Rica', 'CU': 'Cuba',
+            'CV': 'Cabo Verde', 'CW': 'Curaçao', 'CX': 'Christmas Island', 'CY': 'Cyprus',
+            'CZ': 'Czech Republic', 'DE': 'Germany', 'DJ': 'Djibouti', 'DK': 'Denmark', 'DM': 'Dominica',
+            'DO': 'Dominican Republic', 'DZ': 'Algeria', 'EC': 'Ecuador', 'EE': 'Estonia', 'EG': 'Egypt',
+            'EH': 'Western Sahara', 'ER': 'Eritrea', 'ES': 'Spain', 'ET': 'Ethiopia', 'FI': 'Finland',
+            'FJ': 'Fiji', 'FK': 'Falkland Islands', 'FM': 'Micronesia', 'FO': 'Faroe Islands', 'FR': 'France',
+            'GA': 'Gabon', 'GB': 'United Kingdom', 'GD': 'Grenada', 'GE': 'Georgia', 'GF': 'French Guiana',
+            'GG': 'Guernsey', 'GH': 'Ghana', 'GI': 'Gibraltar', 'GL': 'Greenland', 'GM': 'Gambia',
+            'GN': 'Guinea', 'GP': 'Guadeloupe', 'GQ': 'Equatorial Guinea', 'GR': 'Greece', 'GS': 'South Georgia',
+            'GT': 'Guatemala', 'GU': 'Guam', 'GW': 'Guinea-Bissau', 'GY': 'Guyana', 'HK': 'Hong Kong', 'IC': 'Canary Islands',
+            'HM': 'Heard Island', 'HN': 'Honduras', 'HR': 'Croatia', 'HT': 'Haiti', 'HU': 'Hungary',
+            'ID': 'Indonesia', 'IE': 'Ireland', 'IL': 'Israel', 'IM': 'Isle of Man', 'IN': 'India',
+            'IO': 'British Indian Ocean Territory', 'IQ': 'Iraq', 'IR': 'Iran', 'IS': 'Iceland', 'IT': 'Italy',
+            'JE': 'Jersey', 'JM': 'Jamaica', 'JO': 'Jordan', 'JP': 'Japan', 'KE': 'Kenya',
+            'KG': 'Kyrgyzstan', 'KH': 'Cambodia', 'KI': 'Kiribati', 'KM': 'Comoros', 'KN': 'Saint Kitts and Nevis',
+            'KP': 'Korea, North', 'KR': 'Korea, South', 'KW': 'Kuwait', 'KY': 'Cayman Islands', 'KZ': 'Kazakhstan',
+            'LA': 'Laos', 'LB': 'Lebanon', 'LC': 'Saint Lucia', 'LI': 'Liechtenstein', 'LK': 'Sri Lanka',
+            'LR': 'Liberia', 'LS': 'Lesotho', 'LT': 'Lithuania', 'LU': 'Luxembourg', 'LV': 'Latvia',
+            'LY': 'Libya', 'MA': 'Morocco', 'MC': 'Monaco', 'MD': 'Moldova', 'ME': 'Montenegro',
+            'MF': 'Saint Martin', 'MG': 'Madagascar', 'MH': 'Marshall Islands', 'MK': 'North Macedonia', 'ML': 'Mali',
+            'MM': 'Myanmar', 'MN': 'Mongolia', 'MO': 'Macao', 'MP': 'Northern Mariana Islands', 'MQ': 'Martinique',
+            'MR': 'Mauritania', 'MS': 'Montserrat', 'MT': 'Malta', 'MU': 'Mauritius', 'MV': 'Maldives',
+            'MW': 'Malawi', 'MX': 'Mexico', 'MY': 'Malaysia', 'MZ': 'Mozambique', 'NA': 'Namibia',
+            'NC': 'New Caledonia', 'NE': 'Niger', 'NF': 'Norfolk Island', 'NG': 'Nigeria', 'NI': 'Nicaragua',
+            'NL': 'Netherlands', 'NO': 'Norway', 'NP': 'Nepal', 'NR': 'Nauru', 'NU': 'Niue',
+            'NZ': 'New Zealand', 'OM': 'Oman', 'PA': 'Panama', 'PE': 'Peru', 'PF': 'French Polynesia',
+            'PG': 'Papua New Guinea', 'PH': 'Philippines', 'PK': 'Pakistan', 'PL': 'Poland', 'PM': 'Saint Pierre and Miquelon',
+            'PN': 'Pitcairn', 'PR': 'Puerto Rico', 'PS': 'Palestine', 'PT': 'Portugal', 'PW': 'Palau',
+            'PY': 'Paraguay', 'QA': 'Qatar', 'RE': 'Réunion', 'RO': 'Romania', 'RS': 'Serbia',
+            'RU': 'Russia', 'RW': 'Rwanda', 'SA': 'Saudi Arabia', 'SB': 'Solomon Islands', 'SC': 'Seychelles',
+            'SD': 'Sudan', 'SE': 'Sweden', 'SG': 'Singapore', 'SH': 'Saint Helena', 'SI': 'Slovenia',
+            'SJ': 'Svalbard and Jan Mayen', 'SK': 'Slovakia', 'SL': 'Sierra Leone', 'SM': 'San Marino', 'SN': 'Senegal',
+            'SO': 'Somalia', 'SR': 'Suriname', 'SS': 'South Sudan', 'ST': 'São Tomé and Príncipe', 'SV': 'El Salvador',
+            'SX': 'Sint Maarten', 'SY': 'Syria', 'SZ': 'Eswatini', 'TC': 'Turks and Caicos Islands', 'TD': 'Chad',
+            'TF': 'French Southern Territories', 'TG': 'Togo', 'TH': 'Thailand', 'TJ': 'Tajikistan', 'TK': 'Tokelau',
+            'TL': 'Timor-Leste', 'TM': 'Turkmenistan', 'TN': 'Tunisia', 'TO': 'Tonga', 'TR': 'Turkey',
+            'TT': 'Trinidad and Tobago', 'TV': 'Tuvalu', 'TW': 'Taiwan', 'TZ': 'Tanzania', 'UA': 'Ukraine',
+            'UG': 'Uganda', 'UM': 'United States Minor Outlying Islands', 'US': 'United States', 'US-HI': 'Hawaii', 'UY': 'Uruguay', 'UZ': 'Uzbekistan',
+            'VA': 'Vatican City', 'VC': 'Saint Vincent and the Grenadines', 'VE': 'Venezuela', 'VG': 'British Virgin Islands', 'VI': 'U.S. Virgin Islands',
+            'VN': 'Vietnam', 'VU': 'Vanuatu', 'WF': 'Wallis and Futuna', 'WS': 'Samoa', 'XK': 'Kosovo', 'YE': 'Yemen',
+            'YT': 'Mayotte', 'ZA': 'South Africa', 'ZM': 'Zambia', 'ZW': 'Zimbabwe'
+        };
+        
         // Определяем ключ кэша для всех типов запросов
         const cacheKey = cache.getPlansCacheKey(countryCode, region, category);
         
@@ -508,50 +563,48 @@ module.exports = async function handler(req, res) {
                 
                 bundles = bundles.concat(globalFixedBundles, globalUnlimitedBundles);
                 
-                // Для Global нужно получить список стран из всех bundles обеих групп
-                // Извлекаем все уникальные страны из всех bundles, которые могут относиться к Global
-                // (не только из отфильтрованных Global bundles, но из всех bundles обеих групп)
+                // Для Global нужно получить список всех стран, поддерживаемых API
+                // Извлекаем все уникальные страны из ВСЕХ bundles обеих групп (не только Global)
+                // Это даст нам список всех стран, которые поддерживаются API
                 try {
-                    console.log('Extracting all countries from all bundles in both groups for Global...');
+                    console.log('Extracting all countries from ALL bundles in both groups for Global...');
                     const allBundlesForCountries = [...allFixedBundles, ...allUnlimitedBundles];
                     const globalCountriesSet = new Set();
+                    const regionalCodes = ['GLOBAL', 'WORLD', 'WORLDWIDE', 'AFRICA', 'ASIA', 'EUROPE', 'EU LITE', 'EU+', 'NORTH AMERICA', 'LATIN AMERICA', 'AMERICAS', 'CARIBBEAN', 'CENAM', 'OCEANIA', 'BALKANAS', 'CIS', 'CENTRAL EURASIA'];
                     
                     allBundlesForCountries.forEach(bundle => {
-                        // Проверяем, относится ли bundle к Global (по названию, описанию или countries)
-                        const name = (bundle.name || '').toLowerCase();
-                        const desc = (bundle.description || '').toLowerCase();
-                        const isGlobalBundle = name.includes('global') || 
-                                               desc.includes('global') || 
-                                               name.includes('rgb') || 
-                                               name.includes('rgbs') ||
-                                               name.includes('world') ||
-                                               name.includes('worldwide');
-                        
-                        if (isGlobalBundle) {
-                            const countries = bundle.countries || [];
-                            countries.forEach(country => {
-                                let countryCode = null;
-                                if (typeof country === 'string') {
-                                    countryCode = country.toUpperCase();
-                                } else if (typeof country === 'object' && country !== null) {
-                                    countryCode = (country.iso || country.ISO || country.code || '').toUpperCase();
+                        const countries = bundle.countries || [];
+                        countries.forEach(country => {
+                            let countryCode = null;
+                            let countryName = null;
+                            
+                            if (typeof country === 'string') {
+                                countryCode = country.toUpperCase().trim();
+                                countryName = isoToCountryName[countryCode] || countryCode;
+                            } else if (typeof country === 'object' && country !== null) {
+                                countryCode = (country.iso || country.ISO || country.code || '').toUpperCase().trim();
+                                countryName = country.name || country.Name || '';
+                                if (!countryName && countryCode) {
+                                    countryName = isoToCountryName[countryCode] || countryCode;
                                 }
-                                
-                                // Пропускаем региональные коды
-                                if (countryCode && 
-                                    countryCode !== 'GLOBAL' && 
-                                    countryCode !== 'WORLD' && 
-                                    countryCode !== 'WORLDWIDE' &&
-                                    countryCode.length >= 2 && 
-                                    countryCode.length <= 5) {
-                                    globalCountriesSet.add(countryCode);
-                                }
-                            });
-                        }
+                            }
+                            
+                            // Пропускаем региональные коды и невалидные коды
+                            if (countryCode && 
+                                countryCode.length >= 2 && 
+                                countryCode.length <= 5 &&
+                                !regionalCodes.includes(countryCode) &&
+                                !regionalCodes.some(reg => countryCode.includes(reg)) &&
+                                countryCode !== 'GLOBAL' && 
+                                countryCode !== 'WORLD' && 
+                                countryCode !== 'WORLDWIDE') {
+                                globalCountriesSet.add(countryCode);
+                            }
+                        });
                     });
                     
-                    console.log(`Found ${globalCountriesSet.size} unique countries in all Global-related bundles`);
-                    console.log('Global countries codes:', Array.from(globalCountriesSet).sort().slice(0, 20), '...');
+                    console.log(`Found ${globalCountriesSet.size} unique countries from ALL bundles in both groups`);
+                    console.log('Sample Global countries codes:', Array.from(globalCountriesSet).sort().slice(0, 20), '...');
                     
                     // Сохраняем найденные страны для использования при извлечении
                     if (globalCountriesSet.size > 0) {
@@ -564,10 +617,13 @@ module.exports = async function handler(req, res) {
                                 });
                             }
                         });
-                        console.log(`Added ${globalCountriesSet.size} countries from all Global-related bundles to countriesMap`);
+                        console.log(`Added ${globalCountriesSet.size} countries from ALL bundles to countriesMap for Global`);
+                    } else {
+                        console.warn('⚠️ No countries found in bundles. This might indicate an API issue.');
                     }
                 } catch (globalCountriesError) {
-                    console.warn('⚠️ Failed to extract countries from Global bundles:', globalCountriesError.message);
+                    console.warn('⚠️ Failed to extract countries from ALL bundles:', globalCountriesError.message);
+                    console.error('Error details:', globalCountriesError.stack);
                     // Продолжаем работу без этого
                 }
             } catch (error) {
