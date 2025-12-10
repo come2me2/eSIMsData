@@ -536,6 +536,9 @@ function updateContent() {
         if (countryList) countryList.style.display = 'flex';
         renderCountries();
     }
+    
+    // Обновляем кнопку BackButton при изменении контента
+    updateBackButton();
 }
 
 // Render region list
@@ -697,8 +700,40 @@ function handleNavigationClick(section) {
     }
 }
 
-// Telegram BackButton - на главной странице скрываем кнопку "назад"
-if (tg && tg.BackButton) {
-    tg.BackButton.hide();
+// Функция для управления кнопкой BackButton
+function updateBackButton() {
+    if (!tg || !tg.BackButton) return;
+    
+    // Проверяем, находимся ли мы на главной странице (index.html)
+    const isMainPage = window.location.pathname.endsWith('index.html') || 
+                       window.location.pathname === '/' || 
+                       window.location.pathname.endsWith('/');
+    
+    // На главной странице всегда скрываем кнопку BackButton
+    // Это позволяет показывать кнопку Close вместо Back
+    if (isMainPage) {
+        tg.BackButton.hide();
+        console.log('🔙 BackButton скрыта (главная страница)');
+    } else {
+        // На других страницах показываем кнопку Back
+        tg.BackButton.show();
+        console.log('🔙 BackButton показана');
+    }
 }
+
+// Telegram BackButton - на главной странице скрываем кнопку "назад"
+updateBackButton();
+
+// Слушаем изменения истории браузера (возврат назад)
+window.addEventListener('popstate', () => {
+    // Обновляем кнопку BackButton при возврате на страницу
+    setTimeout(updateBackButton, 100);
+});
+
+// Также обновляем при изменении сегмента через setupSegmentedControl
+const originalSetupSegmentedControl = setupSegmentedControl;
+setupSegmentedControl = function() {
+    originalSetupSegmentedControl();
+    updateBackButton();
+};
 
