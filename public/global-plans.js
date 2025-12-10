@@ -90,10 +90,7 @@ async function loadPlansFromAPI() {
                     console.log(`✅ Updated global countries list from API:`, apiCountries.length, 'countries');
                     
                     // Обновляем счетчик стран в UI
-                    const infoTextElement = document.getElementById('globalInfoText');
-                    if (infoTextElement) {
-                        infoTextElement.textContent = `Supported in countries: ${apiCountries.length}`;
-                    }
+                    updateGlobalCountriesCount(apiCountries.length);
                 }
             }
             
