@@ -287,6 +287,20 @@ module.exports = async function handler(req, res) {
         // Определяем ключ кэша для всех типов запросов
         const cacheKey = cache.getPlansCacheKey(countryCode, region, category);
         
+        // Проверяем кэш перед запросом к API
+        const cachedData = cache.get(cacheKey, cache.getTTL('plans'));
+        if (cachedData && cachedData.data) {
+            console.log('✅ Using cached plans data for:', cacheKey);
+            return res.status(200).json({
+                success: true,
+                data: cachedData.data,
+                meta: {
+                    ...cachedData.meta,
+                    source: 'cache'
+                }
+            });
+        }
+        
         // Получаем каталог из API eSIM Go
         const catalogueOptions = {
             perPage: parseInt(perPage)
