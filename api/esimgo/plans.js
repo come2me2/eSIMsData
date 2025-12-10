@@ -593,69 +593,30 @@ module.exports = async function handler(req, res) {
                 
                 bundles = bundles.concat(globalFixedBundles, globalUnlimitedBundles);
                 
-                // Для Global нужно получить список всех стран, поддерживаемых API
-                // Извлекаем все уникальные страны из ВСЕХ bundles обеих групп (не только Global)
-                // Это даст нам список всех стран, которые поддерживаются API
-                try {
-                    console.log('Extracting all countries from ALL bundles in both groups for Global...');
-                    const allBundlesForCountries = [...allFixedBundles, ...allUnlimitedBundles];
-                    const globalCountriesSet = new Set();
-                    const regionalCodes = ['GLOBAL', 'WORLD', 'WORLDWIDE', 'AFRICA', 'ASIA', 'EUROPE', 'EU LITE', 'EU+', 'NORTH AMERICA', 'LATIN AMERICA', 'AMERICAS', 'CARIBBEAN', 'CENAM', 'OCEANIA', 'BALKANAS', 'CIS', 'CENTRAL EURASIA'];
-                    
-                    allBundlesForCountries.forEach(bundle => {
-                        const countries = bundle.countries || [];
-                        countries.forEach(country => {
-                            let countryCode = null;
-                            let countryName = null;
-                            
-                            if (typeof country === 'string') {
-                                countryCode = country.toUpperCase().trim();
-                                countryName = isoToCountryName[countryCode] || countryCode;
-                            } else if (typeof country === 'object' && country !== null) {
-                                countryCode = (country.iso || country.ISO || country.code || '').toUpperCase().trim();
-                                countryName = country.name || country.Name || '';
-                                if (!countryName && countryCode) {
-                                    countryName = isoToCountryName[countryCode] || countryCode;
-                                }
-                            }
-                            
-                            // Пропускаем региональные коды и невалидные коды
-                            if (countryCode && 
-                                countryCode.length >= 2 && 
-                                countryCode.length <= 5 &&
-                                !regionalCodes.includes(countryCode) &&
-                                !regionalCodes.some(reg => countryCode.includes(reg)) &&
-                                countryCode !== 'GLOBAL' && 
-                                countryCode !== 'WORLD' && 
-                                countryCode !== 'WORLDWIDE') {
-                                globalCountriesSet.add(countryCode);
-                            }
+                // Для Global используем предопределенный список из 106 стран
+                // Этот список соответствует актуальным странам, поддерживаемым Global планами в eSIM Go API
+                const globalCountryCodes = [
+                    'AT', 'DK', 'IE', 'IT', 'SE', 'IM', 'FR', 'BG', 'CY', 'EE', 'FI', 'GR', 'HU', 'LV', 'LT', 'NL', 'NO', 'PL', 'RO', 'SK',
+                    'ES', 'GB', 'TR', 'DE', 'MT', 'CH', 'BE', 'HR', 'CZ', 'LI', 'LU', 'PT', 'SI', 'IS', 'UA', 'JE', 'SG', 'MO', 'HK', 'IL',
+                    'AX', 'ID', 'VN', 'RU', 'AE', 'AU', 'TH', 'TW', 'LK', 'MY', 'PK', 'UZ', 'EG', 'NZ', 'AL', 'KR', 'CA', 'KZ', 'MD', 'MK',
+                    'KW', 'MX', 'GG', 'JO', 'OM', 'GI', 'MA', 'BR', 'CL', 'RS', 'JP', 'ME', 'GU', 'US', 'TZ', 'UG', 'CR', 'EC', 'NI', 'IN',
+                    'AR', 'SV', 'PE', 'UY', 'CN', 'PA', 'RE', 'TN', 'BA', 'ZA', 'ZM', 'MG', 'NG', 'KE', 'AD', 'IQ', 'QA', 'SC', 'MU', 'CO',
+                    'GT', 'CM', 'GY', 'SA', 'PY', 'BO'
+                ];
+                
+                console.log(`✅ Using predefined list of ${globalCountryCodes.length} countries for Global plans`);
+                
+                // Добавляем все страны из предопределенного списка в countriesMap
+                globalCountryCodes.forEach(countryCode => {
+                    if (!countriesMap.has(countryCode)) {
+                        countriesMap.set(countryCode, {
+                            code: countryCode,
+                            name: isoToCountryName[countryCode] || countryCode
                         });
-                    });
-                    
-                    console.log(`Found ${globalCountriesSet.size} unique countries from ALL bundles in both groups`);
-                    console.log('Sample Global countries codes:', Array.from(globalCountriesSet).sort().slice(0, 20), '...');
-                    
-                    // Сохраняем найденные страны для использования при извлечении
-                    if (globalCountriesSet.size > 0) {
-                        // Добавляем найденные страны в countriesMap
-                        globalCountriesSet.forEach(countryCode => {
-                            if (!countriesMap.has(countryCode)) {
-                                countriesMap.set(countryCode, {
-                                    code: countryCode,
-                                    name: isoToCountryName[countryCode] || countryCode
-                                });
-                            }
-                        });
-                        console.log(`Added ${globalCountriesSet.size} countries from ALL bundles to countriesMap for Global`);
-                    } else {
-                        console.warn('⚠️ No countries found in bundles. This might indicate an API issue.');
                     }
-                } catch (globalCountriesError) {
-                    console.warn('⚠️ Failed to extract countries from ALL bundles:', globalCountriesError.message);
-                    console.error('Error details:', globalCountriesError.stack);
-                    // Продолжаем работу без этого
-                }
+                });
+                
+                console.log(`✅ Added ${globalCountryCodes.length} countries from predefined list to countriesMap for Global`);
             } catch (error) {
                 console.error('Error fetching Global bundles:', {
                     message: error.message,
