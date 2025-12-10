@@ -8,9 +8,10 @@
  * - secret: секретный ключ для защиты endpoint (из переменной окружения CACHE_REFRESH_SECRET)
  */
 
-const cache = require('../../_lib/cache');
-const esimgoClient = require('../../_lib/esimgo/client');
-const { getAPIRegions } = require('../../_lib/esimgo/region-mapping');
+// Используем относительные пути, как в других endpoints
+const cache = require('../_lib/cache');
+const esimgoClient = require('../_lib/esimgo/client');
+const { getAPIRegions } = require('../_lib/esimgo/region-mapping');
 
 // Импортируем функции из endpoints
 const countriesHandler = require('../esimgo/countries');
