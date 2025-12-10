@@ -280,10 +280,8 @@ async function loadCountriesFromAPI() {
             
             console.log(`✅ Загружено ${countries.length} стран из API`);
             
-            // Обновляем отображение, если мы на вкладке local
-            if (currentSegment === 'local') {
-                renderCountries();
-            }
+            // Возвращаем успешный результат
+            return true;
         } else {
             console.warn('⚠️ API вернул неожиданный формат данных, используем fallback');
         }
@@ -362,10 +360,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Загружаем список стран из API
-    loadCountriesFromAPI();
-    
-    updateContent();
+    // Инициализация приложения - ждем загрузки стран перед отображением
+    initializeApp();
     setupSegmentedControl();
     setupNavigation();
     
@@ -379,6 +375,15 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(setupSearch, 100);
     }
 });
+
+// Инициализация приложения - загружает страны и затем обновляет контент
+async function initializeApp() {
+    // Загружаем список стран из API и ждем завершения
+    await loadCountriesFromAPI();
+    
+    // После загрузки стран обновляем контент
+    updateContent();
+}
 
 // Render country list
 function renderCountries(filteredCountries = countries) {
