@@ -12,13 +12,19 @@ if (tg) {
     
     // Показываем кнопку "назад" в Telegram
     // При возврате назад переходим на Local страницу (главная)
-    if (tg.BackButton) {
+    if (tg && tg.BackButton) {
+        console.log('🔙 Region Unlimited: Показываем BackButton');
         tg.BackButton.show();
         tg.BackButton.onClick(() => {
-            tg.HapticFeedback.impactOccurred('light');
+            console.log('🔙 Region Unlimited: BackButton нажата, переходим на Local');
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
             // Переходим на Local страницу (главная страница)
             window.location.href = 'local-countries.html';
         });
+    } else {
+        console.warn('⚠️ Region Unlimited: Telegram WebApp или BackButton недоступны', { tg: !!tg, BackButton: tg && !!tg.BackButton });
     }
 }
 

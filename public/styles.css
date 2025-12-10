@@ -480,7 +480,7 @@ body {
 }
 
 .global-plans-content {
-    padding-top: 0;
+    padding-top: 16px;
 }
 
 .plans-content::-webkit-scrollbar {
