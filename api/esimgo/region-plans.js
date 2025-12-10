@@ -198,6 +198,76 @@ async function getAllStandardFixedBundles() {
 }
 
 /**
+ * Получить все bundles из группы "Standard Unlimited Essential"
+ * Регионы определяются по полю country/countries, а не по параметру region
+ * Использует пагинацию для получения всех bundles
+ * @returns {Promise<Array>}
+ */
+async function getAllStandardUnlimitedEssentialBundles() {
+    try {
+        console.log('Fetching all bundles from group "Standard Unlimited Essential"');
+        
+        let allBundles = [];
+        let page = 1;
+        const perPage = 1000;
+        let hasMore = true;
+        
+        // Запрашиваем все bundles из группы Standard Unlimited Essential с пагинацией
+        while (hasMore) {
+            const catalogue = await esimgoClient.getCatalogue(null, {
+                group: 'Standard Unlimited Essential',
+                perPage: perPage,
+                page: page
+            });
+            
+            const bundles = Array.isArray(catalogue) 
+                ? catalogue 
+                : (catalogue?.bundles || catalogue?.data || []);
+            
+            if (bundles.length > 0) {
+                allBundles = allBundles.concat(bundles);
+                
+                // Логируем структуру первого bundle только для первой страницы
+                if (page === 1 && bundles.length > 0) {
+                    const sampleBundle = bundles[0];
+                    console.log('Sample Standard Unlimited Essential bundle structure:', {
+                        name: sampleBundle.name,
+                        country: sampleBundle.country,
+                        countries: sampleBundle.countries,
+                        countriesType: typeof sampleBundle.countries,
+                        countriesLength: Array.isArray(sampleBundle.countries) ? sampleBundle.countries.length : 0,
+                        firstCountry: Array.isArray(sampleBundle.countries) ? sampleBundle.countries[0] : null
+                    });
+                }
+                
+                // Проверяем, есть ли еще страницы
+                const pageCount = catalogue?.pageCount || 0;
+                const rows = catalogue?.rows || 0;
+                
+                if (pageCount > 0 && page >= pageCount) {
+                    hasMore = false;
+                } else if (rows > 0 && allBundles.length >= rows) {
+                    hasMore = false;
+                } else if (bundles.length < perPage) {
+                    hasMore = false;
+                } else {
+                    page++;
+                }
+            } else {
+                hasMore = false;
+            }
+        }
+        
+        console.log(`Received ${allBundles.length} bundles from Standard Unlimited Essential group (${page} page(s))`);
+        
+        return allBundles;
+    } catch (error) {
+        console.error('Error fetching Standard Unlimited Essential bundles:', error);
+        return [];
+    }
+}
+
+/**
  * Фильтровать bundles по региону API
  * Регион определяется по полю country/countries в bundle
  * @param {Array} bundles - все bundles из Standard Fixed
