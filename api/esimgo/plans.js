@@ -476,10 +476,21 @@ module.exports = async function handler(req, res) {
                 
                 bundles = bundles.concat(globalFixedBundles, globalUnlimitedBundles);
             } catch (error) {
-                console.error('Error fetching Global bundles:', error.message);
+                console.error('Error fetching Global bundles:', {
+                    message: error.message,
+                    stack: error.stack
+                });
+                // Не сохраняем пустые данные в кэш при ошибке
+                throw error;
             }
             
             console.log('Total Global bundles:', bundles.length);
+            
+            // Проверяем, что bundles не пустой
+            if (bundles.length === 0) {
+                console.warn('⚠️ No Global bundles found, skipping cache');
+                // Не сохраняем в кэш, если bundles пустой
+            }
         } else if (isLocal && countryCode) {
             // Local: запрашиваем из двух групп отдельно (как для Global)
             console.log('Fetching Local bundles from groups: Standard Fixed and Standard Unlimited Essential');
@@ -752,10 +763,19 @@ module.exports = async function handler(req, res) {
                 }
                 bundles = bundles.concat(localUnlimitedBundles);
             } catch (error) {
-                console.error('Error fetching Standard Unlimited Essential bundles for Local:', error.message);
+                console.error('Error fetching Standard Unlimited Essential bundles for Local:', {
+                    message: error.message,
+                    stack: error.stack
+                });
+                // Продолжаем, даже если одна группа не загрузилась
             }
             
             console.log('Total Local bundles:', bundles.length);
+            
+            // Проверяем, что bundles не пустой
+            if (bundles.length === 0) {
+                console.warn('⚠️ No Local bundles found for country:', countryCode);
+            }
         } else {
             // Region: обычный запрос
             const requestCountryCode = null;
@@ -1069,12 +1089,16 @@ module.exports = async function handler(req, res) {
             source: 'api'
         };
         
-        // Сохраняем в кэш перед отправкой ответа
-        cache.set(cacheKey, {
-            data: responseData,
-            meta: responseMeta
-        });
-        console.log('💾 Cached plans data for:', cacheKey);
+        // Сохраняем в кэш только если есть данные
+        if (bundles.length > 0 || plans.standard.length > 0 || plans.unlimited.length > 0) {
+            cache.set(cacheKey, {
+                data: responseData,
+                meta: responseMeta
+            });
+            console.log('💾 Cached plans data for:', cacheKey);
+        } else {
+            console.warn('⚠️ Not caching empty plans data for:', cacheKey);
+        }
         
         return res.status(200).json({
             success: true,
