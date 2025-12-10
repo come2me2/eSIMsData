@@ -1078,7 +1078,7 @@ module.exports = async function handler(req, res) {
                         }
                     }
                     
-                    // Добавляем только валидные ISO коды стран (2-3 символа, не региональные коды)
+                    // Добавляем только валидные ISO коды стран (2-5 символов, не региональные коды)
                     if (countryCode && 
                         countryCode.length >= 2 && countryCode.length <= 5 && 
                         countryCode !== 'GLOBAL' && countryCode !== 'WORLD' && countryCode !== 'WORLDWIDE' &&
@@ -1087,6 +1087,16 @@ module.exports = async function handler(req, res) {
                             code: countryCode,
                             name: countryName || countryCode
                         });
+                    } else if (countryCode && countriesMap.has(countryCode)) {
+                        // Логируем дубликаты для отладки (только первые несколько)
+                        if (countriesMap.size < 5) {
+                            console.log('Duplicate country code skipped:', countryCode);
+                        }
+                    } else if (countryCode && (countryCode.length < 2 || countryCode.length > 5)) {
+                        // Логируем невалидные коды для отладки (только первые несколько)
+                        if (countriesMap.size < 5) {
+                            console.log('Invalid country code length skipped:', countryCode, 'length:', countryCode.length);
+                        }
                     }
                 });
             });
