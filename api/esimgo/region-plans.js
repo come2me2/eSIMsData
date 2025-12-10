@@ -878,7 +878,8 @@ module.exports = async function handler(req, res) {
             region: region,
             apiRegions: apiRegions,
             standardPlans: plans.standard.length,
-            totalBundles: allBundles.length,
+            unlimitedPlans: plans.unlimited.length,
+            totalBundles: allStandardBundles.length + allUnlimitedBundles.length,
             countriesCount: countries.length
         });
         
@@ -892,7 +893,7 @@ module.exports = async function handler(req, res) {
         const responseMeta = {
             region: region,
             apiRegions: apiRegions,
-            bundlesCount: allBundles.length,
+            bundlesCount: allStandardBundles.length + allUnlimitedBundles.length,
             countriesCount: countries.length
         };
         
