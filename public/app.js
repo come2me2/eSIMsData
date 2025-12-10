@@ -702,22 +702,33 @@ function handleNavigationClick(section) {
 
 // Функция для управления кнопкой BackButton
 function updateBackButton() {
-    if (!tg || !tg.BackButton) return;
+    if (!tg || !tg.BackButton) {
+        console.warn('⚠️ Telegram WebApp или BackButton недоступны');
+        return;
+    }
     
     // Проверяем, находимся ли мы на главной странице (index.html)
-    const isMainPage = window.location.pathname.endsWith('index.html') || 
-                       window.location.pathname === '/' || 
-                       window.location.pathname.endsWith('/');
+    const pathname = window.location.pathname;
+    const isMainPage = pathname.endsWith('index.html') || 
+                       pathname === '/' || 
+                       pathname.endsWith('/') ||
+                       pathname === '/index.html';
     
     // На главной странице всегда скрываем кнопку BackButton
     // Это позволяет показывать кнопку Close вместо Back
     if (isMainPage) {
         tg.BackButton.hide();
-        console.log('🔙 BackButton скрыта (главная страница)');
+        console.log('🔙 BackButton скрыта (главная страница)', {
+            pathname: pathname,
+            href: window.location.href
+        });
     } else {
         // На других страницах показываем кнопку Back
         tg.BackButton.show();
-        console.log('🔙 BackButton показана');
+        console.log('🔙 BackButton показана', {
+            pathname: pathname,
+            href: window.location.href
+        });
     }
 }
 
