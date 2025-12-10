@@ -563,6 +563,33 @@ module.exports = async function handler(req, res) {
         
         console.log('Region plans API request:', { region });
         
+        // Определяем ключ кэша для региона
+        const cacheKey = `region-plans:${region}`;
+        
+        // Проверяем кэш перед запросом к API
+        const cachedData = cache.get(cacheKey, cache.getTTL('regionPlans'));
+        if (cachedData) {
+            // Проверяем, что кэшированные данные не пустые
+            const hasData = cachedData.data && (
+                (cachedData.data.standard && cachedData.data.standard.length > 0) ||
+                (cachedData.data.unlimited && cachedData.data.unlimited.length > 0)
+            );
+            if (hasData) {
+                console.log('✅ Using cached region plans data for:', region);
+                return res.status(200).json({
+                    success: true,
+                    data: cachedData.data,
+                    meta: {
+                        ...cachedData.meta,
+                        cached: true
+                    }
+                });
+            } else {
+                console.warn('⚠️ Cached data is empty, clearing cache for:', cacheKey);
+                cache.clear(cacheKey);
+            }
+        }
+        
         // Получаем регионы API для региона приложения
         const apiRegions = getAPIRegions(region);
         
