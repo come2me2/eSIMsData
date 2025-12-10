@@ -859,6 +859,7 @@ module.exports = async function handler(req, res) {
             const bundleApiRegion = bundle.apiRegion; // Регион API, к которому относится этот bundle
             
             // Проверяем, является ли bundle региональным (где country.name/iso = название региона)
+            // Региональный bundle - это тот, где в массиве countries есть элемент с name/iso = название региона
             let isRegionalBundle = false;
             if (countries.length > 0) {
                 isRegionalBundle = countries.some(country => {
@@ -884,6 +885,10 @@ module.exports = async function handler(req, res) {
                 });
             }
             
+            // Для региональных bundles извлекаем ВСЕ страны из bundle.countries
+            // Для нерегиональных bundles (конкретные страны) также извлекаем все страны
+            // Но пропускаем только региональные коды (EU Lite, Europe, etc.)
+            
             countries.forEach(country => {
                 let countryCode = null;
                 let countryName = null;
@@ -907,21 +912,11 @@ module.exports = async function handler(req, res) {
                         return;
                     }
                     
-                    // ВАЖНО: Для региональных bundles извлекаем все страны из bundle.countries
-                    // Для нерегиональных bundles проверяем, что country.region соответствует нужному региону
-                    if (!isRegionalBundle && bundleApiRegion && countryRegion) {
-                        const allowedRegions = apiRegionToCountryRegions[bundleApiRegion] || [];
-                        const countryRegionMatches = allowedRegions.some(allowedRegion => 
-                            countryRegion === allowedRegion || 
-                            countryRegion.includes(allowedRegion) ||
-                            allowedRegion.includes(countryRegion)
-                        );
-                        
-                        // Если country.region не соответствует нужному региону, пропускаем эту страну
-                        if (!countryRegionMatches) {
-                            return;
-                        }
-                    }
+                    // ВАЖНО: Для региональных bundles извлекаем ВСЕ страны из bundle.countries
+                    // Для нерегиональных bundles (конкретные страны) также извлекаем все страны
+                    // НЕ проверяем country.region, так как для региональных bundles это может быть сам регион
+                    // А для нерегиональных bundles country.region может не совпадать с bundleApiRegion
+                    // Просто извлекаем все валидные ISO коды стран, исключая региональные коды
                     
                     // Если название не указано, используем маппинг
                     if (!countryName && countryCode) {
