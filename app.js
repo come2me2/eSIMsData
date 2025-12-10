@@ -536,6 +536,9 @@ function updateContent() {
         if (countryList) countryList.style.display = 'flex';
         renderCountries();
     }
+    
+    // Обновляем кнопку BackButton при изменении контента
+    updateBackButton();
 }
 
 // Render region list
