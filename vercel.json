@@ -2,6 +2,12 @@
   "version": 2,
   "cleanUrls": true,
   "trailingSlash": false,
+  "crons": [
+    {
+      "path": "/api/cache/refresh?secret=CHANGE_ME&type=all",
+      "schedule": "0 2 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
