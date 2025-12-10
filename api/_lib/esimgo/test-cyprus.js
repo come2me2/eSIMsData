@@ -3,7 +3,7 @@
  * GET /api/esimgo/test-cyprus?country=CYP
  */
 
-const esimgoClient = require('../_lib/esimgo/client');
+const esimgoClient = require('./client');
 
 module.exports = async function handler(req, res) {
     // CORS headers

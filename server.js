@@ -40,8 +40,8 @@ const apiRoutes = {
     '/api/esimgo/order': require('./api/esimgo/order'),
     '/api/esimgo/status': require('./api/esimgo/status'),
     '/api/esimgo/assignments': require('./api/esimgo/assignments'),
-    '/api/esimgo/test-africa': require('./api/esimgo/test-africa'),
-    '/api/esimgo/test-cyprus': require('./api/esimgo/test-cyprus'),
+    '/api/esimgo/test-africa': require('./api/_lib/esimgo/test-africa'),
+    '/api/esimgo/test-cyprus': require('./api/_lib/esimgo/test-cyprus'),
     '/api/validate-telegram': require('./api/validate-telegram'),
     '/api/webhook': require('./api/webhook')
 };
