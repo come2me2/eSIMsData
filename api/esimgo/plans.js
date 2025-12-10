@@ -321,8 +321,18 @@ module.exports = async function handler(req, res) {
             }
             
             // Проверяем паттерны в названии (RGBS, RGB - Global bundles)
+            // Проверяем как в lowercase, так и в оригинальном регистре
+            const nameOriginal = bundle.name || '';
             if (name.includes('rgbs') || name.includes('rgb') || 
-                name.includes('world') || name.includes('worldwide')) {
+                nameOriginal.includes('RGBS') || nameOriginal.includes('RGB') ||
+                name.includes('world') || name.includes('worldwide') ||
+                nameOriginal.includes('WORLD') || nameOriginal.includes('WORLDWIDE')) {
+                return true;
+            }
+            
+            // Также проверяем паттерны с подчеркиваниями: _RGB_, _RGBS_, _RGB_V2 и т.д.
+            if (name.includes('_rgb') || name.includes('_rgbs') ||
+                nameOriginal.includes('_RGB') || nameOriginal.includes('_RGBS')) {
                 return true;
             }
             
