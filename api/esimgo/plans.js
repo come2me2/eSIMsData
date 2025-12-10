@@ -1105,6 +1105,15 @@ module.exports = async function handler(req, res) {
         const countries = Array.from(countriesMap.values())
             .sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code));
         
+        // Для Global логируем детальную информацию о странах
+        if (isGlobal) {
+            console.log('Global countries extracted:', {
+                total: countries.length,
+                countryCodes: countries.map(c => c.code).sort(),
+                sampleCountries: countries.slice(0, 10).map(c => ({ code: c.code, name: c.name }))
+            });
+        }
+        
         console.log('Plans grouped:', {
             country: country || 'all',
             region: region || 'all',
