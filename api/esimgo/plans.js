@@ -417,17 +417,26 @@ module.exports = async function handler(req, res) {
                                     perPage: perPage,
                                     page: pageNum
                                 };
-                                return esimgoClient.getCatalogue(null, options);
+                                return esimgoClient.getCatalogue(null, options).catch(err => {
+                                    console.error(`Error fetching ${groupName} page ${pageNum}:`, err.message);
+                                    return null; // Возвращаем null при ошибке
+                                });
                             });
                             
                             const batchResults = await Promise.all(batchPromises);
                             
                             batchResults.forEach((catalogue, idx) => {
+                                if (!catalogue) {
+                                    console.warn(`⚠️ Failed to fetch ${groupName} page ${batch[idx]}`);
+                                    return;
+                                }
                                 const pageBundles = Array.isArray(catalogue) 
                                     ? catalogue 
                                     : (catalogue?.bundles || catalogue?.data || []);
-                                allBundles = allBundles.concat(pageBundles);
-                                console.log(`${groupName} bundles received on page ${batch[idx]}:`, pageBundles.length);
+                                if (pageBundles && pageBundles.length > 0) {
+                                    allBundles = allBundles.concat(pageBundles);
+                                    console.log(`${groupName} bundles received on page ${batch[idx]}:`, pageBundles.length);
+                                }
                             });
                         }
                     }
@@ -439,8 +448,14 @@ module.exports = async function handler(req, res) {
                 // Загружаем обе группы параллельно
                 console.log('Fetching Global bundles from both groups in parallel...');
                 const [allFixedBundles, allUnlimitedBundles] = await Promise.all([
-                    fetchAllPages('Standard Fixed'),
-                    fetchAllPages('Standard Unlimited Essential')
+                    fetchAllPages('Standard Fixed').catch(err => {
+                        console.error('Error in fetchAllPages for Standard Fixed:', err.message);
+                        return [];
+                    }),
+                    fetchAllPages('Standard Unlimited Essential').catch(err => {
+                        console.error('Error in fetchAllPages for Standard Unlimited Essential:', err.message);
+                        return [];
+                    })
                 ]);
                 
                 // Фильтруем по country = "Global"
