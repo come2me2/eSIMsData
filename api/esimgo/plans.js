@@ -419,22 +419,83 @@ module.exports = async function handler(req, res) {
             function isLocalBundle(bundle, targetCountryCode) {
                 const countries = bundle.countries || [];
                 const bundleCountry = bundle.country || bundle.countryCode || bundle.iso;
+                const bundleName = (bundle.name || '').toUpperCase();
+                
+                // Специальная обработка для Northern Cyprus (CYP)
+                // В API может быть как CY, так и CYP, или название "Northern Cyprus"
+                const countryNameMap = {
+                    'CYP': ['CYP', 'CY', 'NORTHERN CYPRUS', 'NORTHERN CYPRUS'],
+                    'CY': ['CY', 'CYP', 'CYPRUS']
+                };
+                
+                // Проверяем паттерн в названии bundle (например, esim_20GB_30D_CYP_V2)
+                if (bundleName.includes(`_${targetCountryCode}_`) || 
+                    bundleName.includes(`_${targetCountryCode} `) ||
+                    bundleName.endsWith(`_${targetCountryCode}`)) {
+                    console.log('✅ Bundle найден по паттерну в названии:', bundle.name);
+                    return true;
+                }
+                
+                // Проверяем альтернативные коды для специальных стран
+                if (countryNameMap[targetCountryCode]) {
+                    const alternativeCodes = countryNameMap[targetCountryCode];
+                    for (const altCode of alternativeCodes) {
+                        if (bundleName.includes(`_${altCode}_`) || 
+                            bundleName.includes(`_${altCode} `) ||
+                            bundleName.endsWith(`_${altCode}`)) {
+                            console.log('✅ Bundle найден по альтернативному коду:', bundle.name, altCode);
+                            return true;
+                        }
+                    }
+                }
                 
                 // Bundle должен содержать только одну страну и это должна быть запрошенная страна
                 if (countries.length === 1) {
                     const country = countries[0];
                     // countries может быть массивом строк (ISO кодов) или объектов {name, region, iso}
                     if (typeof country === 'string') {
-                        return country.toUpperCase() === targetCountryCode;
+                        const countryUpper = country.toUpperCase();
+                        if (countryUpper === targetCountryCode) {
+                            return true;
+                        }
+                        // Проверяем альтернативные коды
+                        if (countryNameMap[targetCountryCode] && countryNameMap[targetCountryCode].includes(countryUpper)) {
+                            return true;
+                        }
                     } else if (typeof country === 'object' && country !== null) {
-                        // Объект с полями iso, ISO, code
+                        // Объект с полями iso, ISO, code, name
                         const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
-                        return countryIso === targetCountryCode;
+                        const countryName = (country.name || country.Name || '').toUpperCase();
+                        
+                        if (countryIso === targetCountryCode) {
+                            return true;
+                        }
+                        
+                        // Проверяем альтернативные коды
+                        if (countryNameMap[targetCountryCode] && countryNameMap[targetCountryCode].includes(countryIso)) {
+                            return true;
+                        }
+                        
+                        // Проверяем по названию страны (для Northern Cyprus)
+                        if (targetCountryCode === 'CYP' && 
+                            (countryName.includes('NORTHERN CYPRUS') || countryName === 'NORTHERN CYPRUS')) {
+                            return true;
+                        }
                     }
                 }
+                
+                // Проверяем bundleCountry напрямую
                 if (bundleCountry) {
-                    return String(bundleCountry).toUpperCase() === targetCountryCode;
+                    const bundleCountryUpper = String(bundleCountry).toUpperCase();
+                    if (bundleCountryUpper === targetCountryCode) {
+                        return true;
+                    }
+                    // Проверяем альтернативные коды
+                    if (countryNameMap[targetCountryCode] && countryNameMap[targetCountryCode].includes(bundleCountryUpper)) {
+                        return true;
+                    }
                 }
+                
                 return false;
             }
             
@@ -479,6 +540,13 @@ module.exports = async function handler(req, res) {
                     return isLocalBundle(bundle, countryCode);
                 });
                 console.log('Local Unlimited bundles after filter:', localUnlimitedBundles.length);
+                if (localUnlimitedBundles.length > 0) {
+                    console.log('Sample Local Unlimited bundles:', localUnlimitedBundles.slice(0, 3).map(b => ({
+                        name: b.name,
+                        countries: b.countries,
+                        price: b.price
+                    })));
+                }
                 bundles = bundles.concat(localUnlimitedBundles);
             } catch (error) {
                 console.error('Error fetching Standard Unlimited Essential bundles for Local:', error.message);
