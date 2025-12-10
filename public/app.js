@@ -315,10 +315,10 @@ const regions = [
     { name: 'Oceania' },
 ];
 
-// Get segment from URL or default to 'region'
-// Note: Local теперь отдельная страница (local-countries.html)
+// Get segment from URL or default to 'local'
+// Local - главная страница, открывается по умолчанию
 const urlParams = new URLSearchParams(window.location.search);
-let currentSegment = urlParams.get('segment') || 'region';
+let currentSegment = urlParams.get('segment') || 'local';
 
 // Initialize app with optimized loading
 document.addEventListener('DOMContentLoaded', () => {

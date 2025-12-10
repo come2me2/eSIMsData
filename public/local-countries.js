@@ -225,8 +225,37 @@ function setupSearch() {
     });
 }
 
+// Setup segmented control
+function setupSegmentedControl() {
+    const segmentButtons = document.querySelectorAll('.segment-btn');
+    
+    segmentButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active class from all buttons
+            segmentButtons.forEach(b => b.classList.remove('active'));
+            // Add active class to clicked button
+            btn.classList.add('active');
+            
+            const segment = btn.dataset.segment;
+            
+            // Navigate to different pages based on segment
+            if (segment === 'region') {
+                window.location.href = 'index.html?segment=region';
+            } else if (segment === 'global') {
+                window.location.href = 'global-plans.html';
+            } else if (segment === 'local') {
+                // Already on Local page
+                return;
+            }
+        });
+    });
+}
+
 // Initialize app
 async function initializeApp() {
+    // Настраиваем сегментированный контрол
+    setupSegmentedControl();
+    
     // Загружаем страны из API
     await loadCountriesFromAPI();
     
