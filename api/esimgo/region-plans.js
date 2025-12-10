@@ -616,11 +616,39 @@ module.exports = async function handler(req, res) {
         // Группируем в планы
         const plans = groupBundlesIntoPlans(allBundles);
         
+        // Извлекаем уникальные страны из bundles
+        const countriesMap = new Map();
+        allBundles.forEach(bundle => {
+            const countries = bundle.countries || [];
+            countries.forEach(country => {
+                let countryCode = null;
+                let countryName = null;
+                
+                if (typeof country === 'string') {
+                    countryCode = country.toUpperCase();
+                } else if (typeof country === 'object' && country !== null) {
+                    countryCode = (country.iso || country.ISO || country.code || '').toUpperCase();
+                    countryName = country.name || country.Name || '';
+                }
+                
+                if (countryCode && !countriesMap.has(countryCode)) {
+                    countriesMap.set(countryCode, {
+                        code: countryCode,
+                        name: countryName || countryCode
+                    });
+                }
+            });
+        });
+        
+        const countries = Array.from(countriesMap.values())
+            .sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code));
+        
         console.log('Region plans grouped:', {
             region: region,
             apiRegions: apiRegions,
             standardPlans: plans.standard.length,
-            totalBundles: allBundles.length
+            totalBundles: allBundles.length,
+            countriesCount: countries.length
         });
         
         return res.status(200).json({
@@ -628,12 +656,14 @@ module.exports = async function handler(req, res) {
             data: {
                 standard: plans.standard,
                 unlimited: [], // Для регионов всегда пустой массив
-                total: plans.standard.length
+                total: plans.standard.length,
+                countries: countries // Добавляем список стран из API
             },
             meta: {
                 region: region,
                 apiRegions: apiRegions,
-                bundlesCount: allBundles.length
+                bundlesCount: allBundles.length,
+                countriesCount: countries.length
             }
         });
         

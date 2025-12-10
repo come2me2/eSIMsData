@@ -218,6 +218,26 @@ async function loadPlansFromAPI(regionName) {
             standardPlans = result.data.standard || [];
             unlimitedPlans = []; // Для регионов всегда пустой массив (только fixed тарифы)
             
+            // Обновляем список стран из API ответа
+            if (result.data.countries && Array.isArray(result.data.countries)) {
+                const apiCountries = result.data.countries.map(c => c.name || c.code);
+                if (apiCountries.length > 0) {
+                    // Обновляем regionDataFull с данными из API
+                    if (!regionDataFull[regionName]) {
+                        regionDataFull[regionName] = {
+                            count: apiCountries.length,
+                            countries: apiCountries
+                        };
+                    } else {
+                        regionDataFull[regionName].count = apiCountries.length;
+                        regionDataFull[regionName].countries = apiCountries;
+                    }
+                    // Обновляем счетчик для обратной совместимости
+                    regionCountryCounts[regionName] = apiCountries.length;
+                    console.log(`✅ Updated countries list for ${regionName} from API:`, apiCountries.length, 'countries');
+                }
+            }
+            
             // Добавляем ID для совместимости
             standardPlans.forEach((plan, index) => {
                 if (!plan.id) {
@@ -235,6 +255,7 @@ async function loadPlansFromAPI(regionName) {
                 standard: standardPlans.length,
                 unlimited: unlimitedPlans.length,
                 region: regionName,
+                countriesCount: result.data.countries?.length || 0,
                 sampleStandard: standardPlans[0] || null,
                 sampleUnlimited: unlimitedPlans[0] || null
             });
@@ -317,7 +338,9 @@ function setupRegionInfo() {
         nameElement.textContent = regionData.name;
     }
     
-    const countryCount = regionCountryCounts[regionData.name] || 25;
+    // Обновляем счетчик стран после загрузки данных из API
+    const regionInfo = regionDataFull[regionData.name] || regionDataFull['Africa'];
+    const countryCount = regionInfo ? regionInfo.count : (regionCountryCounts[regionData.name] || 25);
     if (infoTextElement) {
         infoTextElement.textContent = `Supported in countries: ${countryCount}`;
     }

@@ -78,6 +78,17 @@ async function loadPlansFromAPI() {
             standardPlans = result.data.standard || [];
             unlimitedPlans = result.data.unlimited || [];
             
+            // Обновляем список стран из API ответа
+            if (result.data.countries && Array.isArray(result.data.countries)) {
+                const apiCountries = result.data.countries.map(c => c.name || c.code);
+                if (apiCountries.length > 0) {
+                    // Очищаем старый список и заменяем на новый из API
+                    globalCountries.length = 0;
+                    globalCountries.push(...apiCountries);
+                    console.log(`✅ Updated global countries list from API:`, apiCountries.length, 'countries');
+                }
+            }
+            
             // Добавляем ID для совместимости
             standardPlans.forEach((plan, index) => {
                 if (!plan.id) {
@@ -94,6 +105,7 @@ async function loadPlansFromAPI() {
             console.log('Global plans loaded from API:', {
                 standard: standardPlans.length,
                 unlimited: unlimitedPlans.length,
+                countriesCount: result.data.countries?.length || 0,
                 sampleStandard: standardPlans[0] || null,
                 sampleUnlimited: unlimitedPlans[0] || null
             });
