@@ -683,41 +683,41 @@ module.exports = async function handler(req, res) {
                 options: catalogueOptions,
                 category: region ? 'region' : 'all'
             });
-            
-            // Проверяем, что client загружен
-            if (!esimgoClient) {
-                const errorMsg = 'eSIM Go client module failed to load. Check server logs for details.';
-                console.error(errorMsg);
-                throw new Error(errorMsg);
-            }
-            
-            if (typeof esimgoClient.getCatalogue !== 'function') {
-                const errorMsg = 'getCatalogue function not found in client module';
-                console.error(errorMsg, { clientKeys: Object.keys(esimgoClient) });
-                throw new Error(errorMsg);
-            }
-            
-            let catalogue;
-            try {
+        
+        // Проверяем, что client загружен
+        if (!esimgoClient) {
+            const errorMsg = 'eSIM Go client module failed to load. Check server logs for details.';
+            console.error(errorMsg);
+            throw new Error(errorMsg);
+        }
+        
+        if (typeof esimgoClient.getCatalogue !== 'function') {
+            const errorMsg = 'getCatalogue function not found in client module';
+            console.error(errorMsg, { clientKeys: Object.keys(esimgoClient) });
+            throw new Error(errorMsg);
+        }
+        
+        let catalogue;
+        try {
                 catalogue = await esimgoClient.getCatalogue(requestCountryCode, catalogueOptions);
-                console.log('Catalogue received:', {
-                    isArray: Array.isArray(catalogue),
-                    hasBundles: !!catalogue?.bundles,
-                    bundlesCount: Array.isArray(catalogue) ? catalogue.length : (catalogue?.bundles?.length || 0)
-                });
-            } catch (catalogueError) {
-                console.error('Error getting catalogue:', {
-                    message: catalogueError.message,
-                    stack: catalogueError.stack,
-                    name: catalogueError.name
-                });
-                throw new Error(`Failed to get catalogue: ${catalogueError.message}`);
-            }
-            
-            // Извлекаем bundles
+            console.log('Catalogue received:', {
+                isArray: Array.isArray(catalogue),
+                hasBundles: !!catalogue?.bundles,
+                bundlesCount: Array.isArray(catalogue) ? catalogue.length : (catalogue?.bundles?.length || 0)
+            });
+        } catch (catalogueError) {
+            console.error('Error getting catalogue:', {
+                message: catalogueError.message,
+                stack: catalogueError.stack,
+                name: catalogueError.name
+            });
+            throw new Error(`Failed to get catalogue: ${catalogueError.message}`);
+        }
+        
+        // Извлекаем bundles
             bundles = Array.isArray(catalogue) 
-                ? catalogue 
-                : (catalogue?.bundles || catalogue?.data || []);
+            ? catalogue 
+            : (catalogue?.bundles || catalogue?.data || []);
         }
         
         console.log('Bundles extracted from catalogue:', {
@@ -922,13 +922,33 @@ module.exports = async function handler(req, res) {
                     
                     if (typeof country === 'string') {
                         countryCode = country.toUpperCase();
+                        // Для Global пропускаем "GLOBAL" и другие региональные коды
+                        if (isGlobal && (countryCode === 'GLOBAL' || countryCode === 'WORLD' || countryCode === 'WORLDWIDE')) {
+                            return; // Пропускаем региональные коды для Global
+                        }
                         countryName = isoToCountryName[countryCode] || countryCode;
                     } else if (typeof country === 'object' && country !== null) {
                         countryCode = (country.iso || country.ISO || country.code || '').toUpperCase();
-                        countryName = country.name || country.Name || isoToCountryName[countryCode] || countryCode;
+                        countryName = country.name || country.Name || '';
+                        // Для Global пропускаем "Global" и другие региональные названия
+                        if (isGlobal) {
+                            const countryNameUpper = countryName.toUpperCase();
+                            if (countryCode === 'GLOBAL' || countryCode === 'WORLD' || countryCode === 'WORLDWIDE' ||
+                                countryNameUpper === 'GLOBAL' || countryNameUpper === 'WORLD' || countryNameUpper === 'WORLDWIDE') {
+                                return; // Пропускаем региональные коды/названия для Global
+                            }
+                        }
+                        // Если название не указано, используем маппинг
+                        if (!countryName && countryCode) {
+                            countryName = isoToCountryName[countryCode] || countryCode;
+                        }
                     }
                     
-                    if (countryCode && !countriesMap.has(countryCode)) {
+                    // Добавляем только валидные ISO коды стран (2-3 символа, не региональные коды)
+                    if (countryCode && 
+                        countryCode.length >= 2 && countryCode.length <= 5 && 
+                        countryCode !== 'GLOBAL' && countryCode !== 'WORLD' && countryCode !== 'WORLDWIDE' &&
+                        !countriesMap.has(countryCode)) {
                         countriesMap.set(countryCode, {
                             code: countryCode,
                             name: countryName || countryCode
