@@ -463,11 +463,12 @@ function filterBundlesByRegion(bundles, apiRegion) {
 }
 
 /**
- * Группировка bundles в планы (только standard, без unlimited)
+ * Группировка bundles в планы (standard и unlimited)
  */
-function groupBundlesIntoPlans(bundles) {
+function groupBundlesIntoPlans(bundles, isUnlimited = false) {
     const plans = {
-        standard: []
+        standard: [],
+        unlimited: []
     };
     
     bundles.forEach(bundle => {
@@ -670,32 +671,56 @@ module.exports = async function handler(req, res) {
             });
         }
         
-        // Получаем все bundles из группы Standard Fixed один раз
-        const allStandardFixedBundles = await getAllStandardFixedBundles();
+        // Получаем все bundles из групп Standard Fixed и Standard Unlimited Essential параллельно
+        console.log('Fetching bundles from both groups in parallel...');
+        const [allStandardFixedBundles, allStandardUnlimitedEssentialBundles] = await Promise.all([
+            getAllStandardFixedBundles().catch(err => {
+                console.error('Error fetching Standard Fixed bundles:', err.message);
+                return [];
+            }),
+            getAllStandardUnlimitedEssentialBundles().catch(err => {
+                console.error('Error fetching Standard Unlimited Essential bundles:', err.message);
+                return [];
+            })
+        ]);
         
         // Фильтруем bundles по регионам API (регионы указаны в поле country/countries)
-        let allBundles = [];
+        let allStandardBundles = [];
+        let allUnlimitedBundles = [];
         
         for (const apiRegion of apiRegions) {
             console.log(`Filtering bundles for API region: ${apiRegion}`);
-            const bundles = filterBundlesByRegion(allStandardFixedBundles, apiRegion);
-            console.log(`Found ${bundles.length} bundles for region ${apiRegion}`);
+            
+            // Фильтруем standard bundles
+            const standardBundles = filterBundlesByRegion(allStandardFixedBundles, apiRegion);
+            console.log(`Found ${standardBundles.length} standard bundles for region ${apiRegion}`);
+            
+            // Фильтруем unlimited bundles
+            const unlimitedBundles = filterBundlesByRegion(allStandardUnlimitedEssentialBundles, apiRegion);
+            console.log(`Found ${unlimitedBundles.length} unlimited bundles for region ${apiRegion}`);
             
             // Добавляем информацию о регионе API к каждому bundle
-            bundles.forEach(bundle => {
+            standardBundles.forEach(bundle => {
                 bundle.apiRegion = apiRegion;
             });
-            allBundles = allBundles.concat(bundles);
+            unlimitedBundles.forEach(bundle => {
+                bundle.apiRegion = apiRegion;
+            });
+            
+            allStandardBundles = allStandardBundles.concat(standardBundles);
+            allUnlimitedBundles = allUnlimitedBundles.concat(unlimitedBundles);
         }
         
-        console.log(`Total bundles after filtering by regions: ${allBundles.length}`);
+        console.log(`Total standard bundles after filtering by regions: ${allStandardBundles.length}`);
+        console.log(`Total unlimited bundles after filtering by regions: ${allUnlimitedBundles.length}`);
         
         // Для Latin America делаем дедупликацию по минимальной цене
         if (isLatinAmerica(region)) {
-            allBundles = deduplicateLatinAmerica(allBundles);
+            allStandardBundles = deduplicateLatinAmerica(allStandardBundles);
+            allUnlimitedBundles = deduplicateLatinAmerica(allUnlimitedBundles);
         }
         
-        if (allBundles.length === 0) {
+        if (allStandardBundles.length === 0 && allUnlimitedBundles.length === 0) {
             return res.status(200).json({
                 success: true,
                 data: {
@@ -712,7 +737,13 @@ module.exports = async function handler(req, res) {
         }
         
         // Группируем в планы
-        const plans = groupBundlesIntoPlans(allBundles);
+        const standardPlans = groupBundlesIntoPlans(allStandardBundles, false);
+        const unlimitedPlans = groupBundlesIntoPlans(allUnlimitedBundles, true);
+        
+        const plans = {
+            standard: standardPlans.standard,
+            unlimited: unlimitedPlans.unlimited
+        };
         
         // Извлекаем уникальные страны из bundles (исключаем региональные коды)
         const countriesMap = new Map();
