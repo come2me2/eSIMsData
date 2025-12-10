@@ -6,6 +6,7 @@
  */
 
 const esimgoClient = require('../_lib/esimgo/client');
+const cache = require('../_lib/cache');
 
 // Маппинг ISO кода страны на название
 const isoToCountryName = {
@@ -78,6 +79,16 @@ module.exports = async function handler(req, res) {
     }
     
     try {
+        // Проверяем кэш перед запросом к API
+        const cachedCountries = cache.get('countries:all', cache.getTTL('countries'));
+        if (cachedCountries) {
+            console.log('✅ Using cached countries data');
+            return res.status(200).json({
+                success: true,
+                data: cachedCountries
+            });
+        }
+        
         // Получаем полный каталог с максимальным количеством результатов
         // Используем большой perPage, чтобы получить все страны
         // Если API поддерживает пагинацию, делаем несколько запросов
@@ -236,6 +247,10 @@ module.exports = async function handler(req, res) {
             sample: countries.slice(0, 5).map(c => ({ code: c.code, name: c.name })),
             sampleEnd: countries.slice(-5).map(c => ({ code: c.code, name: c.name }))
         });
+        
+        // Сохраняем в кэш
+        cache.set('countries:all', countries);
+        console.log('💾 Cached countries data');
         
         return res.status(200).json({
             success: true,

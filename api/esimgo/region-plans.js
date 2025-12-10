@@ -10,6 +10,7 @@
 
 const esimgoClient = require('../_lib/esimgo/client');
 const { getAPIRegions, isLatinAmerica } = require('../_lib/esimgo/region-mapping');
+const cache = require('../_lib/cache');
 
 /**
  * Дедупликация тарифов для Latin America
@@ -735,20 +736,31 @@ module.exports = async function handler(req, res) {
             countriesCount: countries.length
         });
         
+        const responseData = {
+            standard: plans.standard,
+            unlimited: [], // Для регионов всегда пустой массив
+            total: plans.standard.length,
+            countries: countries // Добавляем список стран из API
+        };
+        
+        const responseMeta = {
+            region: region,
+            apiRegions: apiRegions,
+            bundlesCount: allBundles.length,
+            countriesCount: countries.length
+        };
+        
+        // Сохраняем в кэш перед отправкой ответа
+        cache.set(cacheKey, {
+            data: responseData,
+            meta: responseMeta
+        });
+        console.log('💾 Cached region plans data for:', region);
+        
         return res.status(200).json({
             success: true,
-            data: {
-                standard: plans.standard,
-                unlimited: [], // Для регионов всегда пустой массив
-                total: plans.standard.length,
-                countries: countries // Добавляем список стран из API
-            },
-            meta: {
-                region: region,
-                apiRegions: apiRegions,
-                bundlesCount: allBundles.length,
-                countriesCount: countries.length
-            }
+            data: responseData,
+            meta: responseMeta
         });
         
     } catch (error) {

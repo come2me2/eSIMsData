@@ -26,6 +26,9 @@ try {
     // Не устанавливаем esimgoClient, чтобы проверка сработала
 }
 
+// Загружаем модуль кэширования
+const cache = require('../_lib/cache');
+
 /**
  * Группировка bundles в планы
  */
@@ -1066,22 +1069,33 @@ module.exports = async function handler(req, res) {
             countriesCount: countries.length
         });
         
+        const responseData = {
+            standard: plans.standard,
+            unlimited: plans.unlimited,
+            total: plans.standard.length + plans.unlimited.length,
+            countries: countries.length > 0 ? countries : undefined // Добавляем список стран из API
+        };
+        
+        const responseMeta = {
+            country: country || null,
+            region: region || null,
+            category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all')),
+            totalBundles: bundles.length,
+            countriesCount: countries.length,
+            source: 'api'
+        };
+        
+        // Сохраняем в кэш перед отправкой ответа
+        cache.set(cacheKey, {
+            data: responseData,
+            meta: responseMeta
+        });
+        console.log('💾 Cached plans data for:', cacheKey);
+        
         return res.status(200).json({
             success: true,
-            data: {
-                standard: plans.standard,
-                unlimited: plans.unlimited,
-                total: plans.standard.length + plans.unlimited.length,
-                countries: countries.length > 0 ? countries : undefined // Добавляем список стран из API
-            },
-            meta: {
-                country: country || null,
-                region: region || null,
-                category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all')),
-                totalBundles: bundles.length,
-                countriesCount: countries.length,
-                source: 'api'
-            }
+            data: responseData,
+            meta: responseMeta
         });
         
     } catch (error) {
