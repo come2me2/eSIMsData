@@ -764,7 +764,22 @@ module.exports = async function handler(req, res) {
         };
         
         // Извлекаем уникальные страны из bundles (исключаем региональные коды)
+        // Важно: для региональных bundles извлекаем только страны, которые действительно относятся к нужному региону
         const countriesMap = new Map();
+        
+        // Маппинг регионов API на возможные значения в поле country.region
+        const apiRegionToCountryRegions = {
+            'EU Lite': ['europe lite', 'europe', 'eu lite', 'eul'],
+            'North America': ['north america', 'northamerica'],
+            'Americas': ['americas', 'america', 'latin america', 'latam'],
+            'Caribbean': ['caribbean', 'carib'],
+            'CENAM': ['cenam', 'central america'],
+            'Africa': ['africa'],
+            'Asia': ['asia'],
+            'Oceania': ['oceania'],
+            'Balkanas': ['balkanas', 'balkans'],
+            'CIS': ['cis', 'central eurasia']
+        };
         
         // Маппинг ISO кодов на названия стран
         const isoToCountryName = {
@@ -832,11 +847,21 @@ module.exports = async function handler(req, res) {
         // Объединяем standard и unlimited bundles для извлечения стран
         const allBundles = [...allStandardBundles, ...allUnlimitedBundles];
         
+        // Получаем список допустимых значений country.region для всех API регионов
+        const allowedCountryRegions = new Set();
+        apiRegions.forEach(apiRegion => {
+            const countryRegions = apiRegionToCountryRegions[apiRegion] || [];
+            countryRegions.forEach(region => allowedCountryRegions.add(region));
+        });
+        
         allBundles.forEach(bundle => {
             const countries = bundle.countries || [];
+            const bundleApiRegion = bundle.apiRegion; // Регион API, к которому относится этот bundle
+            
             countries.forEach(country => {
                 let countryCode = null;
                 let countryName = null;
+                let countryRegion = null;
                 
                 if (typeof country === 'string') {
                     countryCode = country.toUpperCase();
@@ -848,11 +873,28 @@ module.exports = async function handler(req, res) {
                 } else if (typeof country === 'object' && country !== null) {
                     countryCode = (country.iso || country.ISO || country.code || '').toUpperCase();
                     countryName = country.name || country.Name || '';
+                    countryRegion = (country.region || country.Region || country.REGION || '').toLowerCase();
                     
                     // Пропускаем региональные коды и названия
                     const countryNameUpper = countryName.toUpperCase();
                     if (regionalCodes.includes(countryCode) || regionalCodes.includes(countryNameUpper)) {
                         return;
+                    }
+                    
+                    // ВАЖНО: Проверяем, что страна действительно относится к нужному региону
+                    // Для региональных bundles (где bundle.apiRegion установлен) проверяем country.region
+                    if (bundleApiRegion && countryRegion) {
+                        const allowedRegions = apiRegionToCountryRegions[bundleApiRegion] || [];
+                        const countryRegionMatches = allowedRegions.some(allowedRegion => 
+                            countryRegion === allowedRegion || 
+                            countryRegion.includes(allowedRegion) ||
+                            allowedRegion.includes(countryRegion)
+                        );
+                        
+                        // Если country.region не соответствует нужному региону, пропускаем эту страну
+                        if (!countryRegionMatches) {
+                            return;
+                        }
                     }
                     
                     // Если название не указано, используем маппинг
