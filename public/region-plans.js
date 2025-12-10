@@ -149,11 +149,10 @@ const regionDataFull = {
         ]
     },
     'Central Eurasia': {
-        count: 12,
+        count: 7,
         countries: [
-            'Kazakhstan', 'Kyrgyzstan', 'Tajikistan', 'Turkmenistan',
-            'Uzbekistan', 'Afghanistan', 'Armenia', 'Azerbaijan',
-            'Georgia', 'Mongolia', 'Russia', 'Ukraine'
+            'Armenia', 'Kazakhstan', 'Kyrgyzstan', 'Moldova',
+            'Russia', 'Ukraine', 'Georgia'
         ]
     },
     'Oceania': {
@@ -174,7 +173,7 @@ const regionCountryCounts = {
     'Latin America': 20,
     'North America': 15,
     'Balkanas': 8,
-    'Central Eurasia': 12,
+    'Central Eurasia': 7,
     'Oceania': 10
 };
 
