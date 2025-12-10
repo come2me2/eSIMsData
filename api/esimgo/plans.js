@@ -508,47 +508,50 @@ module.exports = async function handler(req, res) {
                 
                 bundles = bundles.concat(globalFixedBundles, globalUnlimitedBundles);
                 
-                // Для Global нужно получить список стран из всех bundles, где country = "Global"
-                // Пробуем запросить каталог с параметром countries=Global для получения всех стран
+                // Для Global нужно получить список стран из всех bundles обеих групп
+                // Извлекаем все уникальные страны из всех bundles, которые могут относиться к Global
+                // (не только из отфильтрованных Global bundles, но из всех bundles обеих групп)
                 try {
-                    console.log('Fetching all countries for Global bundles...');
-                    const globalCountriesCatalogue = await esimgoClient.getCatalogue('Global', {
-                        perPage: 1000,
-                        page: 1
-                    });
-                    
-                    const globalCountriesBundles = Array.isArray(globalCountriesCatalogue) 
-                        ? globalCountriesCatalogue 
-                        : (globalCountriesCatalogue?.bundles || globalCountriesCatalogue?.data || []);
-                    
-                    console.log(`Found ${globalCountriesBundles.length} bundles with country=Global`);
-                    
-                    // Извлекаем все уникальные страны из всех Global bundles
+                    console.log('Extracting all countries from all bundles in both groups for Global...');
+                    const allBundlesForCountries = [...allFixedBundles, ...allUnlimitedBundles];
                     const globalCountriesSet = new Set();
-                    globalCountriesBundles.forEach(bundle => {
-                        const countries = bundle.countries || [];
-                        countries.forEach(country => {
-                            let countryCode = null;
-                            if (typeof country === 'string') {
-                                countryCode = country.toUpperCase();
-                            } else if (typeof country === 'object' && country !== null) {
-                                countryCode = (country.iso || country.ISO || country.code || '').toUpperCase();
-                            }
-                            
-                            // Пропускаем региональные коды
-                            if (countryCode && 
-                                countryCode !== 'GLOBAL' && 
-                                countryCode !== 'WORLD' && 
-                                countryCode !== 'WORLDWIDE' &&
-                                countryCode.length >= 2 && 
-                                countryCode.length <= 5) {
-                                globalCountriesSet.add(countryCode);
-                            }
-                        });
+                    
+                    allBundlesForCountries.forEach(bundle => {
+                        // Проверяем, относится ли bundle к Global (по названию, описанию или countries)
+                        const name = (bundle.name || '').toLowerCase();
+                        const desc = (bundle.description || '').toLowerCase();
+                        const isGlobalBundle = name.includes('global') || 
+                                               desc.includes('global') || 
+                                               name.includes('rgb') || 
+                                               name.includes('rgbs') ||
+                                               name.includes('world') ||
+                                               name.includes('worldwide');
+                        
+                        if (isGlobalBundle) {
+                            const countries = bundle.countries || [];
+                            countries.forEach(country => {
+                                let countryCode = null;
+                                if (typeof country === 'string') {
+                                    countryCode = country.toUpperCase();
+                                } else if (typeof country === 'object' && country !== null) {
+                                    countryCode = (country.iso || country.ISO || country.code || '').toUpperCase();
+                                }
+                                
+                                // Пропускаем региональные коды
+                                if (countryCode && 
+                                    countryCode !== 'GLOBAL' && 
+                                    countryCode !== 'WORLD' && 
+                                    countryCode !== 'WORLDWIDE' &&
+                                    countryCode.length >= 2 && 
+                                    countryCode.length <= 5) {
+                                    globalCountriesSet.add(countryCode);
+                                }
+                            });
+                        }
                     });
                     
-                    console.log(`Found ${globalCountriesSet.size} unique countries in Global bundles from country=Global query`);
-                    console.log('Global countries codes:', Array.from(globalCountriesSet).sort());
+                    console.log(`Found ${globalCountriesSet.size} unique countries in all Global-related bundles`);
+                    console.log('Global countries codes:', Array.from(globalCountriesSet).sort().slice(0, 20), '...');
                     
                     // Сохраняем найденные страны для использования при извлечении
                     if (globalCountriesSet.size > 0) {
@@ -561,11 +564,11 @@ module.exports = async function handler(req, res) {
                                 });
                             }
                         });
-                        console.log(`Added ${globalCountriesSet.size} countries from country=Global query to countriesMap`);
+                        console.log(`Added ${globalCountriesSet.size} countries from all Global-related bundles to countriesMap`);
                     }
                 } catch (globalCountriesError) {
-                    console.warn('⚠️ Failed to fetch countries from country=Global query:', globalCountriesError.message);
-                    // Продолжаем работу без этого запроса
+                    console.warn('⚠️ Failed to extract countries from Global bundles:', globalCountriesError.message);
+                    // Продолжаем работу без этого
                 }
             } catch (error) {
                 console.error('Error fetching Global bundles:', {
