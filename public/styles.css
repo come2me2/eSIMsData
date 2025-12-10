@@ -498,7 +498,7 @@ body {
 
 .country-flag-large {
     width: 80px;
-    height: 60px;
+    height: 80px;
     margin-bottom: 16px;
     display: flex;
     align-items: center;
@@ -512,13 +512,10 @@ body {
 .country-flag-large img,
 .country-flag-img {
     width: 80px;
-    height: 60px;
-    object-fit: cover;
+    height: 80px;
+    object-fit: contain;
     display: block;
-    border-radius: 8px;
-    /* Чёткие края скругления */
-    -webkit-mask-image: -webkit-radial-gradient(white, black);
-    mask-image: radial-gradient(white, black);
+    border-radius: 50%;
     /* Prevent sub-pixel rendering issues */
     transform: translate3d(0, 0, 0);
     /* Crisp rendering for flag images */
