@@ -364,48 +364,84 @@ module.exports = async function handler(req, res) {
                 throw new Error(errorMsg);
             }
             
-            // Запрос 1: Standard Fixed (fixed трафик) с пагинацией
+            // Оптимизация: загружаем Standard Fixed и Standard Unlimited Essential параллельно
+            // Также используем параллельную загрузку страниц пагинации
             try {
-                let allFixedBundles = [];
-                let page = 1;
-                const perPage = 1000;
-                let hasMore = true;
-                
-                while (hasMore) {
-                    const fixedOptions = {
+                // Функция для загрузки всех страниц группы с пагинацией
+                async function fetchAllPages(groupName) {
+                    let allBundles = [];
+                    let page = 1;
+                    const perPage = 1000;
+                    let hasMore = true;
+                    const maxPages = 50;
+                    
+                    // Сначала получаем первую страницу, чтобы узнать общее количество страниц
+                    const firstPageOptions = {
                         ...catalogueOptions,
-                        group: 'Standard Fixed',
+                        group: groupName,
                         perPage: perPage,
-                        page: page
+                        page: 1
                     };
-                    console.log(`Fetching Standard Fixed bundles for Global, page ${page}...`);
-                    const fixedCatalogue = await esimgoClient.getCatalogue(null, fixedOptions);
-                    const fixedBundles = Array.isArray(fixedCatalogue) 
-                        ? fixedCatalogue 
-                        : (fixedCatalogue?.bundles || fixedCatalogue?.data || []);
+                    console.log(`Fetching ${groupName} bundles for Global, page 1...`);
+                    const firstCatalogue = await esimgoClient.getCatalogue(null, firstPageOptions);
+                    const firstBundles = Array.isArray(firstCatalogue) 
+                        ? firstCatalogue 
+                        : (firstCatalogue?.bundles || firstCatalogue?.data || []);
                     
-                    allFixedBundles = allFixedBundles.concat(fixedBundles);
-                    console.log(`Standard Fixed bundles received on page ${page}:`, fixedBundles.length);
+                    allBundles = allBundles.concat(firstBundles);
+                    console.log(`${groupName} bundles received on page 1:`, firstBundles.length);
                     
-                    // Проверяем, есть ли еще страницы
-                    if (fixedCatalogue?.pageCount && page < fixedCatalogue.pageCount) {
-                        page++;
-                    } else if (fixedCatalogue?.rows && allFixedBundles.length < fixedCatalogue.rows) {
-                        page++;
-                    } else if (fixedBundles.length < perPage) {
-                        hasMore = false;
-                    } else {
-                        page++;
+                    // Определяем общее количество страниц
+                    const pageCount = firstCatalogue?.pageCount || 0;
+                    const totalRows = firstCatalogue?.rows || 0;
+                    
+                    if (pageCount > 1 || (totalRows > 0 && firstBundles.length < totalRows)) {
+                        // Загружаем остальные страницы параллельно (батчами по 5 страниц)
+                        const pagesToFetch = [];
+                        const maxPage = Math.min(pageCount || maxPages, maxPages);
+                        
+                        for (let p = 2; p <= maxPage; p++) {
+                            pagesToFetch.push(p);
+                        }
+                        
+                        // Загружаем страницы батчами по 5 параллельно
+                        const batchSize = 5;
+                        for (let i = 0; i < pagesToFetch.length; i += batchSize) {
+                            const batch = pagesToFetch.slice(i, i + batchSize);
+                            console.log(`Fetching ${groupName} bundles for Global, pages ${batch.join(', ')}...`);
+                            
+                            const batchPromises = batch.map(pageNum => {
+                                const options = {
+                                    ...catalogueOptions,
+                                    group: groupName,
+                                    perPage: perPage,
+                                    page: pageNum
+                                };
+                                return esimgoClient.getCatalogue(null, options);
+                            });
+                            
+                            const batchResults = await Promise.all(batchPromises);
+                            
+                            batchResults.forEach((catalogue, idx) => {
+                                const pageBundles = Array.isArray(catalogue) 
+                                    ? catalogue 
+                                    : (catalogue?.bundles || catalogue?.data || []);
+                                allBundles = allBundles.concat(pageBundles);
+                                console.log(`${groupName} bundles received on page ${batch[idx]}:`, pageBundles.length);
+                            });
+                        }
                     }
                     
-                    // Защита от бесконечного цикла
-                    if (page > 50) {
-                        console.warn('⚠️ Превышен лимит страниц (50), останавливаем пагинацию');
-                        hasMore = false;
-                    }
+                    console.log(`Total ${groupName} bundles received:`, allBundles.length);
+                    return allBundles;
                 }
                 
-                console.log('Total Standard Fixed bundles received:', allFixedBundles.length);
+                // Загружаем обе группы параллельно
+                console.log('Fetching Global bundles from both groups in parallel...');
+                const [allFixedBundles, allUnlimitedBundles] = await Promise.all([
+                    fetchAllPages('Standard Fixed'),
+                    fetchAllPages('Standard Unlimited Essential')
+                ]);
                 
                 // Фильтруем по country = "Global"
                 const globalFixedBundles = allFixedBundles.filter(bundle => {
@@ -422,7 +458,14 @@ module.exports = async function handler(req, res) {
                     }
                     return isGlobal;
                 });
+                
+                const globalUnlimitedBundles = allUnlimitedBundles.filter(bundle => {
+                    return isGlobalBundle(bundle);
+                });
+                
                 console.log('Global Fixed bundles after filter:', globalFixedBundles.length);
+                console.log('Global Unlimited bundles after filter:', globalUnlimitedBundles.length);
+                
                 if (globalFixedBundles.length > 0) {
                     console.log('Sample Global Fixed bundles:', globalFixedBundles.slice(0, 5).map(b => ({
                         name: b.name,
@@ -430,69 +473,10 @@ module.exports = async function handler(req, res) {
                         price: b.price
                     })));
                 }
-                bundles = bundles.concat(globalFixedBundles);
+                
+                bundles = bundles.concat(globalFixedBundles, globalUnlimitedBundles);
             } catch (error) {
-                console.error('Error fetching Standard Fixed bundles:', error.message);
-            }
-            
-            // Запрос 2: Standard Unlimited Essential (unlimited трафик) с пагинацией
-            try {
-                let allUnlimitedBundles = [];
-                let page = 1;
-                const perPage = 1000;
-                let hasMore = true;
-                
-                while (hasMore) {
-                    const unlimitedOptions = {
-                        ...catalogueOptions,
-                        group: 'Standard Unlimited Essential',
-                        perPage: perPage,
-                        page: page
-                    };
-                    console.log(`Fetching Standard Unlimited Essential bundles for Global, page ${page}...`);
-                    const unlimitedCatalogue = await esimgoClient.getCatalogue(null, unlimitedOptions);
-                    const unlimitedBundles = Array.isArray(unlimitedCatalogue) 
-                        ? unlimitedCatalogue 
-                        : (unlimitedCatalogue?.bundles || unlimitedCatalogue?.data || []);
-                    
-                    allUnlimitedBundles = allUnlimitedBundles.concat(unlimitedBundles);
-                    console.log(`Standard Unlimited Essential bundles received on page ${page}:`, unlimitedBundles.length);
-                    
-                    // Проверяем, есть ли еще страницы
-                    if (unlimitedCatalogue?.pageCount && page < unlimitedCatalogue.pageCount) {
-                        page++;
-                    } else if (unlimitedCatalogue?.rows && allUnlimitedBundles.length < unlimitedCatalogue.rows) {
-                        page++;
-                    } else if (unlimitedBundles.length < perPage) {
-                        hasMore = false;
-                    } else {
-                        page++;
-                    }
-                    
-                    // Защита от бесконечного цикла
-                    if (page > 50) {
-                        console.warn('⚠️ Превышен лимит страниц (50), останавливаем пагинацию');
-                        hasMore = false;
-                    }
-                }
-                
-                console.log('Total Standard Unlimited Essential bundles received:', allUnlimitedBundles.length);
-                
-                // Фильтруем по country = "Global"
-                const globalUnlimitedBundles = allUnlimitedBundles.filter(bundle => {
-                    return isGlobalBundle(bundle);
-                });
-                console.log('Global Unlimited bundles after filter:', globalUnlimitedBundles.length);
-                if (globalUnlimitedBundles.length > 0) {
-                    console.log('Sample Global Unlimited bundles:', globalUnlimitedBundles.slice(0, 3).map(b => ({
-                        name: b.name,
-                        countries: b.countries,
-                        price: b.price
-                    })));
-                }
-                bundles = bundles.concat(globalUnlimitedBundles);
-            } catch (error) {
-                console.error('Error fetching Standard Unlimited Essential bundles:', error.message);
+                console.error('Error fetching Global bundles:', error.message);
             }
             
             console.log('Total Global bundles:', bundles.length);
