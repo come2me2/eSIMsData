@@ -356,6 +356,10 @@ module.exports = async function handler(req, res) {
             });
         }
         
+        // Извлекаем уникальные страны из bundles (для Global и Local)
+        // Определяем countriesMap заранее, чтобы он был доступен во всех блоках
+        const countriesMap = new Map();
+        
         // Получаем каталог из API eSIM Go
         const catalogueOptions = {
             perPage: parseInt(perPage)
