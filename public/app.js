@@ -730,6 +730,20 @@ window.addEventListener('popstate', () => {
     setTimeout(updateBackButton, 100);
 });
 
+// Обработчик для случаев, когда страница восстанавливается из кеша (bfcache)
+window.addEventListener('pageshow', (event) => {
+    // event.persisted = true означает, что страница была восстановлена из кеша
+    if (event.persisted) {
+        console.log('📄 Страница восстановлена из кеша, обновляем BackButton');
+        setTimeout(updateBackButton, 100);
+    }
+});
+
+// Также обновляем при загрузке страницы (на случай, если что-то пропустили)
+window.addEventListener('load', () => {
+    setTimeout(updateBackButton, 100);
+});
+
 // Также обновляем при изменении сегмента через setupSegmentedControl
 const originalSetupSegmentedControl = setupSegmentedControl;
 setupSegmentedControl = function() {

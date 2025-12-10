@@ -702,22 +702,33 @@ function handleNavigationClick(section) {
 
 // Функция для управления кнопкой BackButton
 function updateBackButton() {
-    if (!tg || !tg.BackButton) return;
+    if (!tg || !tg.BackButton) {
+        console.warn('⚠️ Telegram WebApp или BackButton недоступны');
+        return;
+    }
     
     // Проверяем, находимся ли мы на главной странице (index.html)
-    const isMainPage = window.location.pathname.endsWith('index.html') || 
-                       window.location.pathname === '/' || 
-                       window.location.pathname.endsWith('/');
+    const pathname = window.location.pathname;
+    const isMainPage = pathname.endsWith('index.html') || 
+                       pathname === '/' || 
+                       pathname.endsWith('/') ||
+                       pathname === '/index.html';
     
     // На главной странице всегда скрываем кнопку BackButton
     // Это позволяет показывать кнопку Close вместо Back
     if (isMainPage) {
         tg.BackButton.hide();
-        console.log('🔙 BackButton скрыта (главная страница)');
+        console.log('🔙 BackButton скрыта (главная страница)', {
+            pathname: pathname,
+            href: window.location.href
+        });
     } else {
         // На других страницах показываем кнопку Back
         tg.BackButton.show();
-        console.log('🔙 BackButton показана');
+        console.log('🔙 BackButton показана', {
+            pathname: pathname,
+            href: window.location.href
+        });
     }
 }
 
@@ -727,6 +738,20 @@ updateBackButton();
 // Слушаем изменения истории браузера (возврат назад)
 window.addEventListener('popstate', () => {
     // Обновляем кнопку BackButton при возврате на страницу
+    setTimeout(updateBackButton, 100);
+});
+
+// Обработчик для случаев, когда страница восстанавливается из кеша (bfcache)
+window.addEventListener('pageshow', (event) => {
+    // event.persisted = true означает, что страница была восстановлена из кеша
+    if (event.persisted) {
+        console.log('📄 Страница восстановлена из кеша, обновляем BackButton');
+        setTimeout(updateBackButton, 100);
+    }
+});
+
+// Также обновляем при загрузке страницы (на случай, если что-то пропустили)
+window.addEventListener('load', () => {
     setTimeout(updateBackButton, 100);
 });
 
