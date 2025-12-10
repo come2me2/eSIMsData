@@ -1266,6 +1266,18 @@ module.exports = async function handler(req, res) {
             console.warn('⚠️ Not caching empty plans data for:', cacheKey);
         }
         
+        // Для Global логируем финальный ответ перед отправкой
+        if (isGlobal) {
+            console.log('📤 Sending Global plans response:', {
+                success: true,
+                standardPlansCount: responseData.standard.length,
+                unlimitedPlansCount: responseData.unlimited.length,
+                countriesCount: responseData.countries?.length || 0,
+                sampleStandardPlan: responseData.standard[0] || null,
+                sampleUnlimitedPlan: responseData.unlimited[0] || null
+            });
+        }
+        
         return res.status(200).json({
             success: true,
             data: responseData,
