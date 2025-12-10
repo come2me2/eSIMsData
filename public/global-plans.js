@@ -170,6 +170,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateInfoBox();
     setupNextButton();
     setupCountriesList();
+    
+    // Обновляем счетчик стран из актуального массива globalCountries
+    // Это нужно на случай, если данные уже загружены или есть fallback
+    if (globalCountries.length > 0) {
+        updateGlobalCountriesCount(globalCountries.length);
+    }
 });
 
 // Setup main segmented control (Region, Local, Global)
