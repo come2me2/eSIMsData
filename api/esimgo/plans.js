@@ -1110,7 +1110,7 @@ module.exports = async function handler(req, res) {
         }
         
         // Извлекаем уникальные страны из bundles (для Global и Local)
-        const countriesMap = new Map();
+        // countriesMap уже определен выше
         if (isGlobal || isLocal) {
             // Для Global собираем все уникальные коды стран из всех bundles
             const allCountryCodes = new Set();
