@@ -212,20 +212,53 @@ function setupCountryInfo() {
     console.log('Flag path:', flagPath);
     
     if (flagPath && flagElement) {
-        // Use CDN flag image
+        // Use local flag image
         const img = document.createElement('img');
         img.src = flagPath;
         img.alt = `${countryData.name} flag`;
         img.className = 'country-flag-img';
+        
+        // Улучшенная обработка ошибок загрузки флага
+        let retryCount = 0;
         img.onerror = function() {
-            console.error('Failed to load flag:', flagPath);
+            retryCount++;
+            console.error(`❌ Failed to load flag (attempt ${retryCount}):`, flagPath);
+            
+            // Первая попытка: пробуем без версии кэша
+            if (retryCount === 1) {
+                const pathWithoutVersion = flagPath.split('?')[0];
+                console.log('🔄 Retrying flag load without cache version:', pathWithoutVersion);
+                img.src = pathWithoutVersion;
+                return;
+            }
+            
+            // Вторая попытка: пробуем альтернативные варианты для специальных стран
+            if (retryCount === 2) {
+                const code = countryData.code.toUpperCase();
+                if (code === 'CYP') {
+                    // Пробуем без точки с запятой и пробела
+                    console.log('🔄 Retrying with alternative filename for CYP');
+                    img.src = `/flags/CYP.svg?${FLAG_VERSION}`;
+                    return;
+                }
+            }
+            
+            // Если все попытки не удались, используем emoji
+            console.warn('⚠️ All flag load attempts failed, using emoji fallback');
+            flagElement.innerHTML = '';
             flagElement.textContent = '🏳️';
         };
+        
+        img.onload = function() {
+            console.log('✅ Flag loaded successfully:', flagPath);
+        };
+        
         flagElement.innerHTML = '';
         flagElement.appendChild(img);
     } else {
         // Fallback to emoji
         if (flagElement) {
+            console.warn('⚠️ No flag path available, using emoji fallback');
             flagElement.textContent = '🏳️';
         }
     }

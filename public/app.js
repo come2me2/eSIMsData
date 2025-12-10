@@ -436,6 +436,22 @@ function renderCountries(filteredCountries = countries) {
                     return; // Не заменяем элемент, пробуем еще раз
                 }
                 
+                // Для специальных стран пробуем альтернативные варианты
+                if (retryCount === 2) {
+                    const code = country.code.toUpperCase();
+                    if (code === 'CYP') {
+                        // Пробуем без точки с запятой и пробела
+                        console.log('🔄 Retrying with alternative filename for CYP');
+                        this.src = `/flags/CYP.svg?${FLAG_VERSION}`;
+                        return;
+                    } else if (code === 'US-HI') {
+                        // Пробуем без пробела
+                        console.log('🔄 Retrying with alternative filename for US-HI');
+                        this.src = `/flags/US-HI.svg?${FLAG_VERSION}`;
+                        return;
+                    }
+                }
+                
                 // Если повторная попытка не помогла, заменяем на эмодзи
                 const emojiFlag = document.createElement('span');
                 emojiFlag.className = 'country-flag';
