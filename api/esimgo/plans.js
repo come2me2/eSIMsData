@@ -284,6 +284,9 @@ module.exports = async function handler(req, res) {
         const isGlobal = category === 'global' || req.query.global === 'true';
         const isLocal = category === 'local' || (countryCode && !region);
         
+        // Определяем ключ кэша для всех типов запросов
+        const cacheKey = cache.getPlansCacheKey(countryCode, region, category);
+        
         // Получаем каталог из API eSIM Go
         const catalogueOptions = {
             perPage: parseInt(perPage)
