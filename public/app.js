@@ -547,10 +547,14 @@ function updateContent() {
     } else if (currentSegment === 'global') {
         // Navigate to global plans screen
         window.location.href = 'global-plans.html';
+    } else if (currentSegment === 'local') {
+        // Navigate to local countries screen
+        window.location.href = 'local-countries.html';
     } else {
-        if (regionList) regionList.style.display = 'none';
-        if (countryList) countryList.style.display = 'flex';
-        renderCountries();
+        // Fallback - показываем регионы
+        if (regionList) regionList.style.display = 'flex';
+        if (countryList) countryList.style.display = 'none';
+        renderRegions();
     }
     
     // Обновляем кнопку BackButton при изменении контента

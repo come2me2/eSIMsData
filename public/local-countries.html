@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <title>Local eSIM - eSimsData</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Search Bar -->
+        <div class="search-container">
+            <div class="search-bar">
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M11 11L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <input type="text" placeholder="Search your eSIM country" class="search-input" id="searchInput">
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <h2 class="main-title">eSIM for your Travel</h2>
+            
+            <!-- Section Header -->
+            <p class="section-header">Local eSIM for one country</p>
+
+            <!-- Country List -->
+            <div class="country-list" id="countryList">
+                <!-- Countries will be populated by JavaScript -->
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <p class="empty-state-title">We couldn't find anything.</p>
+                <p class="empty-state-subtitle">Try searching with different keywords.</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="local-countries.js"></script>
+</body>
+</html>
+
