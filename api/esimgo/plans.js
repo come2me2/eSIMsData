@@ -561,7 +561,19 @@ module.exports = async function handler(req, res) {
                     console.log('Sample Global Fixed bundles:', globalFixedBundles.slice(0, 5).map(b => ({
                         name: b.name,
                         countries: b.countries,
-                        price: b.price
+                        price: b.price,
+                        priceType: typeof b.price,
+                        pricePerUnit: b.pricePerUnit,
+                        cost: b.cost,
+                        amount: b.amount,
+                        userPrice: b.userPrice,
+                        basePrice: b.basePrice,
+                        allPriceFields: Object.keys(b).filter(k => 
+                            k.toLowerCase().includes('price') || 
+                            k.toLowerCase().includes('cost') || 
+                            k.toLowerCase().includes('amount') ||
+                            k.toLowerCase().includes('fee')
+                        )
                     })));
                 }
                 
