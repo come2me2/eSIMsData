@@ -743,17 +743,39 @@ window.addEventListener('popstate', () => {
 
 // Обработчик для случаев, когда страница восстанавливается из кеша (bfcache)
 window.addEventListener('pageshow', (event) => {
+    // Обновляем BackButton при каждом показе страницы
     // event.persisted = true означает, что страница была восстановлена из кеша
-    if (event.persisted) {
-        console.log('📄 Страница восстановлена из кеша, обновляем BackButton');
-        setTimeout(updateBackButton, 100);
-    }
+    console.log('📄 Страница показана', { persisted: event.persisted, pathname: window.location.pathname });
+    setTimeout(updateBackButton, 50);
 });
 
 // Также обновляем при загрузке страницы (на случай, если что-то пропустили)
 window.addEventListener('load', () => {
-    setTimeout(updateBackButton, 100);
+    setTimeout(updateBackButton, 50);
 });
+
+// Обновляем при изменении видимости страницы (когда пользователь переключается между вкладками)
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        console.log('👁️ Страница стала видимой, обновляем BackButton');
+        setTimeout(updateBackButton, 50);
+    }
+});
+
+// Периодическая проверка (на случай, если другие обработчики не сработали)
+// Проверяем каждые 500ms, но только если мы на главной странице
+setInterval(() => {
+    const pathname = window.location.pathname;
+    const isMainPage = pathname.endsWith('index.html') || 
+                       pathname === '/' || 
+                       pathname.endsWith('/') ||
+                       pathname === '/index.html';
+    if (isMainPage && tg && tg.BackButton) {
+        // Если мы на главной странице - всегда скрываем кнопку
+        // Это гарантирует, что кнопка будет скрыта даже если другие обработчики не сработали
+        tg.BackButton.hide();
+    }
+}, 500);
 
 // Также обновляем при изменении сегмента через setupSegmentedControl
 const originalSetupSegmentedControl = setupSegmentedControl;
