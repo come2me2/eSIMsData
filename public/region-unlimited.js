@@ -186,6 +186,62 @@ let selectedPlanId = null; // Default selected
 async function loadPlansFromAPI(regionName) {
     console.log('🔵 loadPlansFromAPI (unlimited) called with region:', regionName);
     
+    // Проверяем клиентский кэш (localStorage)
+    const cacheKey = `region_plans_cache_${regionName}`;
+    const cacheTimestampKey = `region_plans_cache_timestamp_${regionName}`;
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
+    
+    try {
+        // Пытаемся загрузить из кэша
+        const cachedData = localStorage.getItem(cacheKey);
+        const cacheTimestamp = localStorage.getItem(cacheTimestampKey);
+        
+        if (cachedData && cacheTimestamp) {
+            const cacheAge = Date.now() - parseInt(cacheTimestamp);
+            if (cacheAge < CACHE_TTL) {
+                console.log(`✅ Loading ${regionName} unlimited plans from localStorage cache`);
+                const result = JSON.parse(cachedData);
+                
+                // Используем данные из кэша
+                if (result.success && result.data) {
+                    unlimitedPlans = result.data.unlimited || [];
+                    
+                    // Обновляем список стран
+                    if (result.meta && result.meta.regionInfo) {
+                        const apiRegionInfo = result.meta.regionInfo;
+                        if (apiRegionInfo.countries && Array.isArray(apiRegionInfo.countries)) {
+                            const apiCountries = apiRegionInfo.countries.map(c => c.name || c.code || c);
+                            if (apiCountries.length > 0) {
+                                regionInfo.count = apiCountries.length;
+                                regionInfo.countries = apiCountries;
+                            }
+                        }
+                    }
+                    
+                    // Добавляем ID для совместимости
+                    unlimitedPlans.forEach((plan, index) => {
+                        if (!plan.id) {
+                            plan.id = plan.bundle_name || `unlimited${index + 1}`;
+                        }
+                    });
+                    
+                    if (unlimitedPlans.length > 0 && !selectedPlanId) {
+                        selectedPlanId = unlimitedPlans[0].id;
+                    }
+                    
+                    console.log(`✅ ${regionName} unlimited plans loaded from cache:`, unlimitedPlans.length);
+                    return true;
+                }
+            } else {
+                console.log('⚠️ Cache expired, fetching fresh data');
+                localStorage.removeItem(cacheKey);
+                localStorage.removeItem(cacheTimestampKey);
+            }
+        }
+    } catch (cacheError) {
+        console.warn('⚠️ Error reading from cache:', cacheError);
+    }
+    
     try {
         const params = new URLSearchParams();
         if (regionName) {
@@ -195,7 +251,7 @@ async function loadPlansFromAPI(regionName) {
         // Используем endpoint для региональных тарифов
         // Он возвращает как standard, так и unlimited тарифы для регионов
         const apiUrl = `/api/esimgo/region-plans?${params.toString()}`;
-        console.log('🔵 Fetching region unlimited plans from:', apiUrl);
+        console.log('🔵 Fetching region unlimited plans from API:', apiUrl);
         
         const response = await fetch(apiUrl);
         console.log('🔵 Response status:', response.status, response.statusText);
@@ -208,6 +264,15 @@ async function loadPlansFromAPI(regionName) {
         
         const result = await response.json();
         console.log('🔵 API response:', result);
+        
+        // Сохраняем в кэш
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(result));
+            localStorage.setItem(cacheTimestampKey, Date.now().toString());
+            console.log(`✅ ${regionName} unlimited plans saved to localStorage cache`);
+        } catch (cacheError) {
+            console.warn('⚠️ Error saving to cache:', cacheError);
+        }
         
         if (result.success && result.data) {
             unlimitedPlans = result.data.unlimited || [];

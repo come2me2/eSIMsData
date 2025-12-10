@@ -244,6 +244,74 @@ let unlimitedPlans = [];
 async function loadPlansFromAPI(regionName) {
     console.log('🔵 loadPlansFromAPI called with region:', regionName);
     
+    // Проверяем клиентский кэш (localStorage)
+    const cacheKey = `region_plans_cache_${regionName}`;
+    const cacheTimestampKey = `region_plans_cache_timestamp_${regionName}`;
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
+    
+    try {
+        // Пытаемся загрузить из кэша
+        const cachedData = localStorage.getItem(cacheKey);
+        const cacheTimestamp = localStorage.getItem(cacheTimestampKey);
+        
+        if (cachedData && cacheTimestamp) {
+            const cacheAge = Date.now() - parseInt(cacheTimestamp);
+            if (cacheAge < CACHE_TTL) {
+                console.log(`✅ Loading ${regionName} plans from localStorage cache`);
+                const result = JSON.parse(cachedData);
+                
+                // Используем данные из кэша
+                if (result.success && result.data) {
+                    standardPlans = result.data.standard || [];
+                    unlimitedPlans = result.data.unlimited || [];
+                    
+                    // Обновляем список стран
+                    if (result.data.countries && Array.isArray(result.data.countries)) {
+                        const apiCountries = result.data.countries.map(c => c.name || c.code);
+                        if (apiCountries.length > 0) {
+                            if (!regionDataFull[regionName]) {
+                                regionDataFull[regionName] = {
+                                    count: apiCountries.length,
+                                    countries: apiCountries
+                                };
+                            } else {
+                                regionDataFull[regionName].count = apiCountries.length;
+                                regionDataFull[regionName].countries = apiCountries;
+                            }
+                            regionCountryCounts[regionName] = apiCountries.length;
+                            updateRegionInfoCount(regionName, apiCountries.length);
+                        }
+                    }
+                    
+                    // Добавляем ID для совместимости
+                    standardPlans.forEach((plan, index) => {
+                        if (!plan.id) {
+                            plan.id = `plan${index + 1}`;
+                        }
+                    });
+                    unlimitedPlans.forEach((plan, index) => {
+                        if (!plan.id) {
+                            plan.id = `unlimited${index + 1}`;
+                        }
+                    });
+                    
+                    console.log(`✅ ${regionName} plans loaded from cache:`, {
+                        standard: standardPlans.length,
+                        unlimited: unlimitedPlans.length
+                    });
+                    
+                    return true;
+                }
+            } else {
+                console.log('⚠️ Cache expired, fetching fresh data');
+                localStorage.removeItem(cacheKey);
+                localStorage.removeItem(cacheTimestampKey);
+            }
+        }
+    } catch (cacheError) {
+        console.warn('⚠️ Error reading from cache:', cacheError);
+    }
+    
     try {
         const params = new URLSearchParams();
         if (regionName) {
@@ -253,7 +321,7 @@ async function loadPlansFromAPI(regionName) {
         // Используем новый endpoint для региональных тарифов
         // Он возвращает только fixed тарифы (без unlimited) для регионов
         const apiUrl = `/api/esimgo/region-plans?${params.toString()}`;
-        console.log('🔵 Fetching region plans from:', apiUrl);
+        console.log('🔵 Fetching region plans from API:', apiUrl);
         
         const response = await fetch(apiUrl);
         console.log('🔵 Response status:', response.status, response.statusText);
@@ -266,6 +334,15 @@ async function loadPlansFromAPI(regionName) {
         
         const result = await response.json();
         console.log('🔵 API response:', result);
+        
+        // Сохраняем в кэш
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(result));
+            localStorage.setItem(cacheTimestampKey, Date.now().toString());
+            console.log(`✅ ${regionName} plans saved to localStorage cache`);
+        } catch (cacheError) {
+            console.warn('⚠️ Error saving to cache:', cacheError);
+        }
         
         if (result.success && result.data) {
             standardPlans = result.data.standard || [];
