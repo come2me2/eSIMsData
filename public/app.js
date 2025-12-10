@@ -554,7 +554,21 @@ function updateContent() {
     }
     
     // Обновляем кнопку BackButton при изменении контента
+    // Используем несколько вызовов для надежности, особенно для Local
     updateBackButton();
+    if (currentSegment === 'local') {
+        // Для Local делаем дополнительные проверки
+        setTimeout(() => {
+            if (tg && tg.BackButton && currentSegment === 'local') {
+                tg.BackButton.hide();
+            }
+        }, 100);
+        setTimeout(() => {
+            if (tg && tg.BackButton && currentSegment === 'local') {
+                tg.BackButton.hide();
+            }
+        }, 300);
+    }
 }
 
 // Render region list
