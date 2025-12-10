@@ -824,5 +824,13 @@ const originalSetupSegmentedControl = setupSegmentedControl;
 setupSegmentedControl = function() {
     originalSetupSegmentedControl();
     updateBackButton();
+    // Дополнительная проверка для Local
+    if (currentSegment === 'local') {
+        setTimeout(() => {
+            if (tg && tg.BackButton && currentSegment === 'local') {
+                tg.BackButton.hide();
+            }
+        }, 100);
+    }
 };
 
