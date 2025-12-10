@@ -51,7 +51,10 @@ function createMockRes() {
         setHeader: function(key, value) {
             this.headers[key] = value;
         },
-        end: function() {}
+        end: function() {
+            // Пустая функция для совместимости
+        },
+        statusCode: 200
     };
     return res;
 }
@@ -89,20 +92,27 @@ async function prefillGlobalPlansCache() {
         const req = createMockReq({ category: 'global' });
         const res = createMockRes();
         
-        await plansHandler(req, res);
+        // Вызываем handler с обработкой ошибок
+        await Promise.resolve(plansHandler(req, res)).catch(err => {
+            log(`❌ Handler error: ${err.message}`);
+            throw err;
+        });
         
+        // Проверяем результат
         if (res.statusCode === 200 && res.data && res.data.success) {
             const standardCount = res.data.data?.standard?.length || 0;
             const unlimitedCount = res.data.data?.unlimited?.length || 0;
             log(`✅ Global plans cache prefilled: ${standardCount} standard, ${unlimitedCount} unlimited`);
             return { success: true, standard: standardCount, unlimited: unlimitedCount };
         } else {
-            log(`❌ Failed to prefill global plans cache: ${JSON.stringify(res.data)}`);
-            return { success: false, error: res.data?.error || 'Unknown error' };
+            const errorMsg = res.data?.error || `HTTP ${res.statusCode}` || 'Unknown error';
+            log(`❌ Failed to prefill global plans cache: ${errorMsg}`);
+            return { success: false, error: errorMsg, statusCode: res.statusCode };
         }
     } catch (error) {
         log(`❌ Error prefilling global plans cache: ${error.message}`);
-        return { success: false, error: error.message };
+        log(`Stack: ${error.stack}`);
+        return { success: false, error: error.message, stack: error.stack };
     }
 }
 
@@ -124,22 +134,29 @@ async function prefillRegionPlansCache() {
             const req = createMockReq({ region: region });
             const res = createMockRes();
             
-            await regionPlansHandler(req, res);
+            // Вызываем handler с обработкой ошибок
+            await Promise.resolve(regionPlansHandler(req, res)).catch(err => {
+                log(`❌ Handler error for ${region}: ${err.message}`);
+                throw err;
+            });
             
+            // Проверяем результат
             if (res.statusCode === 200 && res.data && res.data.success) {
                 const standardCount = res.data.data?.standard?.length || 0;
                 const unlimitedCount = res.data.data?.unlimited?.length || 0;
                 log(`✅ ${region} plans cache prefilled: ${standardCount} standard, ${unlimitedCount} unlimited`);
                 results.success++;
             } else {
-                log(`❌ Failed to prefill ${region} plans cache: ${JSON.stringify(res.data)}`);
+                const errorMsg = res.data?.error || `HTTP ${res.statusCode}` || 'Unknown error';
+                log(`❌ Failed to prefill ${region} plans cache: ${errorMsg}`);
                 results.failed++;
-                results.errors.push({ region, error: res.data?.error || 'Unknown error' });
+                results.errors.push({ region, error: errorMsg, statusCode: res.statusCode });
             }
         } catch (error) {
             log(`❌ Error prefilling ${region} plans cache: ${error.message}`);
+            log(`Stack: ${error.stack}`);
             results.failed++;
-            results.errors.push({ region, error: error.message });
+            results.errors.push({ region, error: error.message, stack: error.stack });
         }
     }
     
@@ -232,26 +249,54 @@ module.exports = async function handler(req, res) {
     };
     
     try {
-        // 1. Предзаполняем кэш стран
-        results.countries = await prefillCountriesCache();
+        // Обрабатываем каждый шаг с обработкой ошибок
+        try {
+            log('Step 1/4: Prefilling countries cache...');
+            results.countries = await prefillCountriesCache();
+        } catch (error) {
+            log(`❌ Error in countries cache: ${error.message}`);
+            results.countries = { success: false, error: error.message };
+        }
         
-        // 2. Предзаполняем кэш Global планов
-        results.global = await prefillGlobalPlansCache();
+        try {
+            log('Step 2/4: Prefilling global plans cache...');
+            results.global = await prefillGlobalPlansCache();
+        } catch (error) {
+            log(`❌ Error in global plans cache: ${error.message}`);
+            results.global = { success: false, error: error.message };
+        }
         
-        // 3. Предзаполняем кэш Region планов
-        results.regions = await prefillRegionPlansCache();
+        try {
+            log('Step 3/4: Prefilling region plans cache...');
+            results.regions = await prefillRegionPlansCache();
+        } catch (error) {
+            log(`❌ Error in region plans cache: ${error.message}`);
+            results.regions = { success: false, error: error.message, success: 0, failed: 0, errors: [] };
+        }
         
-        // 4. Предзаполняем кэш Local планов (опционально)
-        results.local = await prefillLocalPlansCache();
+        try {
+            log('Step 4/4: Prefilling local plans cache...');
+            results.local = await prefillLocalPlansCache();
+        } catch (error) {
+            log(`❌ Error in local plans cache: ${error.message}`);
+            results.local = { success: false, error: error.message, success: 0, failed: 0, errors: [] };
+        }
         
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         
-        log('\n✅ Cache prefill completed successfully!');
+        log('\n✅ Cache prefill process completed!');
         log(`⏱️  Total time: ${duration} seconds`);
         
-        return res.status(200).json({
-            success: true,
-            message: 'Cache prefill completed successfully',
+        // Определяем общий успех
+        const hasSuccess = 
+            (results.countries && results.countries.success) ||
+            (results.global && results.global.success) ||
+            (results.regions && results.regions.success > 0) ||
+            (results.local && results.local.success > 0);
+        
+        return res.status(hasSuccess ? 200 : 500).json({
+            success: hasSuccess,
+            message: hasSuccess ? 'Cache prefill completed (some steps may have failed)' : 'Cache prefill failed',
             duration: `${duration} seconds`,
             results: {
                 countries: results.countries,
@@ -261,10 +306,12 @@ module.exports = async function handler(req, res) {
             }
         });
     } catch (error) {
-        log(`\n❌ Cache prefill failed: ${error.message}`);
+        log(`\n❌ Cache prefill failed with unexpected error: ${error.message}`);
+        log(`Stack: ${error.stack}`);
         return res.status(500).json({
             success: false,
             error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
             results: results
         });
     }
