@@ -940,14 +940,36 @@ module.exports = async function handler(req, res) {
         const countries = Array.from(countriesMap.values())
             .sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code));
         
+        // Логируем детальную информацию для отладки
         console.log('Region plans grouped:', {
             region: region,
             apiRegions: apiRegions,
             standardPlans: plans.standard.length,
             unlimitedPlans: plans.unlimited.length,
             totalBundles: allStandardBundles.length + allUnlimitedBundles.length,
-            countriesCount: countries.length
+            countriesCount: countries.length,
+            countries: countries.slice(0, 10).map(c => ({ code: c.code, name: c.name }))
         });
+        
+        // Логируем примеры bundles для отладки
+        if (allBundles.length > 0) {
+            const sampleBundles = allBundles.slice(0, 3);
+            console.log('Sample bundles for region:', sampleBundles.map(b => ({
+                name: b.name,
+                countriesCount: (b.countries || []).length,
+                countries: (b.countries || []).slice(0, 3).map(c => {
+                    if (typeof c === 'string') return c;
+                    if (typeof c === 'object' && c !== null) {
+                        return {
+                            iso: c.iso || c.ISO || c.code,
+                            name: c.name || c.Name,
+                            region: c.region || c.Region
+                        };
+                    }
+                    return c;
+                })
+            })));
+        }
         
         const responseData = {
             standard: plans.standard,
