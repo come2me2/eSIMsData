@@ -829,6 +829,9 @@ module.exports = async function handler(req, res) {
             'OCEANIA', 'BALKANAS', 'BALKANS', 'CIS', 'CENTRAL EURASIA'
         ];
         
+        // Объединяем standard и unlimited bundles для извлечения стран
+        const allBundles = [...allStandardBundles, ...allUnlimitedBundles];
+        
         allBundles.forEach(bundle => {
             const countries = bundle.countries || [];
             countries.forEach(country => {
