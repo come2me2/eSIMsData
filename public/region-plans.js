@@ -9,23 +9,55 @@ if (tg) {
     // Set theme colors
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
-    
-    // Показываем кнопку "назад" в Telegram
-    // При возврате назад переходим на Local страницу (главная)
+}
+
+// Функция для настройки BackButton
+function setupBackButton() {
     if (tg && tg.BackButton) {
-        console.log('🔙 Region: Показываем BackButton');
+        console.log('🔙 Region: Настраиваем BackButton');
         tg.BackButton.show();
+        
+        // Удаляем предыдущий обработчик, если он был
+        // Telegram WebApp API не поддерживает removeOnClick, поэтому используем флаг
+        let backButtonHandled = false;
+        
         tg.BackButton.onClick(() => {
+            if (backButtonHandled) {
+                console.log('🔙 Region: BackButton уже обработана, игнорируем');
+                return;
+            }
+            backButtonHandled = true;
             console.log('🔙 Region: BackButton нажата, переходим на Local');
+            
             if (tg && tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('light');
             }
+            
             // Переходим на Local страницу (главная страница)
             window.location.href = 'local-countries.html';
         });
+        
+        console.log('🔙 Region: BackButton настроена успешно');
     } else {
         console.warn('⚠️ Region: Telegram WebApp или BackButton недоступны', { tg: !!tg, BackButton: tg && !!tg.BackButton });
     }
+}
+
+// Настраиваем BackButton после загрузки DOM
+document.addEventListener('DOMContentLoaded', () => {
+    setupBackButton();
+});
+
+// Также настраиваем BackButton при полной загрузке страницы
+window.addEventListener('load', () => {
+    setupBackButton();
+});
+
+// Настраиваем BackButton сразу, если DOM уже загружен
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupBackButton);
+} else {
+    setupBackButton();
 }
 
 // Function to get flag image URL from local flags folder
