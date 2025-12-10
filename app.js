@@ -784,9 +784,13 @@ setInterval(() => {
                        pathname.endsWith('/') ||
                        pathname === '/index.html';
     if (isMainPage && tg && tg.BackButton) {
-        // Если мы на главной странице - всегда скрываем кнопку
-        // Это гарантирует, что кнопка будет скрыта даже если другие обработчики не сработали
-        tg.BackButton.hide();
+        // Если мы на главной странице - обновляем кнопку в зависимости от сегмента
+        // На Local - скрываем, на Region/Global - показываем
+        if (currentSegment === 'local') {
+            tg.BackButton.hide();
+        } else {
+            tg.BackButton.show();
+        }
     }
 }, 500);
 
