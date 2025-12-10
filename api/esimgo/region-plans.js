@@ -570,44 +570,58 @@ function groupBundlesIntoPlans(bundles, isUnlimited = false) {
         }
     });
     
-    // Дедупликация стандартных планов
-    const standardMap = new Map();
-    plans.standard.forEach(plan => {
+    // Дедупликация планов
+    const planMap = new Map();
+    const plansToDeduplicate = isUnlimited ? plans.unlimited : plans.standard;
+    
+    plansToDeduplicate.forEach(plan => {
         const priceValue = typeof plan.priceValue === 'number' 
             ? plan.priceValue 
             : parseFloat(plan.priceValue) || 0;
         plan.priceValue = priceValue;
         
-        const key = `${plan.durationDays}-${plan.dataAmount}`;
+        // Для unlimited используем только duration, для standard - duration и dataAmount
+        const key = isUnlimited 
+            ? `${plan.durationDays}` 
+            : `${plan.durationDays}-${plan.dataAmount}`;
         
-        if (!standardMap.has(key)) {
-            standardMap.set(key, plan);
+        if (!planMap.has(key)) {
+            planMap.set(key, plan);
         } else {
-            const existing = standardMap.get(key);
+            const existing = planMap.get(key);
             const existingPrice = typeof existing.priceValue === 'number' 
                 ? existing.priceValue 
                 : parseFloat(existing.priceValue) || 0;
             
             if (plan.currency === existing.currency) {
                 if (priceValue < existingPrice) {
-                    standardMap.set(key, plan);
+                    planMap.set(key, plan);
                 }
             } else if (plan.currency === 'USD' && existing.currency !== 'USD') {
-                standardMap.set(key, plan);
+                planMap.set(key, plan);
             } else if (existing.currency === 'USD' && plan.currency !== 'USD') {
                 // Оставляем существующий USD план
             } else if (priceValue < existingPrice) {
-                standardMap.set(key, plan);
+                planMap.set(key, plan);
             }
         }
     });
     
-    plans.standard = Array.from(standardMap.values()).sort((a, b) => {
+    const deduplicatedPlans = Array.from(planMap.values()).sort((a, b) => {
         if (a.durationDays !== b.durationDays) {
             return a.durationDays - b.durationDays;
         }
-        return a.dataAmount - b.dataAmount;
+        if (!isUnlimited && a.dataAmount && b.dataAmount) {
+            return a.dataAmount - b.dataAmount;
+        }
+        return 0;
     });
+    
+    if (isUnlimited) {
+        plans.unlimited = deduplicatedPlans;
+    } else {
+        plans.standard = deduplicatedPlans;
+    }
     
     return plans;
 }
@@ -870,8 +884,8 @@ module.exports = async function handler(req, res) {
         
         const responseData = {
             standard: plans.standard,
-            unlimited: [], // Для регионов всегда пустой массив
-            total: plans.standard.length,
+            unlimited: plans.unlimited, // Безлимитные тарифы из группы Standard Unlimited Essential
+            total: plans.standard.length + plans.unlimited.length,
             countries: countries // Добавляем список стран из API
         };
         
