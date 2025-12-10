@@ -163,9 +163,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Загружаем реальные глобальные планы из API
     console.log('🔵 Loading global plans from API');
-    await loadPlansFromAPI();
+    const loaded = await loadPlansFromAPI();
     
-    // Рендерим планы после загрузки
+    if (loaded) {
+        console.log('✅ Plans loaded successfully, rendering...');
+        console.log('Standard plans count:', standardPlans.length);
+        console.log('Unlimited plans count:', unlimitedPlans.length);
+        if (standardPlans.length > 0) {
+            console.log('First standard plan after load:', standardPlans[0]);
+        }
+    } else {
+        console.warn('⚠️ Plans loading failed or returned false, using fallback');
+        if (standardPlans.length > 0) {
+            console.log('First standard plan (fallback):', standardPlans[0]);
+        }
+    }
+    
+    // Рендерим планы после загрузки (или fallback)
     renderPlans();
     updateInfoBox();
     setupNextButton();
