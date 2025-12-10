@@ -744,11 +744,19 @@ function updateBackButton() {
     // На вкладке Local - скрываем BackButton (показываем Close)
     // На вкладках Region и Global - показываем BackButton (показываем Back)
     if (currentSegment === 'local') {
+        // Принудительно скрываем BackButton для Local
         tg.BackButton.hide();
+        // Убеждаемся, что кнопка скрыта (вызываем еще раз через небольшую задержку)
+        setTimeout(() => {
+            if (tg && tg.BackButton && currentSegment === 'local') {
+                tg.BackButton.hide();
+            }
+        }, 50);
         console.log('🔙 BackButton скрыта (Local - показываем Close)', {
             pathname: pathname,
             segment: currentSegment,
-            href: window.location.href
+            href: window.location.href,
+            isMainPage: isMainPage
         });
     } else {
         // Region или Global - показываем BackButton
@@ -756,7 +764,8 @@ function updateBackButton() {
         console.log('🔙 BackButton показана (Region/Global - показываем Back)', {
             pathname: pathname,
             segment: currentSegment,
-            href: window.location.href
+            href: window.location.href,
+            isMainPage: isMainPage
         });
     }
 }
