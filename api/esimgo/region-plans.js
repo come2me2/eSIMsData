@@ -858,6 +858,32 @@ module.exports = async function handler(req, res) {
             const countries = bundle.countries || [];
             const bundleApiRegion = bundle.apiRegion; // Регион API, к которому относится этот bundle
             
+            // Проверяем, является ли bundle региональным (где country.name/iso = название региона)
+            let isRegionalBundle = false;
+            if (countries.length > 0) {
+                isRegionalBundle = countries.some(country => {
+                    if (typeof country === 'string') {
+                        const possibleRegionNames = apiRegionToCountryRegions[bundleApiRegion] || [];
+                        return possibleRegionNames.some(regionName => 
+                            country.toLowerCase() === regionName.toLowerCase()
+                        );
+                    } else if (typeof country === 'object' && country !== null) {
+                        const countryName = (country.name || country.Name || '').toLowerCase();
+                        const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
+                        const possibleRegionNames = apiRegionToCountryRegions[bundleApiRegion] || [];
+                        return possibleRegionNames.some(regionName => {
+                            const regionNameLower = regionName.toLowerCase();
+                            const regionNameUpper = regionName.toUpperCase();
+                            return countryName === regionNameLower || 
+                                   countryIso === regionNameUpper ||
+                                   countryName.includes(regionNameLower) ||
+                                   regionNameLower.includes(countryName);
+                        });
+                    }
+                    return false;
+                });
+            }
+            
             countries.forEach(country => {
                 let countryCode = null;
                 let countryName = null;
@@ -881,9 +907,9 @@ module.exports = async function handler(req, res) {
                         return;
                     }
                     
-                    // ВАЖНО: Проверяем, что страна действительно относится к нужному региону
-                    // Для региональных bundles (где bundle.apiRegion установлен) проверяем country.region
-                    if (bundleApiRegion && countryRegion) {
+                    // ВАЖНО: Для региональных bundles извлекаем все страны из bundle.countries
+                    // Для нерегиональных bundles проверяем, что country.region соответствует нужному региону
+                    if (!isRegionalBundle && bundleApiRegion && countryRegion) {
                         const allowedRegions = apiRegionToCountryRegions[bundleApiRegion] || [];
                         const countryRegionMatches = allowedRegions.some(allowedRegion => 
                             countryRegion === allowedRegion || 
