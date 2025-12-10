@@ -269,7 +269,7 @@ async function loadPlansFromAPI(regionName) {
         
         if (result.success && result.data) {
             standardPlans = result.data.standard || [];
-            unlimitedPlans = []; // Для регионов всегда пустой массив (только fixed тарифы)
+            unlimitedPlans = result.data.unlimited || []; // Безлимитные тарифы из группы Standard Unlimited Essential
             
             // Обновляем список стран из API ответа
             if (result.data.countries && Array.isArray(result.data.countries)) {

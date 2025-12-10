@@ -178,20 +178,102 @@ const urlParams = new URLSearchParams(window.location.search);
 const regionName = urlParams.get('region') || 'Africa';
 const regionInfo = regionData[regionName] || regionData['Africa'];
 
-// Plans data
-const unlimitedPlans = [
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-];
+// Plans data - загружаются динамически из API
+let unlimitedPlans = [];
+let selectedPlanId = null; // Default selected
 
-let selectedPlanId = 'unlimited2'; // Default selected
+// Функция загрузки планов из API
+async function loadPlansFromAPI(regionName) {
+    console.log('🔵 loadPlansFromAPI (unlimited) called with region:', regionName);
+    
+    try {
+        const params = new URLSearchParams();
+        if (regionName) {
+            params.append('region', regionName);
+        }
+        
+        // Используем endpoint для региональных тарифов
+        // Он возвращает как standard, так и unlimited тарифы для регионов
+        const apiUrl = `/api/esimgo/region-plans?${params.toString()}`;
+        console.log('🔵 Fetching region unlimited plans from:', apiUrl);
+        
+        const response = await fetch(apiUrl);
+        console.log('🔵 Response status:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ API Error Response:', errorText);
+            throw new Error(`API returned ${response.status}: ${errorText.substring(0, 100)}`);
+        }
+        
+        const result = await response.json();
+        console.log('🔵 API response:', result);
+        
+        if (result.success && result.data) {
+            unlimitedPlans = result.data.unlimited || [];
+            
+            // Обновляем список стран из API ответа
+            if (result.meta && result.meta.regionInfo) {
+                const apiRegionInfo = result.meta.regionInfo;
+                if (apiRegionInfo.countries && Array.isArray(apiRegionInfo.countries)) {
+                    const apiCountries = apiRegionInfo.countries.map(c => c.name || c.code || c);
+                    if (apiCountries.length > 0) {
+                        regionInfo.count = apiCountries.length;
+                        regionInfo.countries = apiCountries;
+                        console.log(`✅ Updated countries list for ${regionName} from API:`, apiCountries.length, 'countries');
+                    }
+                }
+            }
+            
+            // Добавляем ID для совместимости
+            unlimitedPlans.forEach((plan, index) => {
+                if (!plan.id) {
+                    plan.id = plan.bundle_name || `unlimited${index + 1}`;
+                }
+            });
+            
+            // Устанавливаем первый план как выбранный по умолчанию
+            if (unlimitedPlans.length > 0 && !selectedPlanId) {
+                selectedPlanId = unlimitedPlans[0].id;
+            }
+            
+            console.log(`✅ Loaded ${unlimitedPlans.length} unlimited plans from API`);
+            return true;
+        } else {
+            console.warn('❌ Failed to load plans from API - result.success is false or no data');
+            console.warn('Result:', result);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error loading plans from API:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
+        // Fallback к захардкоженным планам
+        unlimitedPlans = [
+            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
+            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
+            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
+            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
+        ];
+        if (!selectedPlanId) {
+            selectedPlanId = 'unlimited2';
+        }
+        console.warn('⚠️ Using fallback plans (hardcoded)');
+        return false;
+    }
+}
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     setupRegionInfo();
     setupSegmentedControl();
+    
+    // Загружаем безлимитные тарифы из API
+    console.log('🔵 Loading unlimited plans from API');
+    await loadPlansFromAPI(regionName);
+    
     renderPlans();
     setupNextButton();
     setupCountriesList();
