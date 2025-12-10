@@ -34,7 +34,7 @@ const apiRoutes = {
     '/api/esimgo/countries': require('./api/esimgo/countries'),
     '/api/esimgo/plans': require('./api/esimgo/plans'),
     '/api/esimgo/region-plans': require('./api/esimgo/region-plans'),
-    '/api/esimgo/catalogue': require('./api/esimgo/catalogue'),
+    '/api/esimgo/catalogue': require('./api/_lib/esimgo/catalogue'),
     '/api/esimgo/catalogue-processed': require('./api/esimgo/catalogue-processed'),
     '/api/esimgo/find-bundle': require('./api/esimgo/find-bundle'),
     '/api/esimgo/order': require('./api/esimgo/order'),
