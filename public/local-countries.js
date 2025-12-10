@@ -274,16 +274,53 @@ async function initializeApp() {
 // Запускаем приложение при загрузке DOM
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
-});
-
-// Также обновляем BackButton при возврате на страницу
-window.addEventListener('popstate', () => {
+    
+    // Убеждаемся, что Local сегмент активен
+    const segmentButtons = document.querySelectorAll('.segment-btn');
+    segmentButtons.forEach(btn => {
+        if (btn.dataset.segment === 'local') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Принудительно скрываем BackButton
     if (tg && tg.BackButton) {
         tg.BackButton.hide();
     }
 });
 
-window.addEventListener('pageshow', () => {
+// Также обновляем BackButton при возврате на страницу
+window.addEventListener('popstate', () => {
+    // Обновляем активный сегмент
+    const segmentButtons = document.querySelectorAll('.segment-btn');
+    segmentButtons.forEach(btn => {
+        if (btn.dataset.segment === 'local') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Скрываем BackButton
+    if (tg && tg.BackButton) {
+        tg.BackButton.hide();
+    }
+});
+
+window.addEventListener('pageshow', (event) => {
+    // Обновляем активный сегмент
+    const segmentButtons = document.querySelectorAll('.segment-btn');
+    segmentButtons.forEach(btn => {
+        if (btn.dataset.segment === 'local') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Скрываем BackButton
     if (tg && tg.BackButton) {
         tg.BackButton.hide();
     }
@@ -291,6 +328,17 @@ window.addEventListener('pageshow', () => {
 
 // Периодическая проверка (на случай, если другие обработчики не сработали)
 setInterval(() => {
+    // Обновляем активный сегмент
+    const segmentButtons = document.querySelectorAll('.segment-btn');
+    segmentButtons.forEach(btn => {
+        if (btn.dataset.segment === 'local') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Скрываем BackButton
     if (tg && tg.BackButton) {
         tg.BackButton.hide();
     }
