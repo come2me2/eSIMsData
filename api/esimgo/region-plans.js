@@ -530,6 +530,24 @@ function groupBundlesIntoPlans(bundles, isUnlimited = false) {
             });
         }
         
+        // Если цена не найдена, логируем предупреждение
+        if (priceValue <= 0) {
+            console.warn('⚠️ Price not found for bundle:', {
+                name: bundle.name,
+                bundleKeys: Object.keys(bundle),
+                priceFields: {
+                    price: bundle.price,
+                    pricePerUnit: bundle.pricePerUnit,
+                    userPrice: bundle.userPrice,
+                    basePrice: bundle.basePrice,
+                    cost: bundle.cost,
+                    amount: bundle.amount
+                }
+            });
+            // Не добавляем план без цены
+            return;
+        }
+        
         // Если цена в центах (больше 100 и меньше 100000), конвертируем в доллары
         // Но только если это целое число (признак центов)
         if (priceValue > 100 && priceValue < 100000 && priceValue % 1 === 0) {
