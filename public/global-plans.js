@@ -55,6 +55,14 @@ const globalCountries = [
 let standardPlans = [];
 let unlimitedPlans = [];
 
+// Функция для обновления счетчика стран
+function updateGlobalCountriesCount(count) {
+    const infoTextElement = document.getElementById('globalInfoText');
+    if (infoTextElement) {
+        infoTextElement.textContent = `Supported in countries: ${count}`;
+    }
+}
+
 // Функция загрузки планов из API (глобальные планы - без фильтров)
 async function loadPlansFromAPI() {
     console.log('🔵 loadPlansFromAPI called for global plans');
