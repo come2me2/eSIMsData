@@ -11,11 +11,13 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
     
     // Показываем кнопку "назад" в Telegram
+    // При возврате назад переходим на Local страницу (главная)
     if (tg.BackButton) {
         tg.BackButton.show();
         tg.BackButton.onClick(() => {
             tg.HapticFeedback.impactOccurred('light');
-            window.history.back();
+            // Переходим на Local страницу (главная страница)
+            window.location.href = 'local-countries.html';
         });
     }
 }
