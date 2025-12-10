@@ -714,19 +714,32 @@ function updateBackButton() {
                        pathname.endsWith('/') ||
                        pathname === '/index.html';
     
-    // На главной странице всегда скрываем кнопку BackButton
-    // Это позволяет показывать кнопку Close вместо Back
-    if (isMainPage) {
-        tg.BackButton.hide();
-        console.log('🔙 BackButton скрыта (главная страница)', {
-            pathname: pathname,
-            href: window.location.href
-        });
-    } else {
-        // На других страницах показываем кнопку Back
+    if (!isMainPage) {
+        // На других страницах (не index.html) показываем кнопку Back
         tg.BackButton.show();
         console.log('🔙 BackButton показана', {
             pathname: pathname,
+            href: window.location.href
+        });
+        return;
+    }
+    
+    // На главной странице проверяем текущий сегмент
+    // На вкладке Local - скрываем BackButton (показываем Close)
+    // На вкладках Region и Global - показываем BackButton (показываем Back)
+    if (currentSegment === 'local') {
+        tg.BackButton.hide();
+        console.log('🔙 BackButton скрыта (Local - показываем Close)', {
+            pathname: pathname,
+            segment: currentSegment,
+            href: window.location.href
+        });
+    } else {
+        // Region или Global - показываем BackButton
+        tg.BackButton.show();
+        console.log('🔙 BackButton показана (Region/Global - показываем Back)', {
+            pathname: pathname,
+            segment: currentSegment,
             href: window.location.href
         });
     }
@@ -771,9 +784,13 @@ setInterval(() => {
                        pathname.endsWith('/') ||
                        pathname === '/index.html';
     if (isMainPage && tg && tg.BackButton) {
-        // Если мы на главной странице - всегда скрываем кнопку
-        // Это гарантирует, что кнопка будет скрыта даже если другие обработчики не сработали
-        tg.BackButton.hide();
+        // Если мы на главной странице - обновляем кнопку в зависимости от сегмента
+        // На Local - скрываем, на Region/Global - показываем
+        if (currentSegment === 'local') {
+            tg.BackButton.hide();
+        } else {
+            tg.BackButton.show();
+        }
     }
 }, 500);
 
