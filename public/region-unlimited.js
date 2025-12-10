@@ -297,7 +297,9 @@ function setupRegionInfo() {
     }
     
     if (infoTextElement) {
-        infoTextElement.textContent = `Supported in countries: ${regionInfo.count}`;
+        // Используем актуальное количество стран из API
+        const actualCount = regionInfo.countries ? regionInfo.countries.length : (regionInfo.count || 0);
+        infoTextElement.textContent = `Supported in countries: ${actualCount}`;
     }
 }
 

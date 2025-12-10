@@ -288,6 +288,12 @@ async function loadPlansFromAPI(regionName) {
                     // Обновляем счетчик для обратной совместимости
                     regionCountryCounts[regionName] = apiCountries.length;
                     console.log(`✅ Updated countries list for ${regionName} from API:`, apiCountries.length, 'countries');
+                    
+                    // Обновляем отображение счетчика сразу после загрузки данных
+                    const infoTextElement = document.getElementById('regionInfoText');
+                    if (infoTextElement) {
+                        infoTextElement.textContent = `Supported in countries: ${apiCountries.length}`;
+                    }
                 }
             }
             
