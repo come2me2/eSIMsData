@@ -13,52 +13,65 @@ if (tg) {
 
 // Функция для настройки BackButton
 function setupBackButton() {
+    // Обновляем ссылку на tg, так как она может измениться
+    tg = window.Telegram?.WebApp;
+    
     if (tg && tg.BackButton) {
-        console.log('🔙 Region: Настраиваем BackButton');
+        console.log('🔙 Region: Настраиваем BackButton', { tg: !!tg, BackButton: !!tg.BackButton });
+        
+        // Показываем кнопку
         tg.BackButton.show();
         
-        // Удаляем предыдущий обработчик, если он был
-        // Telegram WebApp API не поддерживает removeOnClick, поэтому используем флаг
-        let backButtonHandled = false;
-        
-        tg.BackButton.onClick(() => {
-            if (backButtonHandled) {
-                console.log('🔙 Region: BackButton уже обработана, игнорируем');
-                return;
+        // Устанавливаем обработчик с задержкой, чтобы убедиться, что он не переопределяется
+        setTimeout(() => {
+            if (tg && tg.BackButton) {
+                console.log('🔙 Region: Устанавливаем обработчик onClick');
+                tg.BackButton.onClick(() => {
+                    console.log('🔙 Region: BackButton нажата, переходим на Local');
+                    
+                    if (tg && tg.HapticFeedback) {
+                        try {
+                            tg.HapticFeedback.impactOccurred('light');
+                        } catch (e) {
+                            console.warn('⚠️ Region: Ошибка при вызове HapticFeedback', e);
+                        }
+                    }
+                    
+                    // Переходим на Local страницу (главная страница)
+                    try {
+                        window.location.href = 'local-countries.html';
+                    } catch (e) {
+                        console.error('❌ Region: Ошибка при переходе на Local', e);
+                        // Fallback на window.location
+                        window.location = 'local-countries.html';
+                    }
+                });
+                console.log('🔙 Region: BackButton настроена успешно');
+            } else {
+                console.warn('⚠️ Region: tg или BackButton недоступны при установке обработчика');
             }
-            backButtonHandled = true;
-            console.log('🔙 Region: BackButton нажата, переходим на Local');
-            
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            
-            // Переходим на Local страницу (главная страница)
-            window.location.href = 'local-countries.html';
-        });
-        
-        console.log('🔙 Region: BackButton настроена успешно');
+        }, 100);
     } else {
         console.warn('⚠️ Region: Telegram WebApp или BackButton недоступны', { tg: !!tg, BackButton: tg && !!tg.BackButton });
     }
 }
 
 // Настраиваем BackButton после загрузки DOM
-document.addEventListener('DOMContentLoaded', () => {
-    setupBackButton();
-});
-
-// Также настраиваем BackButton при полной загрузке страницы
-window.addEventListener('load', () => {
-    setupBackButton();
-});
-
-// Настраиваем BackButton сразу, если DOM уже загружен
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupBackButton);
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🔙 Region: DOM загружен, настраиваем BackButton');
+        setupBackButton();
+    });
 } else {
+    console.log('🔙 Region: DOM уже загружен, настраиваем BackButton сразу');
     setupBackButton();
 }
+
+// Также настраиваем BackButton при полной загрузке страницы (на случай, если что-то переопределило)
+window.addEventListener('load', () => {
+    console.log('🔙 Region: Страница полностью загружена, проверяем BackButton');
+    setupBackButton();
+});
 
 // Function to get flag image URL from local flags folder
 function getFlagPath(countryCode) {
