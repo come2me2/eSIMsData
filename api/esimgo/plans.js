@@ -1048,6 +1048,10 @@ module.exports = async function handler(req, res) {
                 'YT': 'Mayotte', 'ZA': 'South Africa', 'ZM': 'Zambia', 'ZW': 'Zimbabwe'
             };
             
+            // Для Global собираем все уникальные коды стран из всех bundles
+            const allCountryCodes = new Set();
+            const skippedCountries = [];
+            
             bundles.forEach(bundle => {
                 const countries = bundle.countries || [];
                 countries.forEach(country => {
@@ -1078,6 +1082,11 @@ module.exports = async function handler(req, res) {
                         }
                     }
                     
+                    // Собираем все коды для анализа
+                    if (countryCode) {
+                        allCountryCodes.add(countryCode);
+                    }
+                    
                     // Добавляем только валидные ISO коды стран (2-5 символов, не региональные коды)
                     if (countryCode && 
                         countryCode.length >= 2 && countryCode.length <= 5 && 
@@ -1088,18 +1097,30 @@ module.exports = async function handler(req, res) {
                             name: countryName || countryCode
                         });
                     } else if (countryCode && countriesMap.has(countryCode)) {
-                        // Логируем дубликаты для отладки (только первые несколько)
-                        if (countriesMap.size < 5) {
-                            console.log('Duplicate country code skipped:', countryCode);
-                        }
-                    } else if (countryCode && (countryCode.length < 2 || countryCode.length > 5)) {
-                        // Логируем невалидные коды для отладки (только первые несколько)
-                        if (countriesMap.size < 5) {
-                            console.log('Invalid country code length skipped:', countryCode, 'length:', countryCode.length);
+                        // Дубликат - не логируем, это нормально
+                    } else if (countryCode) {
+                        // Логируем пропущенные страны для отладки
+                        if (countryCode.length < 2 || countryCode.length > 5) {
+                            skippedCountries.push({ code: countryCode, reason: `Invalid length: ${countryCode.length}` });
+                        } else if (countryCode === 'GLOBAL' || countryCode === 'WORLD' || countryCode === 'WORLDWIDE') {
+                            skippedCountries.push({ code: countryCode, reason: 'Regional code' });
                         }
                     }
                 });
             });
+            
+            // Для Global логируем все найденные коды и пропущенные
+            if (isGlobal && skippedCountries.length > 0) {
+                console.log('Skipped countries in Global:', skippedCountries);
+            }
+            if (isGlobal) {
+                console.log('All country codes found in Global bundles:', {
+                    total: allCountryCodes.size,
+                    codes: Array.from(allCountryCodes).sort(),
+                    added: countriesMap.size,
+                    skipped: skippedCountries.length
+                });
+            }
         }
         
         const countries = Array.from(countriesMap.values())
