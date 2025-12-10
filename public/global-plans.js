@@ -270,7 +270,10 @@ function setupCountriesList() {
     
     if (!banner || !chevron || !container || !countriesList) return;
     
-    // Render countries list
+    // Очищаем старый список перед добавлением нового
+    countriesList.innerHTML = '';
+    
+    // Render countries list из обновленного массива globalCountries
     globalCountries.forEach(countryName => {
         const countryItem = document.createElement('div');
         countryItem.className = 'country-item-small';
