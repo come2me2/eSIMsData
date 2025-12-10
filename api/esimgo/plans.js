@@ -361,47 +361,132 @@ module.exports = async function handler(req, res) {
                 throw new Error(errorMsg);
             }
             
-            // Запрос 1: Standard Fixed (fixed трафик)
+            // Запрос 1: Standard Fixed (fixed трафик) с пагинацией
             try {
-                const fixedOptions = {
-                    ...catalogueOptions,
-                    group: 'Standard Fixed'
-                };
-                console.log('Fetching Standard Fixed bundles for Global...');
-                const fixedCatalogue = await esimgoClient.getCatalogue(null, fixedOptions);
-                const fixedBundles = Array.isArray(fixedCatalogue) 
-                    ? fixedCatalogue 
-                    : (fixedCatalogue?.bundles || fixedCatalogue?.data || []);
-                console.log('Standard Fixed bundles received:', fixedBundles.length);
+                let allFixedBundles = [];
+                let page = 1;
+                const perPage = 1000;
+                let hasMore = true;
+                
+                while (hasMore) {
+                    const fixedOptions = {
+                        ...catalogueOptions,
+                        group: 'Standard Fixed',
+                        perPage: perPage,
+                        page: page
+                    };
+                    console.log(`Fetching Standard Fixed bundles for Global, page ${page}...`);
+                    const fixedCatalogue = await esimgoClient.getCatalogue(null, fixedOptions);
+                    const fixedBundles = Array.isArray(fixedCatalogue) 
+                        ? fixedCatalogue 
+                        : (fixedCatalogue?.bundles || fixedCatalogue?.data || []);
+                    
+                    allFixedBundles = allFixedBundles.concat(fixedBundles);
+                    console.log(`Standard Fixed bundles received on page ${page}:`, fixedBundles.length);
+                    
+                    // Проверяем, есть ли еще страницы
+                    if (fixedCatalogue?.pageCount && page < fixedCatalogue.pageCount) {
+                        page++;
+                    } else if (fixedCatalogue?.rows && allFixedBundles.length < fixedCatalogue.rows) {
+                        page++;
+                    } else if (fixedBundles.length < perPage) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                    
+                    // Защита от бесконечного цикла
+                    if (page > 50) {
+                        console.warn('⚠️ Превышен лимит страниц (50), останавливаем пагинацию');
+                        hasMore = false;
+                    }
+                }
+                
+                console.log('Total Standard Fixed bundles received:', allFixedBundles.length);
                 
                 // Фильтруем по country = "Global"
-                const globalFixedBundles = fixedBundles.filter(bundle => {
-                    return isGlobalBundle(bundle);
+                const globalFixedBundles = allFixedBundles.filter(bundle => {
+                    const isGlobal = isGlobalBundle(bundle);
+                    if (!isGlobal && bundle.name) {
+                        // Логируем примеры отфильтрованных bundles для отладки
+                        if (bundle.name.includes('RGB') || bundle.name.includes('RGBS')) {
+                            console.log('❌ Bundle с RGB отфильтрован (не Global):', {
+                                name: bundle.name,
+                                countries: bundle.countries,
+                                description: bundle.description
+                            });
+                        }
+                    }
+                    return isGlobal;
                 });
                 console.log('Global Fixed bundles after filter:', globalFixedBundles.length);
+                if (globalFixedBundles.length > 0) {
+                    console.log('Sample Global Fixed bundles:', globalFixedBundles.slice(0, 5).map(b => ({
+                        name: b.name,
+                        countries: b.countries,
+                        price: b.price
+                    })));
+                }
                 bundles = bundles.concat(globalFixedBundles);
             } catch (error) {
                 console.error('Error fetching Standard Fixed bundles:', error.message);
             }
             
-            // Запрос 2: Standard Unlimited Essential (unlimited трафик)
+            // Запрос 2: Standard Unlimited Essential (unlimited трафик) с пагинацией
             try {
-                const unlimitedOptions = {
-                    ...catalogueOptions,
-                    group: 'Standard Unlimited Essential'
-                };
-                console.log('Fetching Standard Unlimited Essential bundles for Global...');
-                const unlimitedCatalogue = await esimgoClient.getCatalogue(null, unlimitedOptions);
-                const unlimitedBundles = Array.isArray(unlimitedCatalogue) 
-                    ? unlimitedCatalogue 
-                    : (unlimitedCatalogue?.bundles || unlimitedCatalogue?.data || []);
-                console.log('Standard Unlimited Essential bundles received:', unlimitedBundles.length);
+                let allUnlimitedBundles = [];
+                let page = 1;
+                const perPage = 1000;
+                let hasMore = true;
+                
+                while (hasMore) {
+                    const unlimitedOptions = {
+                        ...catalogueOptions,
+                        group: 'Standard Unlimited Essential',
+                        perPage: perPage,
+                        page: page
+                    };
+                    console.log(`Fetching Standard Unlimited Essential bundles for Global, page ${page}...`);
+                    const unlimitedCatalogue = await esimgoClient.getCatalogue(null, unlimitedOptions);
+                    const unlimitedBundles = Array.isArray(unlimitedCatalogue) 
+                        ? unlimitedCatalogue 
+                        : (unlimitedCatalogue?.bundles || unlimitedCatalogue?.data || []);
+                    
+                    allUnlimitedBundles = allUnlimitedBundles.concat(unlimitedBundles);
+                    console.log(`Standard Unlimited Essential bundles received on page ${page}:`, unlimitedBundles.length);
+                    
+                    // Проверяем, есть ли еще страницы
+                    if (unlimitedCatalogue?.pageCount && page < unlimitedCatalogue.pageCount) {
+                        page++;
+                    } else if (unlimitedCatalogue?.rows && allUnlimitedBundles.length < unlimitedCatalogue.rows) {
+                        page++;
+                    } else if (unlimitedBundles.length < perPage) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                    
+                    // Защита от бесконечного цикла
+                    if (page > 50) {
+                        console.warn('⚠️ Превышен лимит страниц (50), останавливаем пагинацию');
+                        hasMore = false;
+                    }
+                }
+                
+                console.log('Total Standard Unlimited Essential bundles received:', allUnlimitedBundles.length);
                 
                 // Фильтруем по country = "Global"
-                const globalUnlimitedBundles = unlimitedBundles.filter(bundle => {
+                const globalUnlimitedBundles = allUnlimitedBundles.filter(bundle => {
                     return isGlobalBundle(bundle);
                 });
                 console.log('Global Unlimited bundles after filter:', globalUnlimitedBundles.length);
+                if (globalUnlimitedBundles.length > 0) {
+                    console.log('Sample Global Unlimited bundles:', globalUnlimitedBundles.slice(0, 3).map(b => ({
+                        name: b.name,
+                        countries: b.countries,
+                        price: b.price
+                    })));
+                }
                 bundles = bundles.concat(globalUnlimitedBundles);
             } catch (error) {
                 console.error('Error fetching Standard Unlimited Essential bundles:', error.message);
