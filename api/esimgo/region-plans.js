@@ -884,48 +884,10 @@ module.exports = async function handler(req, res) {
             countryRegions.forEach(region => allowedCountryRegions.add(region));
         });
         
-        // Проверяем, являются ли bundles региональными (где countries содержат название региона)
-        let allBundlesAreRegional = false;
-        if (allBundles.length > 0) {
-            // Проверяем первые несколько bundles для определения типа
-            const sampleBundles = allBundles.slice(0, Math.min(5, allBundles.length));
-            allBundlesAreRegional = sampleBundles.every(bundle => {
-                const countries = bundle.countries || [];
-                if (countries.length === 0) return false;
-                
-                return countries.some(country => {
-                    if (typeof country === 'string') {
-                        const possibleRegionNames = apiRegionToCountryRegions[bundle.apiRegion] || [];
-                        return possibleRegionNames.some(regionName => 
-                            country.toLowerCase() === regionName.toLowerCase()
-                        );
-                    } else if (typeof country === 'object' && country !== null) {
-                        const countryName = (country.name || country.Name || '').toLowerCase();
-                        const countryIso = (country.iso || country.ISO || country.code || '').toUpperCase();
-                        const possibleRegionNames = apiRegionToCountryRegions[bundle.apiRegion] || [];
-                        return possibleRegionNames.some(regionName => {
-                            const regionNameLower = regionName.toLowerCase();
-                            const regionNameUpper = regionName.toUpperCase();
-                            return countryName === regionNameLower || 
-                                   countryIso === regionNameUpper ||
-                                   countryName.includes(regionNameLower) ||
-                                   regionNameLower.includes(countryName);
-                        });
-                    }
-                    return false;
-                });
-            });
-            
-            console.log(`Regional bundles check for ${region}:`, {
-                allBundlesAreRegional,
-                sampleBundlesCount: sampleBundles.length,
-                firstBundleCountries: sampleBundles[0]?.countries || []
-            });
-        }
-        
-        // Если все bundles региональные, используем маппинг стран для региона
-        if (allBundlesAreRegional && regionToCountryCodes[region]) {
-            console.log(`✅ All bundles are regional for ${region}, using country codes mapping`);
+        // Для регионов с маппингом стран всегда используем маппинг (Europe, North America, Latin America и т.д.)
+        // Это нужно, потому что региональные bundles содержат название региона в countries, а не конкретные страны
+        if (regionToCountryCodes[region]) {
+            console.log(`✅ Using country codes mapping for ${region}`);
             const countryCodes = regionToCountryCodes[region];
             countryCodes.forEach(countryCode => {
                 if (!countriesMap.has(countryCode)) {
@@ -937,7 +899,8 @@ module.exports = async function handler(req, res) {
             });
             console.log(`✅ Added ${countryCodes.length} countries from mapping for ${region}`);
         } else {
-            console.log(`⚠️ Using bundle-based country extraction for ${region} (allBundlesAreRegional=${allBundlesAreRegional}, hasMapping=${!!regionToCountryCodes[region]})`);
+            // Для регионов без маппинга извлекаем страны из bundles
+            console.log(`⚠️ No mapping for ${region}, using bundle-based country extraction`);
             // Извлекаем страны из bundles
             allBundles.forEach(bundle => {
             const countries = bundle.countries || [];
