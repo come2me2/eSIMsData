@@ -521,17 +521,21 @@ body {
     image-rendering: -webkit-optimize-contrast;
 }
 
-/* Для Local планов флаг должен быть прямоугольным, а не круглым */
+/* Для Local планов флаг должен быть прямоугольным, как на local-countries */
 .country-flag-img {
     width: 80px;
     height: 60px;
-    object-fit: contain;
+    object-fit: cover;
     display: block;
-    border-radius: 8px;
-    /* Prevent sub-pixel rendering issues */
+    border-radius: 4px;
+    /* Чёткие края скругления */
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
     transform: translate3d(0, 0, 0);
     /* Crisp rendering for flag images */
     image-rendering: -webkit-optimize-contrast;
+    /* Prevent blurring on high-DPI displays */
+    transform: translateZ(0);
 }
 
 .country-name-large {
