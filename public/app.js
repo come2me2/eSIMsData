@@ -786,10 +786,34 @@ function updateBackButton() {
             href: window.location.href,
             isMainPage: isMainPage
         });
-    } else {
-        // Region или Global - показываем BackButton
+    } else if (currentSegment === 'region') {
+        // Region - показываем BackButton и устанавливаем обработчик для перехода на Local
         tg.BackButton.show();
-        console.log('🔙 BackButton показана (Region/Global - показываем Back)', {
+        
+        // Устанавливаем обработчик для перехода на Local при нажатии "назад" из списка регионов
+        tg.BackButton.onClick(() => {
+            console.log('🔙 Region список: BackButton нажата, переходим на Local');
+            if (tg && tg.HapticFeedback) {
+                try {
+                    tg.HapticFeedback.impactOccurred('light');
+                } catch (e) {
+                    console.warn('⚠️ Ошибка при вызове HapticFeedback', e);
+                }
+            }
+            // Переходим на Local страницу (главная страница)
+            window.location.href = 'local-countries.html';
+        });
+        
+        console.log('🔙 BackButton показана (Region - показываем Back, переход на Local)', {
+            pathname: pathname,
+            segment: currentSegment,
+            href: window.location.href,
+            isMainPage: isMainPage
+        });
+    } else {
+        // Global - показываем BackButton (обработчик уже установлен в global-plans.js)
+        tg.BackButton.show();
+        console.log('🔙 BackButton показана (Global - показываем Back)', {
             pathname: pathname,
             segment: currentSegment,
             href: window.location.href,

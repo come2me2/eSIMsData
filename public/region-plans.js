@@ -37,13 +37,13 @@ function setupBackButton() {
                         }
                     }
                     
-                    // Переходим на Local страницу (главная страница)
+                    // Переходим обратно на список регионов
                     try {
-                        window.location.href = 'local-countries.html';
+                        window.location.href = 'index.html?segment=region';
                     } catch (e) {
-                        console.error('❌ Region: Ошибка при переходе на Local', e);
+                        console.error('❌ Region: Ошибка при переходе на список регионов', e);
                         // Fallback на window.location
-                        window.location = 'local-countries.html';
+                        window.location = 'index.html?segment=region';
                     }
                 });
                 console.log('🔙 Region: BackButton настроена успешно');

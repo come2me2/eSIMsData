@@ -20,8 +20,8 @@ if (tg) {
             if (tg && tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            // Переходим на Local страницу (главная страница)
-            window.location.href = 'local-countries.html';
+            // Переходим обратно на список регионов
+            window.location.href = 'index.html?segment=region';
         });
     } else {
         console.warn('⚠️ Region Unlimited: Telegram WebApp или BackButton недоступны', { tg: !!tg, BackButton: tg && !!tg.BackButton });
