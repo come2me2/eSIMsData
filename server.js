@@ -43,7 +43,8 @@ const apiRoutes = {
     '/api/esimgo/test-africa': require('./api/_lib/esimgo/test-africa'),
     '/api/esimgo/test-cyprus': require('./api/_lib/esimgo/test-cyprus'),
     '/api/validate-telegram': require('./api/validate-telegram'),
-    '/api/webhook': require('./api/webhook')
+    '/api/webhook': require('./api/webhook'),
+    '/api/cache/refresh': require('./api/cache/refresh')
 };
 
 // Регистрация API routes
