@@ -379,11 +379,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Инициализация приложения - загружает страны и затем обновляет контент
 async function initializeApp() {
-    // Загружаем список стран из API и ждем завершения
-    await loadCountriesFromAPI();
+    // Если текущий сегмент - Local, переходим на отдельную страницу (главная страница)
+    if (currentSegment === 'local') {
+        window.location.href = 'local-countries.html';
+        return;
+    }
     
-    // После загрузки стран обновляем контент
-    updateContent();
+    // Для Region загружаем регионы
+    if (currentSegment === 'region') {
+        // Обновляем контент для Region
+        updateContent();
+    } else {
+        // Для других сегментов обновляем контент
+        updateContent();
+    }
 }
 
 // Render country list
