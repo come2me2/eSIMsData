@@ -428,10 +428,23 @@ module.exports = async function handler(req, res) {
                     'CY': ['CY', 'CYP', 'CYPRUS']
                 };
                 
+                // Универсальная проверка: если bundle содержит только одну страну И в названии есть код страны
+                // Это помогает находить bundles даже если структура данных нестандартная
+                if (countries.length === 1) {
+                    // Проверяем паттерн в названии bundle (например, esim_20GB_30D_CYP_V2)
+                    // Используем регулярное выражение для более гибкой проверки
+                    const codePattern = new RegExp(`[^A-Z]${targetCountryCode}[^A-Z]|^${targetCountryCode}[^A-Z]|[^A-Z]${targetCountryCode}$|^${targetCountryCode}$`, 'i');
+                    if (codePattern.test(bundleName)) {
+                        console.log('✅ Bundle найден по паттерну в названии (универсальная проверка):', bundle.name);
+                        return true;
+                    }
+                }
+                
                 // Проверяем паттерн в названии bundle (например, esim_20GB_30D_CYP_V2)
                 if (bundleName.includes(`_${targetCountryCode}_`) || 
                     bundleName.includes(`_${targetCountryCode} `) ||
-                    bundleName.endsWith(`_${targetCountryCode}`)) {
+                    bundleName.endsWith(`_${targetCountryCode}`) ||
+                    bundleName.startsWith(`${targetCountryCode}_`)) {
                     console.log('✅ Bundle найден по паттерну в названии:', bundle.name);
                     return true;
                 }
@@ -442,7 +455,8 @@ module.exports = async function handler(req, res) {
                     for (const altCode of alternativeCodes) {
                         if (bundleName.includes(`_${altCode}_`) || 
                             bundleName.includes(`_${altCode} `) ||
-                            bundleName.endsWith(`_${altCode}`)) {
+                            bundleName.endsWith(`_${altCode}`) ||
+                            bundleName.startsWith(`${altCode}_`)) {
                             console.log('✅ Bundle найден по альтернативному коду:', bundle.name, altCode);
                             return true;
                         }
