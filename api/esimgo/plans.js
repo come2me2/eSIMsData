@@ -507,6 +507,66 @@ module.exports = async function handler(req, res) {
                 }
                 
                 bundles = bundles.concat(globalFixedBundles, globalUnlimitedBundles);
+                
+                // Для Global нужно получить список стран из всех bundles, где country = "Global"
+                // Пробуем запросить каталог с параметром countries=Global для получения всех стран
+                try {
+                    console.log('Fetching all countries for Global bundles...');
+                    const globalCountriesCatalogue = await esimgoClient.getCatalogue('Global', {
+                        perPage: 1000,
+                        page: 1
+                    });
+                    
+                    const globalCountriesBundles = Array.isArray(globalCountriesCatalogue) 
+                        ? globalCountriesCatalogue 
+                        : (globalCountriesCatalogue?.bundles || globalCountriesCatalogue?.data || []);
+                    
+                    console.log(`Found ${globalCountriesBundles.length} bundles with country=Global`);
+                    
+                    // Извлекаем все уникальные страны из всех Global bundles
+                    const globalCountriesSet = new Set();
+                    globalCountriesBundles.forEach(bundle => {
+                        const countries = bundle.countries || [];
+                        countries.forEach(country => {
+                            let countryCode = null;
+                            if (typeof country === 'string') {
+                                countryCode = country.toUpperCase();
+                            } else if (typeof country === 'object' && country !== null) {
+                                countryCode = (country.iso || country.ISO || country.code || '').toUpperCase();
+                            }
+                            
+                            // Пропускаем региональные коды
+                            if (countryCode && 
+                                countryCode !== 'GLOBAL' && 
+                                countryCode !== 'WORLD' && 
+                                countryCode !== 'WORLDWIDE' &&
+                                countryCode.length >= 2 && 
+                                countryCode.length <= 5) {
+                                globalCountriesSet.add(countryCode);
+                            }
+                        });
+                    });
+                    
+                    console.log(`Found ${globalCountriesSet.size} unique countries in Global bundles from country=Global query`);
+                    console.log('Global countries codes:', Array.from(globalCountriesSet).sort());
+                    
+                    // Сохраняем найденные страны для использования при извлечении
+                    if (globalCountriesSet.size > 0) {
+                        // Добавляем найденные страны в countriesMap
+                        globalCountriesSet.forEach(countryCode => {
+                            if (!countriesMap.has(countryCode)) {
+                                countriesMap.set(countryCode, {
+                                    code: countryCode,
+                                    name: isoToCountryName[countryCode] || countryCode
+                                });
+                            }
+                        });
+                        console.log(`Added ${globalCountriesSet.size} countries from country=Global query to countriesMap`);
+                    }
+                } catch (globalCountriesError) {
+                    console.warn('⚠️ Failed to fetch countries from country=Global query:', globalCountriesError.message);
+                    // Продолжаем работу без этого запроса
+                }
             } catch (error) {
                 console.error('Error fetching Global bundles:', {
                     message: error.message,
