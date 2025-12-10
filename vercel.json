@@ -4,7 +4,7 @@
   "trailingSlash": false,
   "crons": [
     {
-      "path": "/api/cache/refresh?secret=CHANGE_ME&type=all",
+      "path": "/api/cache/refresh",
       "schedule": "0 2 * * *"
     }
   ],

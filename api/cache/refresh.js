@@ -72,49 +72,43 @@ async function refreshCountriesCache() {
 
 /**
  * Обновить кэш для планов (Local, Global, Region)
- * Это сложная операция, которая может занять время
+ * Очищает кэш, чтобы при следующем запросе данные загрузились заново
+ * Это более эффективно, чем загружать все данные здесь
  */
 async function refreshPlansCache() {
     console.log('🔄 Refreshing plans cache...');
     const results = {
-        local: 0,
-        global: 0,
-        regions: 0,
+        cleared: [],
         errors: []
     };
     
     try {
-        // Для Global планов
+        // Очищаем кэш для Global планов
         try {
-            console.log('🔄 Refreshing global plans cache...');
-            // Очищаем кэш
+            console.log('🔄 Clearing global plans cache...');
             cache.clear('plans:global');
-            
-            // Загружаем данные (это вызовет обновление кэша)
-            // Здесь мы просто делаем запрос, который обновит кэш
-            // В реальности это делается через вызов соответствующего endpoint
-            results.global = 1;
-            console.log('✅ Global plans cache refresh initiated');
+            results.cleared.push('global');
+            console.log('✅ Global plans cache cleared');
         } catch (error) {
-            console.error('❌ Error refreshing global plans cache:', error);
+            console.error('❌ Error clearing global plans cache:', error);
             results.errors.push({ type: 'global', error: error.message });
         }
         
-        // Для Region планов
+        // Очищаем кэш для Region планов
         const regions = ['Africa', 'Asia', 'Europe', 'North America', 'Latin America', 'Oceania', 'Balkanas', 'Central Eurasia'];
         for (const region of regions) {
             try {
-                console.log(`🔄 Refreshing ${region} plans cache...`);
+                console.log(`🔄 Clearing ${region} plans cache...`);
                 cache.clear(`region-plans:${region}`);
-                results.regions++;
+                results.cleared.push(`region:${region}`);
             } catch (error) {
-                console.error(`❌ Error refreshing ${region} plans cache:`, error);
+                console.error(`❌ Error clearing ${region} plans cache:`, error);
                 results.errors.push({ type: `region:${region}`, error: error.message });
             }
         }
         
-        console.log(`✅ Plans cache refresh completed: ${results.regions} regions, ${results.global} global`);
-        return { success: true, results };
+        console.log(`✅ Plans cache cleared: ${results.cleared.length} entries`);
+        return { success: true, cleared: results.cleared.length, results };
     } catch (error) {
         console.error('❌ Error refreshing plans cache:', error);
         return { success: false, error: error.message, results };
@@ -132,13 +126,19 @@ module.exports = async function handler(req, res) {
     }
     
     // Проверяем секретный ключ
-    const secret = req.query.secret || req.headers['x-cache-refresh-secret'];
-    if (secret !== CACHE_REFRESH_SECRET) {
-        console.warn('⚠️ Unauthorized cache refresh attempt');
-        return res.status(401).json({
-            success: false,
-            error: 'Unauthorized. Provide correct secret key.'
-        });
+    // Для Vercel Cron Jobs секрет передается через заголовок
+    const secret = req.query.secret || req.headers['x-cache-refresh-secret'] || req.headers['authorization']?.replace('Bearer ', '');
+    
+    // Если секрет не установлен или равен дефолтному, пропускаем проверку (для разработки)
+    // В продакшене обязательно установите CACHE_REFRESH_SECRET
+    if (CACHE_REFRESH_SECRET && CACHE_REFRESH_SECRET !== 'change-me-in-production') {
+        if (!secret || secret !== CACHE_REFRESH_SECRET) {
+            console.warn('⚠️ Unauthorized cache refresh attempt');
+            return res.status(401).json({
+                success: false,
+                error: 'Unauthorized. Provide correct secret key.'
+            });
+        }
     }
     
     const type = req.query.type || 'all';
