@@ -1008,8 +1008,8 @@ module.exports = async function handler(req, res) {
                     });
                 }
             });
+            });
         }
-        });
         
         const countries = Array.from(countriesMap.values())
             .sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code));
