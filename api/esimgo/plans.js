@@ -105,10 +105,24 @@ function groupBundlesIntoPlans(bundles) {
                     k.toLowerCase().includes('fee')
                 ),
                 price: bundle.price,
+                priceType: typeof bundle.price,
                 pricePerUnit: bundle.pricePerUnit,
                 cost: bundle.cost,
-                amount: bundle.amount
+                amount: bundle.amount,
+                userPrice: bundle.userPrice,
+                basePrice: bundle.basePrice,
+                allKeys: Object.keys(bundle)
             });
+        } else {
+            // Для Global bundles логируем успешное извлечение цены
+            if (bundle.name && (bundle.name.includes('RGB') || bundle.name.includes('Global'))) {
+                console.log('✅ Price extracted for Global bundle:', {
+                    name: bundle.name,
+                    priceValue: priceValue,
+                    currency: currency,
+                    source: 'groupBundlesIntoPlans'
+                });
+            }
         }
         
         // Пропускаем bundles без цены или с нулевой ценой
