@@ -550,20 +550,24 @@ function groupBundlesIntoPlans(bundles, isUnlimited = false) {
         const plan = {
             id: bundle.name,
             bundle_name: bundle.name,
-            data: `${bundle.dataAmount / 1000} GB`,
-            dataAmount: bundle.dataAmount,
+            data: isUnlimited ? '∞ GB' : `${bundle.dataAmount / 1000} GB`,
+            dataAmount: isUnlimited ? null : bundle.dataAmount,
             duration: `${bundle.duration} Days`,
             durationDays: bundle.duration,
             price: priceFormatted,
             priceValue: priceValue,
             currency: currency,
-            unlimited: false,
+            unlimited: isUnlimited,
             countries: bundle.countries || [],
             description: bundle.description || '',
             region: bundle.region || bundle.apiRegion || null
         };
         
-        plans.standard.push(plan);
+        if (isUnlimited) {
+            plans.unlimited.push(plan);
+        } else {
+            plans.standard.push(plan);
+        }
     });
     
     // Дедупликация стандартных планов
