@@ -77,8 +77,60 @@ let countries = [
     { name: 'Indonesia', code: 'ID' },
 ]; // Fallback список
 
-// Загрузка списка стран из API
-async function loadCountriesFromAPI() {
+// Загрузка списка стран из API с кэшированием
+async function loadCountriesFromAPI(useCache = true) {
+    // Кэширование включено - сначала проверяем кэш для мгновенной загрузки
+    const cacheKey = 'countries_cache';
+    const cacheTimestampKey = 'countries_cache_timestamp';
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
+    
+    // Сначала проверяем кэш для мгновенной загрузки
+    if (useCache) {
+        try {
+            const cachedData = localStorage.getItem(cacheKey);
+            const cacheTimestamp = localStorage.getItem(cacheTimestampKey);
+            
+            if (cachedData && cacheTimestamp) {
+                const cacheAge = Date.now() - parseInt(cacheTimestamp);
+                if (cacheAge < CACHE_TTL) {
+                    console.log('✅ Загрузка списка стран из localStorage кэша (мгновенная загрузка)');
+                    const result = JSON.parse(cachedData);
+                    
+                    if (result.success && result.data && Array.isArray(result.data)) {
+                        // Преобразуем данные из кэша в нужный формат
+                        countries = result.data.map(country => ({
+                            name: country.name,
+                            code: country.code
+                        }));
+                        
+                        console.log(`✅ Загружено ${countries.length} стран из кэша`);
+                        
+                        // Обновляем UI с кэшированными данными
+                        renderCountries(countries);
+                        
+                        // Возвращаем true, но продолжаем обновление из API в фоне
+                        // Это позволяет показать кэшированные данные сразу
+                        setTimeout(() => {
+                            loadCountriesFromAPI(false).then((success) => {
+                                if (success) {
+                                    // Обновляем UI с актуальными данными из API
+                                    renderCountries(countries);
+                                }
+                            });
+                        }, 100);
+                        return true;
+                    }
+                } else {
+                    console.log('⚠️ Кэш истек, загружаем свежие данные');
+                    localStorage.removeItem(cacheKey);
+                    localStorage.removeItem(cacheTimestampKey);
+                }
+            }
+        } catch (cacheError) {
+            console.warn('⚠️ Ошибка при чтении кэша:', cacheError);
+        }
+    }
+    
     try {
         console.log('🔄 Загрузка списка стран из API...');
         const response = await fetch('/api/esimgo/countries');
@@ -88,6 +140,15 @@ async function loadCountriesFromAPI() {
         }
         
         const result = await response.json();
+        
+        // Сохраняем в кэш для следующего запуска
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(result));
+            localStorage.setItem(cacheTimestampKey, Date.now().toString());
+            console.log('✅ Список стран сохранен в localStorage кэш');
+        } catch (cacheError) {
+            console.warn('⚠️ Ошибка при сохранении в кэш:', cacheError);
+        }
         
         if (result.success && result.data && Array.isArray(result.data)) {
             // Преобразуем данные из API в нужный формат
