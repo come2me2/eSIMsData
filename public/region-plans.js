@@ -455,6 +455,12 @@ function setupRegionInfo() {
     if (iconElement) {
         // Для иконки Африки добавляем специальный класс для уменьшения размера
         const isAfrica = regionData.name === 'Africa';
+        if (isAfrica) {
+            // Добавляем класс к контейнеру для специальной обработки
+            iconElement.classList.add('africa-icon-container');
+        } else {
+            iconElement.classList.remove('africa-icon-container');
+        }
         const imgClass = isAfrica ? 'region-icon-africa' : '';
         iconElement.innerHTML = `<img src="${iconPath}" alt="${regionData.name} icon"${imgClass ? ` class="${imgClass}"` : ''}>`;
     }

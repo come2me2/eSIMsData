@@ -528,7 +528,15 @@ body {
 /* Специальный стиль для иконки Африки - уменьшаем размер, чтобы не обрезалась */
 .country-flag-large img.region-icon-africa {
     width: 70px;
+    height: auto;
     max-height: 100px;
+    min-height: auto;
+    object-fit: contain;
+    object-position: center;
+    /* Убираем обрезание в Telegram Mini App */
+    overflow: visible;
+    display: block;
+    margin: 0 auto;
 }
 
 /* Для Local планов флаг должен быть прямоугольным без скруглений */
