@@ -26,12 +26,12 @@ function setupBackButton() {
         setTimeout(() => {
             if (tg && tg.BackButton) {
                 console.log('🔙 Region: Устанавливаем обработчик onClick');
-                tg.BackButton.onClick(() => {
+        tg.BackButton.onClick(() => {
                     console.log('🔙 Region: BackButton нажата, переходим на Local');
                     
                     if (tg && tg.HapticFeedback) {
                         try {
-                            tg.HapticFeedback.impactOccurred('light');
+            tg.HapticFeedback.impactOccurred('light');
                         } catch (e) {
                             console.warn('⚠️ Region: Ошибка при вызове HapticFeedback', e);
                         }
@@ -61,7 +61,7 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         console.log('🔙 Region: DOM загружен, настраиваем BackButton');
         setupBackButton();
-    });
+        });
 } else {
     console.log('🔙 Region: DOM уже загружен, настраиваем BackButton сразу');
     setupBackButton();

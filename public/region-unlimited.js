@@ -18,7 +18,7 @@ if (tg) {
         tg.BackButton.onClick(() => {
             console.log('🔙 Region Unlimited: BackButton нажата, переходим на Local');
             if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('light');
+            tg.HapticFeedback.impactOccurred('light');
             }
             // Переходим обратно на список регионов
             window.location.href = 'index.html?segment=region';
@@ -317,11 +317,11 @@ async function loadPlansFromAPI(regionName) {
         });
         // Fallback к захардкоженным планам
         unlimitedPlans = [
-            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-        ];
+    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
+    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
+    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
+    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
+];
         if (!selectedPlanId) {
             selectedPlanId = 'unlimited2';
         }

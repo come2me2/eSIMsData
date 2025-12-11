@@ -787,7 +787,7 @@ setInterval(() => {
         // Если мы на главной странице - обновляем кнопку в зависимости от сегмента
         // На Local - скрываем, на Region/Global - показываем
         if (currentSegment === 'local') {
-            tg.BackButton.hide();
+    tg.BackButton.hide();
         } else {
             tg.BackButton.show();
         }

@@ -107,3 +107,4 @@ curl "https://esim-data.vercel.app/api/cache/refresh?secret=esimsdata11&type=pla
 - `ESIMGO_API_KEY` - API ключ eSIM Go
 - `CACHE_REFRESH_SECRET` - Секретный ключ для защиты endpoints (по умолчанию: `change-me-in-production`)
 
+
