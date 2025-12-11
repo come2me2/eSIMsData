@@ -379,9 +379,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Инициализация приложения - загружает страны и затем обновляет контент
 async function initializeApp() {
-    // Если текущий сегмент - Local, переходим на отдельную страницу (главная страница)
+    // Если текущий сегмент - Local, переходим на отдельную страницу
     if (currentSegment === 'local') {
         window.location.href = 'local-countries.html';
+        return;
+    }
+    
+    // Если текущий сегмент - Region, показываем список регионов на этой странице
+    if (currentSegment === 'region') {
+        // Обновляем контент для Region
+        updateContent();
         return;
     }
     
