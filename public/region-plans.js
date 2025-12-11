@@ -209,11 +209,9 @@ const regionDataFull = {
         ]
     },
     'Oceania': {
-        count: 10,
+        count: 2,
         countries: [
-            'Australia', 'New Zealand', 'Fiji', 'Papua New Guinea',
-            'Samoa', 'Tonga', 'Vanuatu', 'Solomon Islands',
-            'New Caledonia', 'French Polynesia'
+            'Australia', 'New Zealand'
         ]
     }
 };
@@ -227,7 +225,7 @@ const regionCountryCounts = {
     'North America': 15,
     'Balkanas': 8,
     'Central Eurasia': 7,
-    'Oceania': 10
+    'Oceania': 2
 };
 
 // Get region data from URL
@@ -456,7 +454,7 @@ function setupRegionInfo() {
     const iconPath = `Region/${iconFileName}`;
     
     if (iconElement) {
-        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionData.name} icon" class="country-flag-img">`;
+        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionData.name} icon">`;
     }
     
     if (nameElement) {

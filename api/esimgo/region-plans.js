@@ -806,7 +806,7 @@ module.exports = async function handler(req, res) {
             'Latin America': ['AR', 'BO', 'BR', 'CL', 'CO', 'CR', 'DO', 'EC', 'SV', 'GT', 'HN', 'MX', 'NI', 'PA', 'PY', 'PE', 'UY', 'VE', 'CU', 'JM', 'BS', 'HT', 'TT'],
             'Africa': ['DZ', 'AO', 'BJ', 'BW', 'BF', 'BI', 'CM', 'CV', 'TD', 'CG', 'EG', 'ET', 'GH', 'KE', 'MG', 'MW', 'ML', 'MA', 'MZ', 'NA', 'NG', 'SN', 'ZA', 'TZ', 'TN'],
             'Asia': ['BD', 'KH', 'CN', 'IN', 'ID', 'JP', 'KZ', 'KG', 'LA', 'MY', 'MV', 'MN', 'MM', 'NP', 'PK', 'PH', 'SG', 'KR', 'LK', 'TW', 'TH', 'UZ', 'VN', 'AF', 'AM', 'AZ', 'BH', 'BT', 'BN', 'GE'],
-            'Oceania': ['AU', 'NZ', 'FJ', 'PG', 'WS', 'TO', 'VU', 'SB', 'NC', 'PF'],
+            'Oceania': ['AU', 'NZ'],
             'Balkanas': ['AL', 'BA', 'RS', 'ME', 'MK', 'BG', 'HR', 'SI'],
             'Central Eurasia': ['AM', 'KZ', 'KG', 'MD', 'RU', 'UA', 'GE']
         };

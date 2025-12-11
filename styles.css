@@ -498,7 +498,8 @@ body {
 
 .country-flag-large {
     width: 80px;
-    height: 60px;
+    min-height: 60px;
+    height: auto;
     margin-bottom: 16px;
     display: flex;
     align-items: center;
@@ -507,22 +508,45 @@ body {
     line-height: 0;
     border: none;
     background-color: transparent;
+    overflow: visible;
 }
 
-.country-flag-large img,
+/* Для Region планов - круглые флаги */
+.country-flag-large img:not(.country-flag-img) {
+    width: 80px;
+    height: auto;
+    max-height: 120px;
+    object-fit: contain;
+    display: block;
+    border-radius: 50%;
+    /* Prevent sub-pixel rendering issues */
+    transform: translate3d(0, 0, 0);
+    /* Crisp rendering for flag images */
+    image-rendering: -webkit-optimize-contrast;
+}
+
+/* Для Local планов флаг должен быть прямоугольным без скруглений */
 .country-flag-img {
     width: 80px;
     height: 60px;
     object-fit: cover;
     display: block;
-    border-radius: 8px;
-    /* Чёткие края скругления */
-    -webkit-mask-image: -webkit-radial-gradient(white, black);
-    mask-image: radial-gradient(white, black);
-    /* Prevent sub-pixel rendering issues */
+    border-radius: 0 !important;
+    /* Убираем маски и скругления для прямоугольных флагов */
+    -webkit-mask-image: none;
+    mask-image: none;
     transform: translate3d(0, 0, 0);
     /* Crisp rendering for flag images */
     image-rendering: -webkit-optimize-contrast;
+    /* Prevent blurring on high-DPI displays */
+    transform: translateZ(0);
+}
+
+/* Переопределяем для local планов - убираем скругление */
+.country-flag-large .country-flag-img {
+    border-radius: 0 !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
 }
 
 .country-name-large {

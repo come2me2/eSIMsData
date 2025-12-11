@@ -164,11 +164,9 @@ const regionData = {
         ]
     },
     'Oceania': {
-        count: 10,
+        count: 2,
         countries: [
-            'Australia', 'New Zealand', 'Fiji', 'Papua New Guinea',
-            'Samoa', 'Tonga', 'Vanuatu', 'Solomon Islands',
-            'New Caledonia', 'French Polynesia'
+            'Australia', 'New Zealand'
         ]
     }
 };
@@ -354,7 +352,7 @@ function setupRegionInfo() {
     const iconPath = `Region/${iconFileName}`;
     
     if (iconElement) {
-        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionName} icon" class="country-flag-img">`;
+        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionName} icon">`;
     }
     
     if (nameElement) {

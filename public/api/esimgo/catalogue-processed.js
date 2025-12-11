@@ -20,8 +20,8 @@ const regionMapping = {
     'Latin America': ['BR', 'MX', 'AR', 'CO', 'CL', 'PE', 'EC', 'VE', 'GT', 'CU', 'BO', 'DO', 'HN', 'PY', 'SV', 'NI', 'CR', 'PA', 'UY', 'JM'],
     'North America': ['US', 'CA', 'MX', 'GT', 'HN', 'SV', 'NI', 'CR', 'PA', 'CU', 'JM', 'HT', 'DO', 'TT', 'BS'],
     'Balkanas': ['AL', 'BA', 'BG', 'HR', 'GR', 'ME', 'MK', 'RS'],
-    'Central Eurasia': ['KZ', 'KG', 'TJ', 'TM', 'UZ', 'AF', 'AM', 'AZ', 'GE', 'MN', 'RU', 'UA'],
-    'Oceania': ['AU', 'NZ', 'FJ', 'PG', 'WS', 'TO', 'VU', 'SB', 'NC', 'PF']
+    'Central Eurasia': ['AM', 'KZ', 'KG', 'MD', 'RU', 'UA', 'GE'],
+    'Oceania': ['AU', 'NZ']
 };
 
 /**

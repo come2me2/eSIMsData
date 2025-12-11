@@ -149,19 +149,16 @@ const regionData = {
         ]
     },
     'Central Eurasia': {
-        count: 12,
+        count: 7,
         countries: [
-            'Kazakhstan', 'Kyrgyzstan', 'Tajikistan', 'Turkmenistan',
-            'Uzbekistan', 'Afghanistan', 'Armenia', 'Azerbaijan',
-            'Georgia', 'Mongolia', 'Russia', 'Ukraine'
+            'Armenia', 'Kazakhstan', 'Kyrgyzstan', 'Moldova',
+            'Russia', 'Ukraine', 'Georgia'
         ]
     },
     'Oceania': {
-        count: 10,
+        count: 2,
         countries: [
-            'Australia', 'New Zealand', 'Fiji', 'Papua New Guinea',
-            'Samoa', 'Tonga', 'Vanuatu', 'Solomon Islands',
-            'New Caledonia', 'French Polynesia'
+            'Australia', 'New Zealand'
         ]
     }
 };
@@ -200,7 +197,7 @@ function setupRegionInfo() {
     const iconPath = `Region/${iconFileName}`;
     
     if (iconElement) {
-        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionName} icon" class="country-flag-img">`;
+        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionName} icon">`;
     }
     
     if (nameElement) {
