@@ -1,6 +1,17 @@
 // Telegram Web App initialization
 let tg = window.Telegram.WebApp;
 
+// Функция для скрытия BackButton (показываем Close)
+function hideBackButton() {
+    // Обновляем ссылку на tg, так как она может измениться
+    tg = window.Telegram?.WebApp;
+    
+    if (tg && tg.BackButton) {
+        tg.BackButton.hide();
+        console.log('🔙 BackButton скрыта (Local страница - показываем Close)');
+    }
+}
+
 // Initialize Telegram Web App
 if (tg) {
     tg.ready();
@@ -11,10 +22,7 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
     
     // На странице Local всегда скрываем BackButton (показываем Close)
-    if (tg.BackButton) {
-        tg.BackButton.hide();
-        console.log('🔙 BackButton скрыта (Local страница - показываем Close)');
-    }
+    hideBackButton();
 }
 
 // Flag version for cache busting
@@ -276,10 +284,7 @@ async function initializeApp() {
     setupSearch();
     
     // Убеждаемся, что BackButton скрыта (показываем Close)
-    if (tg && tg.BackButton) {
-        tg.BackButton.hide();
-        console.log('🔙 BackButton скрыта (Local страница - показываем Close)');
-    }
+    hideBackButton();
 }
 
 // Запускаем приложение при загрузке DOM
@@ -297,10 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
     
     // Принудительно скрываем BackButton (чтобы показать Close)
-    if (tg && tg.BackButton) {
-        tg.BackButton.hide();
-        console.log('🔙 BackButton скрыта (Local страница - показываем Close)');
-    }
+    hideBackButton();
 });
 
 // Также обновляем BackButton при возврате на страницу
@@ -316,12 +318,11 @@ window.addEventListener('popstate', () => {
     });
     
     // Скрываем BackButton
-    if (tg && tg.BackButton) {
-        tg.BackButton.hide();
-    }
+    hideBackButton();
 });
 
 window.addEventListener('pageshow', (event) => {
+    console.log('📄 Local страница показана', { persisted: event.persisted });
     // Обновляем активный сегмент
     const segmentButtons = document.querySelectorAll('.segment-btn');
     segmentButtons.forEach(btn => {
@@ -332,10 +333,12 @@ window.addEventListener('pageshow', (event) => {
         }
     });
     
-    // Скрываем BackButton
-    if (tg && tg.BackButton) {
-        tg.BackButton.hide();
-    }
+    // Скрываем BackButton (на Local всегда показываем Close)
+    hideBackButton();
+    
+    // Дополнительная проверка через небольшую задержку
+    setTimeout(hideBackButton, 100);
+    setTimeout(hideBackButton, 300);
 });
 
 // Периодическая проверка (на случай, если другие обработчики не сработали)
@@ -350,9 +353,31 @@ setInterval(() => {
         }
     });
     
-    // Скрываем BackButton
-    if (tg && tg.BackButton) {
-        tg.BackButton.hide();
-    }
+    // Скрываем BackButton (на Local всегда показываем Close)
+    hideBackButton();
 }, 300);
+
+// Обработчик для случаев, когда страница становится видимой
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        console.log('👁️ Local страница стала видимой, скрываем BackButton');
+        hideBackButton();
+        setTimeout(hideBackButton, 100);
+    }
+});
+
+// Обработчик для focus (когда пользователь возвращается на вкладку)
+window.addEventListener('focus', () => {
+    console.log('🎯 Local страница получила фокус, скрываем BackButton');
+    hideBackButton();
+    setTimeout(hideBackButton, 100);
+});
+
+// Дополнительная проверка при полной загрузке страницы
+window.addEventListener('load', () => {
+    console.log('📄 Local страница полностью загружена, скрываем BackButton');
+    hideBackButton();
+    setTimeout(hideBackButton, 100);
+    setTimeout(hideBackButton, 300);
+});
 
