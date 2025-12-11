@@ -14,7 +14,7 @@ const esimgoClient = require('./client');
  * Группировка стран по регионам
  */
 const regionMapping = {
-    'Africa': ['ZA', 'EG', 'KE', 'NG', 'MA', 'TZ', 'GH', 'ET', 'UG', 'DZ', 'SD', 'AO', 'MZ', 'CM', 'CI', 'SN', 'ML', 'BF', 'MW', 'ZM', 'ZW', 'TN', 'MG', 'RW', 'BJ'],
+    'Africa': ['EG', 'MA', 'TZ', 'UG', 'TN', 'ZA', 'ZM', 'MG', 'NG', 'KE', 'MU', 'RE'],
     'Asia': ['CN', 'IN', 'JP', 'KR', 'TH', 'VN', 'ID', 'MY', 'SG', 'PH', 'BD', 'PK', 'LK', 'KH', 'MM', 'LA', 'MN', 'NP', 'BT', 'MV', 'BN', 'TL', 'AF', 'IQ', 'IR', 'SA', 'AE', 'IL', 'JO', 'LB'],
     'Europe': ['GB', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'CH', 'AT', 'SE', 'NO', 'DK', 'FI', 'PL', 'CZ', 'GR', 'PT', 'IE', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'LU', 'MT', 'CY', 'IS', 'AL', 'BA', 'RS', 'ME', 'MK'],
     'Latin America': ['BR', 'MX', 'AR', 'CO', 'CL', 'PE', 'EC', 'VE', 'GT', 'CU', 'BO', 'DO', 'HN', 'PY', 'SV', 'NI', 'CR', 'PA', 'UY', 'JM'],

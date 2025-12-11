@@ -804,7 +804,7 @@ module.exports = async function handler(req, res) {
             'Europe': ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IS', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'CH', 'GB', 'AL', 'BA', 'RS', 'ME', 'MK', 'CYP'], // Добавлен CYP для Northern Cyprus
             'North America': ['US', 'CA', 'MX'],
             'Latin America': ['AR', 'BO', 'BR', 'CL', 'CO', 'CR', 'DO', 'EC', 'SV', 'GT', 'HN', 'MX', 'NI', 'PA', 'PY', 'PE', 'UY', 'VE', 'CU', 'JM', 'BS', 'HT', 'TT'],
-            'Africa': ['DZ', 'AO', 'BJ', 'BW', 'BF', 'BI', 'CM', 'CV', 'TD', 'CG', 'EG', 'ET', 'GH', 'KE', 'MG', 'MW', 'ML', 'MA', 'MZ', 'NA', 'NG', 'SN', 'ZA', 'TZ', 'TN'],
+            'Africa': ['EG', 'MA', 'TZ', 'UG', 'TN', 'ZA', 'ZM', 'MG', 'NG', 'KE', 'MU', 'RE'],
             'Asia': ['BD', 'KH', 'CN', 'IN', 'ID', 'JP', 'KZ', 'KG', 'LA', 'MY', 'MV', 'MN', 'MM', 'NP', 'PK', 'PH', 'SG', 'KR', 'LK', 'TW', 'TH', 'UZ', 'VN', 'AF', 'AM', 'AZ', 'BH', 'BT', 'BN', 'GE'],
             'Oceania': ['AU', 'NZ'],
             'Balkanas': ['AL', 'BA', 'RS', 'ME', 'MK', 'BG', 'HR', 'SI'],
