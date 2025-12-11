@@ -431,14 +431,12 @@ async function initializeApp() {
     // Настраиваем сегментированный контрол
     setupSegmentedControl();
     
-    // Загружаем страны из API (с кэшированием)
-    // Функция loadCountriesFromAPI сама обновит UI при загрузке из кэша
-    await loadCountriesFromAPI();
+    // Сначала показываем статичный список стран (мгновенно, без ожидания)
+    renderCountries(countries);
     
-    // Рендерим список стран (если еще не отрендерен из кэша)
-    if (countries.length > 0) {
-        renderCountries(countries);
-    }
+    // Затем загружаем актуальные данные из API (с кэшированием)
+    // Функция loadCountriesFromAPI обновит UI с актуальными данными
+    await loadCountriesFromAPI();
     
     // Настраиваем поиск
     setupSearch();
