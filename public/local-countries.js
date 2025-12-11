@@ -71,7 +71,7 @@ function getFlagPath(countryCode) {
 // Статичный список всех стран с кодами (для мгновенного отображения при первом запуске)
 // Этот список будет показан пользователю сразу, до загрузки из API
 const staticCountries = [
-    { name: 'Afghanistan', code: 'AF' }, { name: 'Åland Islands', code: 'AX' }, { name: 'Albania', code: 'AL' },
+    { name: 'Åland Islands', code: 'AX' }, { name: 'Albania', code: 'AL' },
     { name: 'Algeria', code: 'DZ' }, { name: 'Andorra', code: 'AD' }, { name: 'Angola', code: 'AO' },
     { name: 'Anguilla', code: 'AI' }, { name: 'Antigua and Barbuda', code: 'AG' }, { name: 'Argentina', code: 'AR' },
     { name: 'Armenia', code: 'AM' }, { name: 'Australia', code: 'AU' }, { name: 'Austria', code: 'AT' },
