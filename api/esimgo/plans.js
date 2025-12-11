@@ -355,7 +355,9 @@ module.exports = async function handler(req, res) {
         };
         
         // Определяем ключ кэша для всех типов запросов
-        const cacheKey = cache.getPlansCacheKey(countryCode, region, category);
+        // Для Local явно указываем category='local' в ключе кэша, чтобы каждая страна имела свой кэш
+        const effectiveCategory = isLocal ? 'local' : (isGlobal ? 'global' : category);
+        const cacheKey = cache.getPlansCacheKey(countryCode, region, effectiveCategory);
         
         // Проверяем кэш перед запросом к API
         const cachedData = cache.get(cacheKey, cache.getTTL('plans'));
