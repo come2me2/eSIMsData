@@ -36,18 +36,35 @@ let unlimitedPlans = [];
 
 /**
  * Загрузка реальных планов из eSIM Go API
+ * Поддерживает country, region и global типы
  */
-async function loadPlansFromAPI(countryCode) {
-    console.log('🔵 loadPlansFromAPI called with countryCode:', countryCode);
+async function loadPlansFromAPI(countryCode, regionName, orderType) {
+    console.log('🔵 loadPlansFromAPI called:', { countryCode, regionName, orderType });
     
     try {
-        const params = new URLSearchParams();
-        if (countryCode) {
-            params.append('country', countryCode);
-        }
+        let apiUrl;
         
-        const apiUrl = `/api/esimgo/plans?${params.toString()}`;
-        console.log('🔵 Fetching plans from:', apiUrl);
+        // Определяем правильный API endpoint в зависимости от типа заказа
+        if (orderType === 'region' && regionName) {
+            // Для region используем специальный endpoint
+            const params = new URLSearchParams();
+            params.append('region', regionName);
+            apiUrl = `/api/esimgo/region-plans?${params.toString()}`;
+            console.log('🔵 Fetching region plans from:', apiUrl);
+        } else if (orderType === 'global') {
+            // Для global используем category=global
+            apiUrl = `/api/esimgo/plans?category=global`;
+            console.log('🔵 Fetching global plans from:', apiUrl);
+        } else if (countryCode) {
+            // Для country используем стандартный endpoint с country параметром
+            const params = new URLSearchParams();
+            params.append('country', countryCode);
+            apiUrl = `/api/esimgo/plans?${params.toString()}`;
+            console.log('🔵 Fetching country plans from:', apiUrl);
+        } else {
+            console.warn('⚠️ No valid parameters for loading plans');
+            return false;
+        }
         
         const response = await fetch(apiUrl);
         console.log('🔵 Response status:', response.status, response.statusText);
@@ -80,9 +97,11 @@ async function loadPlansFromAPI(countryCode) {
             });
             
             console.log('Plans loaded from API:', {
+                type: orderType,
                 standard: standardPlans.length,
                 unlimited: unlimitedPlans.length,
                 country: countryCode,
+                region: regionName,
                 sampleStandard: standardPlans[0] || null,
                 sampleUnlimited: unlimitedPlans[0] || null
             });
@@ -414,9 +433,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Загружаем реальные планы из API
     console.log('🔵 DOMContentLoaded - orderData:', orderData);
     const countryCode = orderData?.code || null;
-    console.log('🔵 Loading plans for country:', countryCode);
+    const regionName = orderData?.name || null;
+    const orderType = orderData?.type || 'country';
+    console.log('🔵 Loading plans:', { countryCode, regionName, orderType });
     
-    const plansLoaded = await loadPlansFromAPI(countryCode);
+    const plansLoaded = await loadPlansFromAPI(countryCode, regionName, orderType);
     
     console.log('🔵 Plans loaded status:', plansLoaded, {
         standardCount: standardPlans.length,
