@@ -178,13 +178,82 @@ let unlimitedPlans = [];
 let selectedPlanId = null; // Default selected
 
 // Функция загрузки планов из API
-async function loadPlansFromAPI(regionName) {
-    console.log('🔵 loadPlansFromAPI (unlimited) called with region:', regionName);
+async function loadPlansFromAPI(regionName, useCache = true) {
+    console.log('🔵 loadPlansFromAPI (unlimited) called with region:', regionName, 'useCache:', useCache);
     
-    // Кэширование отключено - всегда загружаем из API
-    // const cacheKey = `region_plans_cache_${regionName}`;
-    // const cacheTimestampKey = `region_plans_cache_timestamp_${regionName}`;
-    // const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
+    // Кэширование включено - сначала проверяем кэш для мгновенной загрузки
+    const cacheKey = `region_plans_cache_${regionName}`;
+    const cacheTimestampKey = `region_plans_cache_timestamp_${regionName}`;
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
+    
+    // Сначала проверяем кэш для мгновенной загрузки
+    if (useCache) {
+        try {
+            const cachedData = localStorage.getItem(cacheKey);
+            const cacheTimestamp = localStorage.getItem(cacheTimestampKey);
+            
+            if (cachedData && cacheTimestamp) {
+                const cacheAge = Date.now() - parseInt(cacheTimestamp);
+                if (cacheAge < CACHE_TTL) {
+                    console.log(`✅ Loading ${regionName} unlimited plans from localStorage cache (instant load)`);
+                    const result = JSON.parse(cachedData);
+                    
+                    // Используем данные из кэша для мгновенной загрузки
+                    if (result.success && result.data) {
+                        unlimitedPlans = result.data.unlimited || [];
+                        
+                        // НЕ перезаписываем regionData данными из API
+                        // Используем только предопределенные данные из regionData
+                        
+                        // Добавляем ID для совместимости
+                        unlimitedPlans.forEach((plan, index) => {
+                            if (!plan.id) {
+                                plan.id = plan.bundle_name || `unlimited${index + 1}`;
+                            }
+                        });
+                        
+                        if (unlimitedPlans.length > 0 && !selectedPlanId) {
+                            selectedPlanId = unlimitedPlans[0].id;
+                        }
+                        
+                        // Обновляем счетчик стран из предопределенных данных
+                        const regionInfo = regionData[regionName] || regionData['Africa'];
+                        if (regionInfo) {
+                            const infoTextElement = document.getElementById('regionInfoText');
+                            if (infoTextElement) {
+                                infoTextElement.textContent = `Supported in countries: ${regionInfo.count}`;
+                            }
+                        }
+                        
+                        console.log(`✅ ${regionName} unlimited plans loaded from cache:`, unlimitedPlans.length);
+                        
+                        // Обновляем UI с кэшированными данными
+                        renderPlans();
+                        updateInfoBox();
+                        
+                        // Возвращаем true, но продолжаем обновление из API в фоне
+                        // Это позволяет показать кэшированные данные сразу
+                        setTimeout(() => {
+                            loadPlansFromAPI(regionName, false).then((success) => {
+                                if (success) {
+                                    // Обновляем UI с актуальными данными из API
+                                    renderPlans();
+                                    updateInfoBox();
+                                }
+                            });
+                        }, 100);
+                        return true;
+                    }
+                } else {
+                    console.log('⚠️ Cache expired, fetching fresh data');
+                    localStorage.removeItem(cacheKey);
+                    localStorage.removeItem(cacheTimestampKey);
+                }
+            }
+        } catch (cacheError) {
+            console.warn('⚠️ Error reading from cache:', cacheError);
+        }
+    }
     
     try {
         const params = new URLSearchParams();
@@ -209,14 +278,14 @@ async function loadPlansFromAPI(regionName) {
         const result = await response.json();
         console.log('🔵 API response:', result);
         
-        // Кэширование отключено
-        // try {
-        //     localStorage.setItem(cacheKey, JSON.stringify(result));
-        //     localStorage.setItem(cacheTimestampKey, Date.now().toString());
-        //     console.log(`✅ ${regionName} unlimited plans saved to localStorage cache`);
-        // } catch (cacheError) {
-        //     console.warn('⚠️ Error saving to cache:', cacheError);
-        // }
+        // Сохраняем в кэш для следующего запуска
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(result));
+            localStorage.setItem(cacheTimestampKey, Date.now().toString());
+            console.log(`✅ ${regionName} unlimited plans saved to localStorage cache`);
+        } catch (cacheError) {
+            console.warn('⚠️ Error saving to cache:', cacheError);
+        }
         
         if (result.success && result.data) {
             unlimitedPlans = result.data.unlimited || [];

@@ -64,13 +64,85 @@ function updateGlobalCountriesCount(count) {
 }
 
 // Функция загрузки планов из API (глобальные планы - без фильтров)
-async function loadPlansFromAPI() {
-    console.log('🔵 loadPlansFromAPI called for global plans');
+async function loadPlansFromAPI(useCache = true) {
+    console.log('🔵 loadPlansFromAPI called for global plans, useCache:', useCache);
     
-    // Кэширование отключено - всегда загружаем из API
-    // const cacheKey = 'global_plans_cache';
-    // const cacheTimestampKey = 'global_plans_cache_timestamp';
-    // const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
+    // Кэширование включено - сначала проверяем кэш для мгновенной загрузки
+    const cacheKey = 'global_plans_cache';
+    const cacheTimestampKey = 'global_plans_cache_timestamp';
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
+    
+    // Сначала проверяем кэш для мгновенной загрузки
+    if (useCache) {
+        try {
+            const cachedData = localStorage.getItem(cacheKey);
+            const cacheTimestamp = localStorage.getItem(cacheTimestampKey);
+            
+            if (cachedData && cacheTimestamp) {
+                const cacheAge = Date.now() - parseInt(cacheTimestamp);
+                if (cacheAge < CACHE_TTL) {
+                    console.log('✅ Loading global plans from localStorage cache (instant load)');
+                    const result = JSON.parse(cachedData);
+                    
+                    // Используем данные из кэша для мгновенной загрузки
+                    if (result.success && result.data) {
+                        standardPlans = result.data.standard || [];
+                        unlimitedPlans = result.data.unlimited || [];
+                        
+                        // Обновляем список стран
+                        if (result.data.countries && Array.isArray(result.data.countries)) {
+                            const apiCountries = result.data.countries.map(c => c.name || c.code);
+                            if (apiCountries.length > 0) {
+                                globalCountries.length = 0;
+                                globalCountries.push(...apiCountries);
+                                updateGlobalCountriesCount(apiCountries.length);
+                            }
+                        }
+                        
+                        // Добавляем ID для совместимости
+                        standardPlans.forEach((plan, index) => {
+                            if (!plan.id) {
+                                plan.id = `plan${index + 1}`;
+                            }
+                        });
+                        unlimitedPlans.forEach((plan, index) => {
+                            if (!plan.id) {
+                                plan.id = `unlimited${index + 1}`;
+                            }
+                        });
+                        
+                        console.log('✅ Global plans loaded from cache:', {
+                            standard: standardPlans.length,
+                            unlimited: unlimitedPlans.length
+                        });
+                        
+                        // Обновляем UI с кэшированными данными
+                        renderPlans();
+                        updateInfoBox();
+                        
+                        // Возвращаем true, но продолжаем обновление из API в фоне
+                        // Это позволяет показать кэшированные данные сразу
+                        setTimeout(() => {
+                            loadPlansFromAPI(false).then((success) => {
+                                if (success) {
+                                    // Обновляем UI с актуальными данными из API
+                                    renderPlans();
+                                    updateInfoBox();
+                                }
+                            });
+                        }, 100);
+                        return true;
+                    }
+                } else {
+                    console.log('⚠️ Cache expired, fetching fresh data');
+                    localStorage.removeItem(cacheKey);
+                    localStorage.removeItem(cacheTimestampKey);
+                }
+            }
+        } catch (cacheError) {
+            console.warn('⚠️ Error reading from cache:', cacheError);
+        }
+    }
     
     try {
         // Для глобальных планов передаем параметр category=global для загрузки из API
@@ -89,14 +161,14 @@ async function loadPlansFromAPI() {
         const result = await response.json();
         console.log('🔵 API response:', result);
         
-        // Кэширование отключено
-        // try {
-        //     localStorage.setItem(cacheKey, JSON.stringify(result));
-        //     localStorage.setItem(cacheTimestampKey, Date.now().toString());
-        //     console.log('✅ Global plans saved to localStorage cache');
-        // } catch (cacheError) {
-        //     console.warn('⚠️ Error saving to cache:', cacheError);
-        // }
+        // Сохраняем в кэш для следующего запуска
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(result));
+            localStorage.setItem(cacheTimestampKey, Date.now().toString());
+            console.log('✅ Global plans saved to localStorage cache');
+        } catch (cacheError) {
+            console.warn('⚠️ Error saving to cache:', cacheError);
+        }
         
         if (result.success && result.data) {
             standardPlans = result.data.standard || [];
