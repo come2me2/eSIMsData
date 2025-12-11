@@ -67,65 +67,10 @@ function updateGlobalCountriesCount(count) {
 async function loadPlansFromAPI() {
     console.log('🔵 loadPlansFromAPI called for global plans');
     
-    // Проверяем клиентский кэш (localStorage)
-    const cacheKey = 'global_plans_cache';
-    const cacheTimestampKey = 'global_plans_cache_timestamp';
-    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
-    
-    try {
-        // Пытаемся загрузить из кэша
-        const cachedData = localStorage.getItem(cacheKey);
-        const cacheTimestamp = localStorage.getItem(cacheTimestampKey);
-        
-        if (cachedData && cacheTimestamp) {
-            const cacheAge = Date.now() - parseInt(cacheTimestamp);
-            if (cacheAge < CACHE_TTL) {
-                console.log('✅ Loading global plans from localStorage cache');
-                const result = JSON.parse(cachedData);
-                
-                // Используем данные из кэша
-                if (result.success && result.data) {
-                    standardPlans = result.data.standard || [];
-                    unlimitedPlans = result.data.unlimited || [];
-                    
-                    // Обновляем список стран
-                    if (result.data.countries && Array.isArray(result.data.countries)) {
-                        const apiCountries = result.data.countries.map(c => c.name || c.code);
-                        if (apiCountries.length > 0) {
-                            globalCountries.length = 0;
-                            globalCountries.push(...apiCountries);
-                            updateGlobalCountriesCount(apiCountries.length);
-                        }
-                    }
-                    
-                    // Добавляем ID для совместимости
-                    standardPlans.forEach((plan, index) => {
-                        if (!plan.id) {
-                            plan.id = `plan${index + 1}`;
-                        }
-                    });
-                    unlimitedPlans.forEach((plan, index) => {
-                        if (!plan.id) {
-                            plan.id = `unlimited${index + 1}`;
-                        }
-                    });
-                    
-                    console.log('✅ Global plans loaded from cache:', {
-                        standard: standardPlans.length,
-                        unlimited: unlimitedPlans.length
-                    });
-                    
-                    return true;
-                }
-            } else {
-                console.log('⚠️ Cache expired, fetching fresh data');
-                localStorage.removeItem(cacheKey);
-                localStorage.removeItem(cacheTimestampKey);
-            }
-        }
-    } catch (cacheError) {
-        console.warn('⚠️ Error reading from cache:', cacheError);
-    }
+    // Кэширование отключено - всегда загружаем из API
+    // const cacheKey = 'global_plans_cache';
+    // const cacheTimestampKey = 'global_plans_cache_timestamp';
+    // const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
     
     try {
         // Для глобальных планов передаем параметр category=global для загрузки из API
@@ -144,14 +89,14 @@ async function loadPlansFromAPI() {
         const result = await response.json();
         console.log('🔵 API response:', result);
         
-        // Сохраняем в кэш
-        try {
-            localStorage.setItem(cacheKey, JSON.stringify(result));
-            localStorage.setItem(cacheTimestampKey, Date.now().toString());
-            console.log('✅ Global plans saved to localStorage cache');
-        } catch (cacheError) {
-            console.warn('⚠️ Error saving to cache:', cacheError);
-        }
+        // Кэширование отключено
+        // try {
+        //     localStorage.setItem(cacheKey, JSON.stringify(result));
+        //     localStorage.setItem(cacheTimestampKey, Date.now().toString());
+        //     console.log('✅ Global plans saved to localStorage cache');
+        // } catch (cacheError) {
+        //     console.warn('⚠️ Error saving to cache:', cacheError);
+        // }
         
         if (result.success && result.data) {
             standardPlans = result.data.standard || [];
