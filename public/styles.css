@@ -525,6 +525,14 @@ body {
     image-rendering: -webkit-optimize-contrast;
 }
 
+/* Специальные стили для контейнера иконки Африки */
+.country-flag-large.africa-icon-container {
+    min-height: 100px !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 5px 0;
+}
+
 /* Специальный стиль для иконки Африки - уменьшаем размер, чтобы не обрезалась */
 .country-flag-large img.region-icon-africa {
     width: 70px;
