@@ -1,14 +1,27 @@
 // Telegram Web App initialization
 let tg = window.Telegram.WebApp;
 
+// Немедленно скрываем BackButton при загрузке скрипта (до инициализации)
+// Это важно, так как предыдущая страница могла показать BackButton
+if (tg && tg.BackButton) {
+    tg.BackButton.hide();
+    console.log('🔙 BackButton скрыта немедленно при загрузке скрипта');
+}
+
 // Функция для скрытия BackButton (показываем Close)
+// На странице local-countries.html всегда скрываем BackButton
 function hideBackButton() {
     // Обновляем ссылку на tg, так как она может измениться
     tg = window.Telegram?.WebApp;
     
     if (tg && tg.BackButton) {
+        // Всегда скрываем BackButton на странице Local (показываем Close)
         tg.BackButton.hide();
-        console.log('🔙 BackButton скрыта (Local страница - показываем Close)');
+        console.log('🔙 BackButton скрыта (Local страница - показываем Close)', {
+            pathname: window.location.pathname,
+            href: window.location.href,
+            isVisible: tg.BackButton.isVisible
+        });
     }
 }
 
@@ -22,7 +35,12 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
     
     // На странице Local всегда скрываем BackButton (показываем Close)
+    // Делаем это сразу и несколько раз для надежности
     hideBackButton();
+    setTimeout(hideBackButton, 0);
+    setTimeout(hideBackButton, 50);
+    setTimeout(hideBackButton, 100);
+    setTimeout(hideBackButton, 200);
 }
 
 // Flag version for cache busting
@@ -299,10 +317,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // Сразу скрываем BackButton (чтобы показать Close) до инициализации
+    hideBackButton();
+    setTimeout(hideBackButton, 0);
+    setTimeout(hideBackButton, 50);
+    
     initializeApp();
     
-    // Принудительно скрываем BackButton (чтобы показать Close)
+    // Принудительно скрываем BackButton после инициализации (чтобы показать Close)
     hideBackButton();
+    setTimeout(hideBackButton, 100);
+    setTimeout(hideBackButton, 200);
+    setTimeout(hideBackButton, 300);
 });
 
 // Также обновляем BackButton при возврате на страницу
@@ -342,6 +368,7 @@ window.addEventListener('pageshow', (event) => {
 });
 
 // Периодическая проверка (на случай, если другие обработчики не сработали)
+// Проверяем каждые 100мс для более быстрой реакции
 setInterval(() => {
     // Обновляем активный сегмент
     const segmentButtons = document.querySelectorAll('.segment-btn');
@@ -355,7 +382,7 @@ setInterval(() => {
     
     // Скрываем BackButton (на Local всегда показываем Close)
     hideBackButton();
-}, 300);
+}, 100);
 
 // Обработчик для случаев, когда страница становится видимой
 document.addEventListener('visibilitychange', () => {
