@@ -100,60 +100,57 @@ const regionIconMap = {
 // Region country counts and country lists
 const regionData = {
     'Africa': {
-        count: 25,
+        count: 12,
         countries: [
-            'Algeria', 'Angola', 'Benin', 'Botswana', 'Burkina Faso',
-            'Burundi', 'Cameroon', 'Cape Verde', 'Chad', 'Congo',
-            'Egypt', 'Ethiopia', 'Ghana', 'Kenya', 'Madagascar',
-            'Malawi', 'Mali', 'Morocco', 'Mozambique', 'Namibia',
-            'Nigeria', 'Senegal', 'South Africa', 'Tanzania', 'Tunisia'
+            'Egypt', 'Morocco', 'Tanzania', 'Uganda', 'Tunisia',
+            'South Africa', 'Zambia', 'Madagascar', 'Nigeria', 'Kenya',
+            'Mauritius', 'Réunion'
         ]
     },
     'Asia': {
-        count: 30,
+        count: 12,
         countries: [
-            'Bangladesh', 'Cambodia', 'China', 'India', 'Indonesia',
-            'Japan', 'Kazakhstan', 'Kyrgyzstan', 'Laos', 'Malaysia',
-            'Maldives', 'Mongolia', 'Myanmar', 'Nepal', 'Pakistan',
-            'Philippines', 'Singapore', 'South Korea', 'Sri Lanka', 'Taiwan',
-            'Thailand', 'Uzbekistan', 'Vietnam', 'Afghanistan', 'Armenia',
-            'Azerbaijan', 'Bahrain', 'Bhutan', 'Brunei', 'Georgia'
+            'Hong Kong', 'Indonesia', 'Korea, South', 'Macao', 'Malaysia',
+            'Pakistan', 'Singapore', 'Sri Lanka', 'Taiwan', 'Thailand',
+            'Uzbekistan', 'Vietnam'
         ]
     },
     'Europe': {
-        count: 35,
+        count: 33,
         countries: [
-            'Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus',
-            'Czech Republic', 'Denmark', 'Estonia', 'Finland', 'France',
-            'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland',
-            'Italy', 'Latvia', 'Lithuania', 'Luxembourg', 'Malta',
-            'Netherlands', 'Norway', 'Poland', 'Portugal', 'Romania',
-            'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland',
-            'China', 'Albania', 'Belarus', 'Bosnia', 'Serbia'
+            'Austria', 'Denmark', 'Ireland', 'Italy', 'Sweden',
+            'France', 'Bulgaria', 'Cyprus', 'Estonia', 'Finland',
+            'Greece', 'Hungary', 'Latvia', 'Lithuania', 'Netherlands',
+            'Norway', 'Poland', 'Romania', 'Slovakia', 'Spain',
+            'Germany', 'Malta', 'Switzerland', 'Belgium', 'Croatia',
+            'Czech Republic', 'Liechtenstein', 'Luxembourg', 'Portugal', 'Slovenia',
+            'Iceland', 'Vatican City', 'Moldova'
         ]
     },
     'Latin America': {
-        count: 20,
+        count: 38,
         countries: [
-            'Argentina', 'Bolivia', 'Brazil', 'Chile', 'Colombia',
-            'Costa Rica', 'Dominican Republic', 'Ecuador', 'El Salvador', 'Guatemala',
-            'Honduras', 'Mexico', 'Nicaragua', 'Panama', 'Paraguay',
-            'Peru', 'Uruguay', 'Venezuela', 'Cuba', 'Jamaica'
+            'Argentina', 'Brazil', 'Chile', 'Colombia', 'Costa Rica',
+            'Ecuador', 'El Salvador', 'Peru', 'Uruguay', 'French Guiana',
+            'Mexico', 'Anguilla', 'Antigua and Barbuda', 'Bahamas', 'Barbados',
+            'Bermuda', 'Caribbean Netherlands', 'Cayman Islands', 'Curaçao', 'Dominica',
+            'Grenada', 'Guyana', 'Haiti', 'Jamaica', 'Martinique',
+            'Montserrat', 'Netherlands Antilles', 'Saint Kitts and Nevis', 'Saint Lucia',
+            'Saint Vincent and the Grenadines', 'Trinidad and Tobago', 'Turks and Caicos Islands',
+            'British Virgin Islands', 'Suriname', 'Guatemala', 'Honduras', 'Nicaragua', 'Panama'
         ]
     },
     'North America': {
-        count: 15,
+        count: 3,
         countries: [
-            'United States', 'Canada', 'Mexico', 'Guatemala', 'Honduras',
-            'El Salvador', 'Nicaragua', 'Costa Rica', 'Panama', 'Cuba',
-            'Jamaica', 'Haiti', 'Dominican Republic', 'Trinidad and Tobago', 'Bahamas'
+            'Canada', 'Mexico', 'United States'
         ]
     },
     'Balkanas': {
-        count: 8,
+        count: 10,
         countries: [
             'Albania', 'Bosnia and Herzegovina', 'Bulgaria', 'Croatia',
-            'Greece', 'Montenegro', 'North Macedonia', 'Serbia'
+            'Greece', 'Montenegro', 'North Macedonia', 'Romania', 'Serbia', 'Slovenia'
         ]
     },
     'Central Eurasia': {
