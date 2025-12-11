@@ -37,13 +37,13 @@ function setupBackButton() {
                         }
                     }
                     
-                    // Переходим обратно на список регионов
+                    // Переходим обратно на Local страницу (главная)
                     try {
-                        window.location.href = 'index.html?segment=region';
+                        window.location.href = 'local-countries.html';
                     } catch (e) {
-                        console.error('❌ Region: Ошибка при переходе на список регионов', e);
+                        console.error('❌ Region: Ошибка при переходе на Local', e);
                         // Fallback на window.location
-                        window.location = 'index.html?segment=region';
+                        window.location = 'local-countries.html';
                     }
                 });
                 console.log('🔙 Region: BackButton настроена успешно');
@@ -454,7 +454,10 @@ function setupRegionInfo() {
     const iconPath = `Region/${iconFileName}`;
     
     if (iconElement) {
-        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionData.name} icon">`;
+        // Для иконки Африки добавляем специальный класс для уменьшения размера
+        const isAfrica = regionData.name === 'Africa';
+        const imgClass = isAfrica ? 'region-icon-africa' : '';
+        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionData.name} icon"${imgClass ? ` class="${imgClass}"` : ''}>`;
     }
     
     if (nameElement) {

@@ -525,6 +525,12 @@ body {
     image-rendering: -webkit-optimize-contrast;
 }
 
+/* Специальный стиль для иконки Африки - уменьшаем размер, чтобы не обрезалась */
+.country-flag-large img.region-icon-africa {
+    width: 70px;
+    max-height: 100px;
+}
+
 /* Для Local планов флаг должен быть прямоугольным без скруглений */
 .country-flag-img {
     width: 80px;

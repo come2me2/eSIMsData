@@ -253,6 +253,16 @@ function setupSegmentedControl() {
 
 // Initialize app
 async function initializeApp() {
+    // Сначала активируем кнопку Local
+    const segmentButtons = document.querySelectorAll('.segment-btn');
+    segmentButtons.forEach(btn => {
+        if (btn.dataset.segment === 'local') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
     // Настраиваем сегментированный контрол
     setupSegmentedControl();
     
@@ -265,17 +275,16 @@ async function initializeApp() {
     // Настраиваем поиск
     setupSearch();
     
-    // Убеждаемся, что BackButton скрыта
+    // Убеждаемся, что BackButton скрыта (показываем Close)
     if (tg && tg.BackButton) {
         tg.BackButton.hide();
+        console.log('🔙 BackButton скрыта (Local страница - показываем Close)');
     }
 }
 
 // Запускаем приложение при загрузке DOM
 document.addEventListener('DOMContentLoaded', () => {
-    initializeApp();
-    
-    // Убеждаемся, что Local сегмент активен
+    // Сначала активируем кнопку Local (до initializeApp)
     const segmentButtons = document.querySelectorAll('.segment-btn');
     segmentButtons.forEach(btn => {
         if (btn.dataset.segment === 'local') {
@@ -285,9 +294,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Принудительно скрываем BackButton
+    initializeApp();
+    
+    // Принудительно скрываем BackButton (чтобы показать Close)
     if (tg && tg.BackButton) {
         tg.BackButton.hide();
+        console.log('🔙 BackButton скрыта (Local страница - показываем Close)');
     }
 });
 

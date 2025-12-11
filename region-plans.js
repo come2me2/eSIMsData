@@ -11,11 +11,13 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
     
     // Показываем кнопку "назад" в Telegram
+    // При возврате назад переходим на Local страницу (главная)
     if (tg.BackButton) {
         tg.BackButton.show();
         tg.BackButton.onClick(() => {
             tg.HapticFeedback.impactOccurred('light');
-            window.history.back();
+            // Переходим на Local страницу (главная)
+            window.location.href = 'local-countries.html';
         });
     }
 }
@@ -219,7 +221,10 @@ function setupRegionInfo() {
     const iconPath = `Region/${iconFileName}`;
     
     if (iconElement) {
-        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionData.name} icon">`;
+        // Для иконки Африки добавляем специальный класс для уменьшения размера
+        const isAfrica = regionData.name === 'Africa';
+        const imgClass = isAfrica ? 'region-icon-africa' : '';
+        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionData.name} icon"${imgClass ? ` class="${imgClass}"` : ''}>`;
     }
     
     if (nameElement) {

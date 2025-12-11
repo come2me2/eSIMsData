@@ -20,8 +20,8 @@ if (tg) {
             if (tg && tg.HapticFeedback) {
             tg.HapticFeedback.impactOccurred('light');
             }
-            // Переходим обратно на список регионов
-            window.location.href = 'index.html?segment=region';
+            // Переходим обратно на Local страницу (главная)
+            window.location.href = 'local-countries.html';
         });
     } else {
         console.warn('⚠️ Region Unlimited: Telegram WebApp или BackButton недоступны', { tg: !!tg, BackButton: tg && !!tg.BackButton });
@@ -352,7 +352,10 @@ function setupRegionInfo() {
     const iconPath = `Region/${iconFileName}`;
     
     if (iconElement) {
-        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionName} icon">`;
+        // Для иконки Африки добавляем специальный класс для уменьшения размера
+        const isAfrica = regionName === 'Africa';
+        const imgClass = isAfrica ? 'region-icon-africa' : '';
+        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionName} icon"${imgClass ? ` class="${imgClass}"` : ''}>`;
     }
     
     if (nameElement) {
