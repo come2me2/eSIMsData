@@ -296,7 +296,8 @@ module.exports = async function handler(req, res) {
         
         const countryCode = country ? country.toUpperCase() : null;
         const isGlobal = category === 'global' || req.query.global === 'true';
-        const isLocal = category === 'local' || (countryCode && !region);
+        // Для Local: если есть countryCode и нет region, и category не 'global' - это Local
+        const isLocal = category === 'local' || (countryCode && !region && category !== 'global');
         
         // Маппинг ISO кодов на названия стран (используется для Global и Local)
         const isoToCountryName = {
