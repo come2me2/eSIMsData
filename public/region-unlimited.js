@@ -215,6 +215,15 @@ async function loadPlansFromAPI(regionName) {
                         selectedPlanId = unlimitedPlans[0].id;
                     }
                     
+                    // Обновляем счетчик стран из предопределенных данных
+                    const regionInfo = regionData[regionName] || regionData['Africa'];
+                    if (regionInfo) {
+                        const infoTextElement = document.getElementById('regionInfoText');
+                        if (infoTextElement) {
+                            infoTextElement.textContent = `Supported in countries: ${regionInfo.count}`;
+                        }
+                    }
+                    
                     console.log(`✅ ${regionName} unlimited plans loaded from cache:`, unlimitedPlans.length);
                     return true;
                 }
@@ -276,6 +285,15 @@ async function loadPlansFromAPI(regionName) {
             // Устанавливаем первый план как выбранный по умолчанию
             if (unlimitedPlans.length > 0 && !selectedPlanId) {
                 selectedPlanId = unlimitedPlans[0].id;
+            }
+            
+            // Обновляем счетчик стран из предопределенных данных
+            const regionInfo = regionData[regionName] || regionData['Africa'];
+            if (regionInfo) {
+                const infoTextElement = document.getElementById('regionInfoText');
+                if (infoTextElement) {
+                    infoTextElement.textContent = `Supported in countries: ${regionInfo.count}`;
+                }
             }
             
             console.log(`✅ Loaded ${unlimitedPlans.length} unlimited plans from API`);

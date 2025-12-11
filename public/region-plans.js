@@ -401,12 +401,16 @@ let selectedPlanId = 'plan2'; // Default selected for standard
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
-    setupRegionInfo();
-    setupSegmentedControl();
-    
     // Получаем название региона из URL
     const urlParams = new URLSearchParams(window.location.search);
     const regionName = urlParams.get('region') || 'Africa';
+    
+    // Обновляем regionData.name перед setupRegionInfo
+    regionData.name = regionName;
+    
+    // Настраиваем информацию о регионе (иконка, название, счетчик стран)
+    setupRegionInfo();
+    setupSegmentedControl();
     
     // Загружаем реальные планы из API для региона
     console.log('🔵 Loading plans for region:', regionName);
@@ -417,6 +421,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateInfoBox();
     setupNextButton();
     setupCountriesList();
+    
+    // Повторно обновляем счетчик после загрузки данных (на случай, если что-то перезаписало)
+    setupRegionInfo();
 });
 
 // Setup region info
@@ -439,9 +446,9 @@ function setupRegionInfo() {
         nameElement.textContent = regionData.name;
     }
     
-    // Обновляем счетчик стран после загрузки данных из API
+    // Обновляем счетчик стран из предопределенных данных
     const regionInfo = regionDataFull[regionData.name] || regionDataFull['Africa'];
-    const countryCount = regionInfo ? regionInfo.count : (regionCountryCounts[regionData.name] || 25);
+    const countryCount = regionInfo ? regionInfo.count : (regionCountryCounts[regionData.name] || regionCountryCounts['Africa']);
     if (infoTextElement) {
         infoTextElement.textContent = `Supported in countries: ${countryCount}`;
     }
