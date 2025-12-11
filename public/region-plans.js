@@ -260,21 +260,14 @@ async function loadPlansFromAPI(regionName) {
                     standardPlans = result.data.standard || [];
                     unlimitedPlans = result.data.unlimited || [];
                     
-                    // Обновляем список стран
-                    if (result.data.countries && Array.isArray(result.data.countries)) {
-                        const apiCountries = result.data.countries.map(c => c.name || c.code);
-                        if (apiCountries.length > 0) {
-                            if (!regionDataFull[regionName]) {
-                                regionDataFull[regionName] = {
-                                    count: apiCountries.length,
-                                    countries: apiCountries
-                                };
-                            } else {
-                                regionDataFull[regionName].count = apiCountries.length;
-                                regionDataFull[regionName].countries = apiCountries;
-                            }
-                            regionCountryCounts[regionName] = apiCountries.length;
-                            updateRegionInfoCount(regionName, apiCountries.length);
+                    // НЕ перезаписываем regionDataFull данными из API
+                    // Используем только предопределенные данные из regionDataFull
+                    // Обновляем только счетчик для отображения
+                    const regionInfo = regionDataFull[regionName];
+                    if (regionInfo) {
+                        const infoTextElement = document.getElementById('regionInfoText');
+                        if (infoTextElement) {
+                            infoTextElement.textContent = `Supported in countries: ${regionInfo.count}`;
                         }
                     }
                     
@@ -343,29 +336,14 @@ async function loadPlansFromAPI(regionName) {
             standardPlans = result.data.standard || [];
             unlimitedPlans = result.data.unlimited || []; // Безлимитные тарифы из группы Standard Unlimited Essential
             
-            // Обновляем список стран из API ответа
-            if (result.data.countries && Array.isArray(result.data.countries)) {
-                const apiCountries = result.data.countries.map(c => c.name || c.code);
-                if (apiCountries.length > 0) {
-                    // Обновляем regionDataFull с данными из API
-                    if (!regionDataFull[regionName]) {
-                        regionDataFull[regionName] = {
-                            count: apiCountries.length,
-                            countries: apiCountries
-                        };
-                    } else {
-                        regionDataFull[regionName].count = apiCountries.length;
-                        regionDataFull[regionName].countries = apiCountries;
-                    }
-                    // Обновляем счетчик для обратной совместимости
-                    regionCountryCounts[regionName] = apiCountries.length;
-                    console.log(`✅ Updated countries list for ${regionName} from API:`, apiCountries.length, 'countries');
-                    
-                    // Обновляем отображение счетчика сразу после загрузки данных
-                    const infoTextElement = document.getElementById('regionInfoText');
-                    if (infoTextElement) {
-                        infoTextElement.textContent = `Supported in countries: ${apiCountries.length}`;
-                    }
+            // НЕ перезаписываем regionDataFull данными из API
+            // Используем только предопределенные данные из regionDataFull
+            // Обновляем только счетчик для отображения
+            const regionInfo = regionDataFull[regionName];
+            if (regionInfo) {
+                const infoTextElement = document.getElementById('regionInfoText');
+                if (infoTextElement) {
+                    infoTextElement.textContent = `Supported in countries: ${regionInfo.count}`;
                 }
             }
             

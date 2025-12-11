@@ -201,17 +201,8 @@ async function loadPlansFromAPI(regionName) {
                 if (result.success && result.data) {
                     unlimitedPlans = result.data.unlimited || [];
                     
-                    // Обновляем список стран
-                    if (result.meta && result.meta.regionInfo) {
-                        const apiRegionInfo = result.meta.regionInfo;
-                        if (apiRegionInfo.countries && Array.isArray(apiRegionInfo.countries)) {
-                            const apiCountries = apiRegionInfo.countries.map(c => c.name || c.code || c);
-                            if (apiCountries.length > 0) {
-                                regionInfo.count = apiCountries.length;
-                                regionInfo.countries = apiCountries;
-                            }
-                        }
-                    }
+                    // НЕ перезаписываем regionData данными из API
+                    // Используем только предопределенные данные из regionData
                     
                     // Добавляем ID для совместимости
                     unlimitedPlans.forEach((plan, index) => {
@@ -272,18 +263,8 @@ async function loadPlansFromAPI(regionName) {
         if (result.success && result.data) {
             unlimitedPlans = result.data.unlimited || [];
             
-            // Обновляем список стран из API ответа
-            if (result.meta && result.meta.regionInfo) {
-                const apiRegionInfo = result.meta.regionInfo;
-                if (apiRegionInfo.countries && Array.isArray(apiRegionInfo.countries)) {
-                    const apiCountries = apiRegionInfo.countries.map(c => c.name || c.code || c);
-                    if (apiCountries.length > 0) {
-                        regionInfo.count = apiCountries.length;
-                        regionInfo.countries = apiCountries;
-                        console.log(`✅ Updated countries list for ${regionName} from API:`, apiCountries.length, 'countries');
-                    }
-                }
-            }
+            // НЕ перезаписываем regionData данными из API
+            // Используем только предопределенные данные из regionData
             
             // Добавляем ID для совместимости
             unlimitedPlans.forEach((plan, index) => {
@@ -360,8 +341,8 @@ function setupRegionInfo() {
     }
     
     if (infoTextElement) {
-        // Используем актуальное количество стран из API
-        const actualCount = regionInfo.countries ? regionInfo.countries.length : (regionInfo.count || 0);
+        // Используем предопределенное значение count из regionData
+        const actualCount = regionInfo.count || 0;
         infoTextElement.textContent = `Supported in countries: ${actualCount}`;
     }
 }
