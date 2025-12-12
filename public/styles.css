@@ -498,8 +498,11 @@ body {
 
 .country-flag-large {
     width: 80px;
-    min-height: 80px;
-    height: auto;
+    height: 60px;
+    min-width: 80px;
+    min-height: 60px;
+    max-width: 80px;
+    max-height: 60px;
     margin-bottom: 16px;
     display: flex;
     align-items: center;
@@ -508,7 +511,9 @@ body {
     line-height: 0;
     border: none;
     background-color: transparent;
-    overflow: visible;
+    overflow: hidden;
+    border-radius: 12px;
+    flex-shrink: 0;
 }
 
 /* Для Region планов - круглые флаги */
@@ -547,28 +552,46 @@ body {
     margin: 0 auto;
 }
 
-/* Для Local планов флаг должен быть прямоугольным без скруглений */
+/* Для Local планов флаг должен быть закругленным и правильно обрезанным */
 .country-flag-img {
     width: 80px;
     height: 60px;
+    min-width: 80px;
+    min-height: 60px;
+    max-width: 80px;
+    max-height: 60px;
     object-fit: cover;
+    object-position: center;
     display: block;
-    border-radius: 0 !important;
-    /* Убираем маски и скругления для прямоугольных флагов */
-    -webkit-mask-image: none;
-    mask-image: none;
+    border-radius: 12px;
+    /* Чёткие края скругления */
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
+    mask-image: radial-gradient(white, black);
     transform: translate3d(0, 0, 0);
     /* Crisp rendering for flag images */
     image-rendering: -webkit-optimize-contrast;
     /* Prevent blurring on high-DPI displays */
     transform: translateZ(0);
+    backface-visibility: hidden;
+    /* Убеждаемся, что флаг не обрезается */
+    overflow: hidden;
+    /* Для SVG флагов - правильное масштабирование */
+    flex-shrink: 0;
 }
 
-/* Переопределяем для local планов - убираем скругление */
+/* Переопределяем для local планов - закругленные флаги */
 .country-flag-large .country-flag-img {
-    border-radius: 0 !important;
-    -webkit-mask-image: none !important;
-    mask-image: none !important;
+    border-radius: 12px !important;
+    -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
+    mask-image: radial-gradient(white, black) !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 80px !important;
+    min-height: 60px !important;
+    max-width: 80px !important;
+    max-height: 60px !important;
 }
 
 .country-name-large {
