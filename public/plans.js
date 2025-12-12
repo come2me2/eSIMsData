@@ -41,6 +41,8 @@ async function loadPlansFromAPI(countryCode) {
         const params = new URLSearchParams();
         if (countryCode) {
             params.append('country', countryCode);
+            // Явно указываем category=local для Local планов
+            params.append('category', 'local');
         }
         
         const apiUrl = `/api/esimgo/plans?${params.toString()}`;

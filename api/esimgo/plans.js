@@ -31,8 +31,10 @@ const cache = require('../_lib/cache');
 
 /**
  * Группировка bundles в планы
+ * @param {Array} bundles - массив bundles
+ * @param {boolean} isLocal - является ли это Local запросом (для Local показываем все тарифы, без агрессивной дедупликации)
  */
-function groupBundlesIntoPlans(bundles) {
+function groupBundlesIntoPlans(bundles, isLocal = false) {
     const plans = {
         standard: [],
         unlimited: []
@@ -162,95 +164,132 @@ function groupBundlesIntoPlans(bundles) {
         }
     });
     
-    // Дедупликация стандартных планов: оставляем только один вариант с минимальной ценой для каждой комбинации длительности и объема данных
-    const standardMap = new Map();
-    plans.standard.forEach(plan => {
-        // Убеждаемся, что priceValue - это число
-        const priceValue = typeof plan.priceValue === 'number' ? plan.priceValue : parseFloat(plan.priceValue) || 0;
-        plan.priceValue = priceValue; // Обновляем значение на случай, если оно было строкой
+    // Дедупликация стандартных планов
+    if (isLocal) {
+        // Для Local планов: показываем ВСЕ тарифы без дедупликации
+        // Просто нормализуем priceValue и сортируем
+        plans.standard.forEach(plan => {
+            const priceValue = typeof plan.priceValue === 'number' ? plan.priceValue : parseFloat(plan.priceValue) || 0;
+            plan.priceValue = priceValue;
+        });
         
-        // Ключ: комбинация длительности и объема данных
-        const key = `${plan.durationDays}_${plan.dataAmount}`;
-        
-        if (!standardMap.has(key)) {
-            standardMap.set(key, plan);
-        } else {
-            // Если уже есть план с такой комбинацией, выбираем с минимальной ценой
-            const existing = standardMap.get(key);
-            const existingPrice = typeof existing.priceValue === 'number' ? existing.priceValue : parseFloat(existing.priceValue) || 0;
+        // Сортируем по длительности, затем по объему данных, затем по цене
+        plans.standard.sort((a, b) => {
+            if (a.durationDays !== b.durationDays) {
+                return a.durationDays - b.durationDays;
+            }
+            if (a.dataAmount !== b.dataAmount) {
+                return a.dataAmount - b.dataAmount;
+            }
+            return a.priceValue - b.priceValue;
+        });
+    } else {
+        // Для Global/Region планов: оставляем только один вариант с минимальной ценой для каждой комбинации длительности и объема данных
+        const standardMap = new Map();
+        plans.standard.forEach(plan => {
+            const priceValue = typeof plan.priceValue === 'number' ? plan.priceValue : parseFloat(plan.priceValue) || 0;
+            plan.priceValue = priceValue;
             
-            // Если валюта одинаковая, выбираем минимальную цену
-            // Если валюта разная, оставляем USD или первую найденную
-            if (plan.currency === existing.currency) {
-                if (priceValue < existingPrice) {
+            // Ключ: комбинация длительности и объема данных
+            const key = `${plan.durationDays}_${plan.dataAmount}`;
+            
+            if (!standardMap.has(key)) {
+                standardMap.set(key, plan);
+            } else {
+                // Если уже есть план с такой комбинацией, выбираем с минимальной ценой
+                const existing = standardMap.get(key);
+                const existingPrice = typeof existing.priceValue === 'number' ? existing.priceValue : parseFloat(existing.priceValue) || 0;
+                
+                // Если валюта одинаковая, выбираем минимальную цену
+                // Если валюта разная, оставляем USD или первую найденную
+                if (plan.currency === existing.currency) {
+                    if (priceValue < existingPrice) {
+                        standardMap.set(key, plan);
+                    }
+                } else if (plan.currency === 'USD' && existing.currency !== 'USD') {
+                    // Предпочитаем USD если есть выбор
+                    standardMap.set(key, plan);
+                } else if (existing.currency === 'USD' && plan.currency !== 'USD') {
+                    // Оставляем существующий USD план
+                    // Ничего не делаем
+                } else if (priceValue < existingPrice) {
+                    // Если валюты разные и обе не USD, выбираем минимальную цену
                     standardMap.set(key, plan);
                 }
-            } else if (plan.currency === 'USD' && existing.currency !== 'USD') {
-                // Предпочитаем USD если есть выбор
-                standardMap.set(key, plan);
-            } else if (existing.currency === 'USD' && plan.currency !== 'USD') {
-                // Оставляем существующий USD план
-                // Ничего не делаем
-            } else if (priceValue < existingPrice) {
-                // Если валюты разные и обе не USD, выбираем минимальную цену
-                standardMap.set(key, plan);
             }
-        }
-    });
-    
-    // Преобразуем Map обратно в массив и сортируем
-    plans.standard = Array.from(standardMap.values()).sort((a, b) => {
-        // Сначала по длительности, потом по объему данных
-        if (a.durationDays !== b.durationDays) {
-            return a.durationDays - b.durationDays;
-        }
-        return a.dataAmount - b.dataAmount;
-    });
+        });
+        
+        // Преобразуем Map обратно в массив и сортируем
+        plans.standard = Array.from(standardMap.values()).sort((a, b) => {
+            // Сначала по длительности, потом по объему данных
+            if (a.durationDays !== b.durationDays) {
+                return a.durationDays - b.durationDays;
+            }
+            return a.dataAmount - b.dataAmount;
+        });
+    }
     
     console.log('Standard plans after deduplication:', {
         count: plans.standard.length,
         plans: plans.standard.map(p => ({ duration: p.durationDays, data: p.dataAmount, price: p.priceValue, currency: p.currency }))
     });
     
-    // Дедупликация безлимитных планов: оставляем только один вариант с минимальной ценой для каждой длительности
-    const unlimitedMap = new Map();
-    plans.unlimited.forEach(plan => {
-        const key = plan.durationDays;
-        // Убеждаемся, что priceValue - это число
-        const priceValue = typeof plan.priceValue === 'number' ? plan.priceValue : parseFloat(plan.priceValue) || 0;
-        plan.priceValue = priceValue; // Обновляем значение на случай, если оно было строкой
+    // Дедупликация безлимитных планов
+    if (isLocal) {
+        // Для Local планов: показываем ВСЕ тарифы без дедупликации
+        // Просто нормализуем priceValue и сортируем
+        plans.unlimited.forEach(plan => {
+            const priceValue = typeof plan.priceValue === 'number' ? plan.priceValue : parseFloat(plan.priceValue) || 0;
+            plan.priceValue = priceValue;
+        });
         
-        if (!unlimitedMap.has(key)) {
-            unlimitedMap.set(key, plan);
-        } else {
-            // Если уже есть план с такой длительностью, выбираем с минимальной ценой
-            // Учитываем валюту: сравниваем только планы с одинаковой валютой
-            const existing = unlimitedMap.get(key);
-            const existingPrice = typeof existing.priceValue === 'number' ? existing.priceValue : parseFloat(existing.priceValue) || 0;
+        // Сортируем по длительности, затем по цене
+        plans.unlimited.sort((a, b) => {
+            if (a.durationDays !== b.durationDays) {
+                return a.durationDays - b.durationDays;
+            }
+            return a.priceValue - b.priceValue;
+        });
+    } else {
+        // Для Global/Region планов: оставляем только один вариант с минимальной ценой для каждой длительности
+        const unlimitedMap = new Map();
+        plans.unlimited.forEach(plan => {
+            const key = plan.durationDays;
+            const priceValue = typeof plan.priceValue === 'number' ? plan.priceValue : parseFloat(plan.priceValue) || 0;
+            plan.priceValue = priceValue;
             
-            // Если валюта одинаковая, выбираем минимальную цену
-            // Если валюта разная, оставляем USD или первую найденную
-            if (plan.currency === existing.currency) {
-                if (priceValue < existingPrice) {
+            if (!unlimitedMap.has(key)) {
+                unlimitedMap.set(key, plan);
+            } else {
+                // Если уже есть план с такой длительностью, выбираем с минимальной ценой
+                // Учитываем валюту: сравниваем только планы с одинаковой валютой
+                const existing = unlimitedMap.get(key);
+                const existingPrice = typeof existing.priceValue === 'number' ? existing.priceValue : parseFloat(existing.priceValue) || 0;
+                
+                // Если валюта одинаковая, выбираем минимальную цену
+                // Если валюта разная, оставляем USD или первую найденную
+                if (plan.currency === existing.currency) {
+                    if (priceValue < existingPrice) {
+                        unlimitedMap.set(key, plan);
+                    }
+                } else if (plan.currency === 'USD' && existing.currency !== 'USD') {
+                    // Предпочитаем USD если есть выбор
+                    unlimitedMap.set(key, plan);
+                } else if (existing.currency === 'USD' && plan.currency !== 'USD') {
+                    // Оставляем существующий USD план
+                    // Ничего не делаем
+                } else if (priceValue < existingPrice) {
+                    // Если валюты разные и обе не USD, выбираем минимальную цену
                     unlimitedMap.set(key, plan);
                 }
-            } else if (plan.currency === 'USD' && existing.currency !== 'USD') {
-                // Предпочитаем USD если есть выбор
-                unlimitedMap.set(key, plan);
-            } else if (existing.currency === 'USD' && plan.currency !== 'USD') {
-                // Оставляем существующий USD план
-                // Ничего не делаем
-            } else if (priceValue < existingPrice) {
-                // Если валюты разные и обе не USD, выбираем минимальную цену
-                unlimitedMap.set(key, plan);
             }
-        }
-    });
-    
-    // Преобразуем Map обратно в массив и сортируем
-    plans.unlimited = Array.from(unlimitedMap.values()).sort((a, b) => {
-        return a.durationDays - b.durationDays;
-    });
+        });
+        
+        // Преобразуем Map обратно в массив и сортируем
+        plans.unlimited = Array.from(unlimitedMap.values()).sort((a, b) => {
+            return a.durationDays - b.durationDays;
+        });
+    }
     
     console.log('Unlimited plans after deduplication:', {
         count: plans.unlimited.length,
@@ -359,18 +398,27 @@ module.exports = async function handler(req, res) {
         const effectiveCategory = isLocal ? 'local' : (isGlobal ? 'global' : category);
         const cacheKey = cache.getPlansCacheKey(countryCode, region, effectiveCategory);
         
-        // Проверяем кэш перед запросом к API
-        const cachedData = cache.get(cacheKey, cache.getTTL('plans'));
-        if (cachedData && cachedData.data) {
-            console.log('✅ Using cached plans data for:', cacheKey);
-            return res.status(200).json({
-                success: true,
-                data: cachedData.data,
-                meta: {
-                    ...cachedData.meta,
-                    source: 'cache'
-                }
-            });
+        // Проверяем параметр forceRefresh для принудительного обновления кэша
+        const forceRefresh = req.query.forceRefresh === 'true' || req.query.refresh === 'true';
+        
+        // Проверяем кэш перед запросом к API (если не требуется принудительное обновление)
+        if (!forceRefresh) {
+            const cachedData = cache.get(cacheKey, cache.getTTL('plans'));
+            if (cachedData && cachedData.data) {
+                console.log('✅ Using cached plans data for:', cacheKey);
+                return res.status(200).json({
+                    success: true,
+                    data: cachedData.data,
+                    meta: {
+                        ...cachedData.meta,
+                        source: 'cache'
+                    }
+                });
+            }
+        } else {
+            // Очищаем кэш при принудительном обновлении
+            console.log('🔄 Force refresh requested, clearing cache for:', cacheKey);
+            cache.clear(cacheKey);
         }
         
         // Извлекаем уникальные страны из bundles (для Global и Local)
@@ -1079,8 +1127,8 @@ module.exports = async function handler(req, res) {
             });
         }
         
-        // Группируем в планы
-        const plans = groupBundlesIntoPlans(bundles);
+        // Группируем в планы (для Local показываем все тарифы, для Global/Region - дедуплицируем)
+        const plans = groupBundlesIntoPlans(bundles, isLocal);
         
         // Логируем примеры планов для отладки цен
         if (plans.standard.length > 0) {
