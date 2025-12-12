@@ -44,7 +44,7 @@ if (tg) {
 }
 
 // Flag version for cache busting
-const FLAG_VERSION = 'v7';
+const FLAG_VERSION = 'v8'; // Updated: fix flag styling (rounded corners, proper sizing)
 
 // Function to get flag image URL
 function getFlagPath(countryCode) {
