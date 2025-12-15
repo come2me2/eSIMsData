@@ -1,6 +1,9 @@
 // Telegram Web App initialization
 let tg = window.Telegram.WebApp;
 
+// 🔧 Флаг режима разработки - деактивирует кнопку Purchase
+const DEV_MODE = true; // Установите false для активации покупок
+
 // Initialize Telegram Web App
 if (tg) {
     tg.ready();
@@ -662,7 +665,19 @@ function setupPromoCode() {
 
 // Setup purchase button
 function setupPurchaseButton() {
-    document.getElementById('purchaseBtn').addEventListener('click', async () => {
+    const purchaseBtn = document.getElementById('purchaseBtn');
+    
+    // Деактивируем кнопку в режиме разработки
+    if (DEV_MODE) {
+        purchaseBtn.disabled = true;
+        purchaseBtn.textContent = 'Purchase (Disabled - Dev Mode)';
+        purchaseBtn.style.opacity = '0.5';
+        purchaseBtn.style.cursor = 'not-allowed';
+        console.log('⚠️ Purchase button disabled - Development mode');
+        return;
+    }
+    
+    purchaseBtn.addEventListener('click', async () => {
         const auth = window.telegramAuth;
         
         // Проверка авторизации
@@ -679,7 +694,6 @@ function setupPurchaseButton() {
         }
         
         // Показываем индикатор загрузки
-        const purchaseBtn = document.getElementById('purchaseBtn');
         const originalText = purchaseBtn.textContent;
         purchaseBtn.textContent = 'Validating...';
         purchaseBtn.disabled = true;
