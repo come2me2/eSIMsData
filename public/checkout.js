@@ -3,6 +3,8 @@ let tg = window.Telegram.WebApp;
 
 // 🔧 Флаг режима разработки - деактивирует кнопку Purchase
 const DEV_MODE = true; // Установите false для активации покупок
+const ENABLE_STARS = true; // Включает оплату через Telegram Stars
+const STARS_RATE_DISPLAY = parseFloat('100'); // Примерный курс Stars для отображения
 
 // Initialize Telegram Web App
 if (tg) {
@@ -451,11 +453,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupOrderDetails();
     setupPromoCode();
     setupPurchaseButton();
+    setupStarsButton();
     
     // Если планы загрузились, обновляем отображение
     if (plansLoaded && (standardPlans.length > 0 || unlimitedPlans.length > 0)) {
         updateOrderDetailsWithRealPlans();
     }
+
+    updateStarsPriceDisplay();
 });
 
 // Setup order details
@@ -566,6 +571,50 @@ function updateOrderDetailsWithRealPlans() {
     }
 }
 
+function getSelectedPlan() {
+    const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
+    return plans.find(p => p.id === orderData.planId) || plans[0];
+}
+
+function getPriceValueFromPlan(plan) {
+    if (!plan) return null;
+    if (typeof plan.priceValue === 'number') return plan.priceValue;
+    if (plan.price) {
+        const match = plan.price.match(/([\d.,]+)/);
+        if (match) {
+            const parsed = parseFloat(match[1].replace(',', '.'));
+            if (!Number.isNaN(parsed)) return parsed;
+        }
+    }
+    return null;
+}
+
+function computeStars(priceValue) {
+    if (!priceValue || Number.isNaN(priceValue)) return null;
+    return Math.max(1, Math.ceil(priceValue * STARS_RATE_DISPLAY));
+}
+
+function updateStarsPriceDisplay() {
+    const starsPriceElement = document.getElementById('checkoutStarsPrice');
+    if (!starsPriceElement) return;
+
+    if (!ENABLE_STARS) {
+        starsPriceElement.style.display = 'none';
+        return;
+    }
+
+    const plan = getSelectedPlan();
+    const priceValue = getPriceValueFromPlan(plan);
+    const stars = computeStars(priceValue);
+
+    if (stars) {
+        starsPriceElement.style.display = 'block';
+        starsPriceElement.textContent = `≈ ${stars} Stars`;
+    } else {
+        starsPriceElement.style.display = 'none';
+    }
+}
+
 // Update total price display with discount if applicable
 function updateTotalPrice() {
     const totalPriceElement = document.getElementById('checkoutTotalPrice');
@@ -583,6 +632,9 @@ function updateTotalPrice() {
     } else {
         totalPriceElement.textContent = originalPrice;
     }
+
+    // Обновляем отображение Stars после пересчёта цены
+    updateStarsPriceDisplay();
 }
 
 // Setup promo code
@@ -749,6 +801,101 @@ function setupPurchaseButton() {
             } else {
                 alert('Ошибка проверки данных: ' + error.message);
             }
+        }
+    });
+}
+
+// Setup Stars payment button
+function setupStarsButton() {
+    const starsBtn = document.getElementById('purchaseStarsBtn');
+    
+    if (!starsBtn) return;
+    
+    if (!ENABLE_STARS) {
+        starsBtn.style.display = 'none';
+        return;
+    }
+    
+    starsBtn.addEventListener('click', async () => {
+        const auth = window.telegramAuth;
+        
+        if (!auth || !auth.isAuthenticated()) {
+            alert('Пожалуйста, авторизуйтесь через Telegram для оплаты');
+            if (tg) {
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+            return;
+        }
+        
+        if (!tg || !tg.openInvoice) {
+            alert('Оплата через Stars доступна только внутри Telegram');
+            return;
+        }
+        
+        const plan = getSelectedPlan();
+        if (!plan) {
+            alert('План не найден. Обновите страницу.');
+            return;
+        }
+        
+        const priceValue = getPriceValueFromPlan(plan);
+        const currency = plan.currency || 'USD';
+        const bundleName = plan.bundle_name || plan.id;
+        
+        const originalText = starsBtn.textContent;
+        starsBtn.textContent = 'Creating invoice...';
+        starsBtn.disabled = true;
+        
+        try {
+            const validation = await auth.validateOnServer('/api/validate-telegram');
+            if (!validation.valid) {
+                throw new Error(validation.error || 'Validation failed');
+            }
+            
+            const response = await fetch('/api/telegram/stars/create-invoice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    plan_id: plan.id,
+                    plan_type: orderData.planType,
+                    bundle_name: bundleName,
+                    country_code: orderData.code,
+                    country_name: orderData.name,
+                    price: priceValue || plan.price,
+                    currency,
+                    telegram_user_id: auth.getUserId(),
+                    telegram_username: auth.getUsername()
+                })
+            });
+            
+            const result = await response.json();
+            if (!result.success || !result.invoiceLink) {
+                throw new Error(result.error || 'Не удалось создать счёт');
+            }
+            
+            const invoiceLink = result.invoiceLink;
+            const slug = invoiceLink.split('/').pop();
+            
+            const cb = (status) => {
+                console.log('Invoice status:', status);
+                if (status === 'paid') {
+                    tg.showAlert('Оплата принята. eSIM будет выдана в чат после обработки заказа.');
+                } else if (status === 'cancelled') {
+                    tg.showAlert('Оплата отменена.');
+                }
+            };
+            
+            tg.openInvoice(slug, cb);
+        } catch (error) {
+            console.error('❌ Stars payment error:', error);
+            if (tg) {
+                tg.showAlert('Оплата через Stars не удалась: ' + error.message);
+            } else {
+                alert('Оплата через Stars не удалась: ' + error.message);
+            }
+        } finally {
+            starsBtn.textContent = originalText;
+            starsBtn.disabled = false;
         }
     });
 }
