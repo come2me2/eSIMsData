@@ -1107,9 +1107,7 @@ module.exports = async function handler(req, res) {
                 category: isGlobal ? 'global' : (isLocal ? 'local' : (region ? 'region' : 'all')),
                 country: countryCode,
                 region: region,
-                originalBundlesCount: Array.isArray(catalogue) 
-                    ? catalogue.length 
-                    : (catalogue?.bundles?.length || catalogue?.data?.length || 0)
+                originalBundlesCount: Array.isArray(bundles) ? bundles.length : 0
             });
             return res.status(200).json({
                 success: true,
