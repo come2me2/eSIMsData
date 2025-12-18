@@ -250,19 +250,40 @@ function getFlagPath(countryCode) {
     return `/flags/${code}.svg?${FLAG_VERSION}`;
 }
 
-// Country data - будет загружено из API
+// Country data - будет загружено из кэша/API
 let countries = [
     { name: 'Afghanistan', code: 'AF' },
     { name: 'Thailand', code: 'TH' },
     { name: 'China', code: 'CN' },
     { name: 'Spain', code: 'ES' },
     { name: 'Indonesia', code: 'ID' },
-]; // Fallback список
+]; // Fallback список (используется только если всё остальное не сработало)
 
-// Загрузка списка стран из API
+// Загрузка списка стран с оптимизацией
+// Приоритет: memory cache -> localStorage -> static JSON -> API
 async function loadCountriesFromAPI() {
     try {
-        console.log('🔄 Загрузка списка стран из API...');
+        console.log('🔄 Загрузка списка стран...');
+        const startTime = performance.now();
+        
+        // Используем DataLoader если доступен (загружает из статических файлов)
+        if (window.DataLoader && typeof window.DataLoader.loadCountries === 'function') {
+            try {
+                const data = await window.DataLoader.loadCountries();
+                if (data && Array.isArray(data)) {
+                    countries = data.map(country => ({
+                        name: country.name,
+                        code: country.code
+                    }));
+                    console.log(`✅ Загружено ${countries.length} стран за ${(performance.now() - startTime).toFixed(0)}ms`);
+                    return true;
+                }
+            } catch (e) {
+                console.warn('⚠️ DataLoader failed, falling back to API:', e.message);
+            }
+        }
+        
+        // Fallback: прямой запрос к API
         const response = await fetch('/api/esimgo/countries');
         
         if (!response.ok) {
@@ -272,23 +293,19 @@ async function loadCountriesFromAPI() {
         const result = await response.json();
         
         if (result.success && result.data && Array.isArray(result.data)) {
-            // Преобразуем данные из API в нужный формат
             countries = result.data.map(country => ({
                 name: country.name,
                 code: country.code
             }));
             
-            console.log(`✅ Загружено ${countries.length} стран из API`);
-            
-            // Возвращаем успешный результат
+            console.log(`✅ Загружено ${countries.length} стран из API за ${(performance.now() - startTime).toFixed(0)}ms`);
             return true;
         } else {
             console.warn('⚠️ API вернул неожиданный формат данных, используем fallback');
         }
     } catch (error) {
-        console.error('❌ Ошибка при загрузке стран из API:', error);
+        console.error('❌ Ошибка при загрузке стран:', error);
         console.log('📋 Используем fallback список стран');
-        // Используем fallback список, который уже определен выше
     }
 }
 

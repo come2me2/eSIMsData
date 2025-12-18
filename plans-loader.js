@@ -1,6 +1,7 @@
 /**
  * Утилита для загрузки реальных планов из eSIM Go API
- * Используется во всех страницах для получения актуальных цен и тарифов
+ * Использует оптимизированный DataLoader с многоуровневым кэшированием
+ * Приоритет: memory cache -> localStorage -> static JSON -> API
  */
 
 let cachedPlans = {
@@ -10,66 +11,86 @@ let cachedPlans = {
     timestamp: null
 };
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 минут
+const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 часа (данные обновляются ночью)
 
 /**
- * Загрузка планов из API
+ * Загрузка планов с оптимизацией
  * @param {string} countryCode - код страны (ISO, опционально)
  * @param {string} region - название региона (опционально)
+ * @param {string} category - категория: 'local', 'region', 'global'
  * @returns {Promise<Object>} - объект с standard и unlimited планами
  */
-async function loadPlansFromAPI(countryCode = null, region = null) {
+async function loadPlansFromAPI(countryCode = null, region = null, category = null) {
     try {
-        // Проверяем кеш
-        const cacheKey = countryCode || region || 'all';
+        const cacheKey = countryCode || region || category || 'all';
         const now = Date.now();
+        const startTime = performance.now();
         
+        // Проверяем memory cache (мгновенно)
         if (cachedPlans.country === cacheKey && 
             cachedPlans.timestamp && 
             (now - cachedPlans.timestamp) < CACHE_DURATION) {
-            console.log('Using cached plans for:', cacheKey);
+            console.log(`⚡ Memory cache hit: ${cacheKey}`);
             return {
                 standard: cachedPlans.standard,
                 unlimited: cachedPlans.unlimited
             };
         }
         
-        // Загружаем из API
-        const params = new URLSearchParams();
-        if (countryCode) {
-            params.append('country', countryCode);
-        }
-        if (region) {
-            params.append('region', region);
+        let data = null;
+        
+        // Используем DataLoader если доступен
+        if (window.DataLoader) {
+            try {
+                if (category === 'global') {
+                    data = await window.DataLoader.loadGlobalPlans();
+                } else if (region) {
+                    data = await window.DataLoader.loadRegionPlans(region);
+                } else if (countryCode) {
+                    data = await window.DataLoader.loadLocalPlans(countryCode);
+                }
+            } catch (e) {
+                console.warn('⚠️ DataLoader failed:', e.message);
+            }
         }
         
-        const response = await fetch(`/api/esimgo/plans?${params.toString()}`);
-        const result = await response.json();
+        // Fallback: прямой запрос к API
+        if (!data) {
+            const params = new URLSearchParams();
+            if (countryCode) params.append('country', countryCode);
+            if (region) params.append('region', region);
+            if (category) params.append('category', category);
+            
+            const response = await fetch(`/api/esimgo/plans?${params.toString()}`);
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                data = result.data;
+            } else {
+                throw new Error(result.error || 'Failed to load plans');
+            }
+        }
         
-        if (result.success && result.data) {
-            // Сохраняем в кеш
+        if (data) {
+            // Сохраняем в memory cache
             cachedPlans = {
-                standard: result.data.standard || [],
-                unlimited: result.data.unlimited || [],
+                standard: data.standard || [],
+                unlimited: data.unlimited || [],
                 country: cacheKey,
                 timestamp: now
             };
             
             // Добавляем ID для совместимости
             cachedPlans.standard.forEach((plan, index) => {
-                if (!plan.id) {
-                    plan.id = `plan${index + 1}`;
-                }
+                if (!plan.id) plan.id = `plan${index + 1}`;
             });
             
             cachedPlans.unlimited.forEach((plan, index) => {
-                if (!plan.id) {
-                    plan.id = `unlimited${index + 1}`;
-                }
+                if (!plan.id) plan.id = `unlimited${index + 1}`;
             });
             
-            console.log('Plans loaded from API:', {
-                country: countryCode || region || 'all',
+            console.log(`✅ Plans loaded in ${(performance.now() - startTime).toFixed(0)}ms:`, {
+                key: cacheKey,
                 standard: cachedPlans.standard.length,
                 unlimited: cachedPlans.unlimited.length
             });
@@ -78,13 +99,11 @@ async function loadPlansFromAPI(countryCode = null, region = null) {
                 standard: cachedPlans.standard,
                 unlimited: cachedPlans.unlimited
             };
-        } else {
-            throw new Error(result.error || 'Failed to load plans');
         }
-    } catch (error) {
-        console.error('Error loading plans from API:', error);
         
-        // Fallback к захардкоженным планам
+        throw new Error('No data received');
+    } catch (error) {
+        console.error('❌ Error loading plans:', error);
         return getFallbackPlans();
     }
 }

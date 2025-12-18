@@ -7,9 +7,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Загружаем модуль кэширования
+const cache = require('./api/_lib/cache');
 
 // Middleware
 app.use(cors());
@@ -90,8 +94,68 @@ app.use((err, req, res, next) => {
     });
 });
 
+/**
+ * Прогрев кэша из статических файлов при старте сервера
+ * Загружает предгенерированные JSON файлы в memory cache
+ */
+async function warmupCache() {
+    const dataDir = path.join(__dirname, 'public', 'data');
+    
+    if (!fs.existsSync(dataDir)) {
+        console.log('⚠️ No static data directory found. Run: node scripts/generate-static-data.js');
+        return;
+    }
+    
+    console.log('🔥 Warming up cache from static files...');
+    const startTime = Date.now();
+    let loaded = 0;
+    
+    try {
+        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json') && f !== 'index.json');
+        
+        for (const file of files) {
+            try {
+                const content = fs.readFileSync(path.join(dataDir, file), 'utf8');
+                const data = JSON.parse(content);
+                
+                if (data.success && data.data) {
+                    // Определяем ключ кэша по имени файла
+                    let cacheKey = null;
+                    
+                    if (file === 'countries.json') {
+                        cacheKey = 'countries:all';
+                        cache.set(cacheKey, data.data);
+                    } else if (file === 'plans-global.json') {
+                        cacheKey = 'plans:global';
+                        cache.set(cacheKey, { data: data.data, meta: data.meta });
+                    } else if (file.startsWith('plans-region-')) {
+                        const region = file.replace('plans-region-', '').replace('.json', '')
+                            .split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                        cacheKey = `plans:region:${region}`;
+                        cache.set(cacheKey, { data: data.data, meta: data.meta });
+                    } else if (file.startsWith('plans-local-')) {
+                        const country = file.replace('plans-local-', '').replace('.json', '').toUpperCase();
+                        cacheKey = `plans:local:${country}`;
+                        cache.set(cacheKey, { data: data.data, meta: data.meta });
+                    }
+                    
+                    if (cacheKey) {
+                        loaded++;
+                    }
+                }
+            } catch (e) {
+                console.warn(`⚠️ Failed to load ${file}:`, e.message);
+            }
+        }
+        
+        console.log(`✅ Cache warmed up: ${loaded} entries in ${Date.now() - startTime}ms`);
+    } catch (error) {
+        console.error('❌ Cache warmup failed:', error.message);
+    }
+}
+
 // Запуск сервера
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📁 Serving static files from: ${path.join(__dirname, 'public')}`);
     console.log(`🔑 ESIMGO_API_KEY: ${process.env.ESIMGO_API_KEY ? '✓ Set' : '✗ Not set'}`);
@@ -100,6 +164,9 @@ app.listen(PORT, () => {
     Object.keys(apiRoutes).forEach(route => {
         console.log(`   ${route}`);
     });
+    
+    // Прогреваем кэш после старта сервера
+    await warmupCache();
 });
 
 // Graceful shutdown
