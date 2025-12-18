@@ -13,7 +13,8 @@ const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
 const processedPayments = new Set();
 
 // Переиспользуем уже существующий handler для создания заказа
-const createOrderHandler = require('../esimgo/order');
+// webhook.js находится в api/telegram/stars/, поэтому поднимаемся на два уровня
+const createOrderHandler = require('../../esimgo/order');
 
 function createMockReq(body = {}) {
     return {
