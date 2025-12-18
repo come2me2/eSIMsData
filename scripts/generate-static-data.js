@@ -25,12 +25,29 @@ const DATA_DIR = path.join(__dirname, '../public/data');
 // Регионы для генерации
 const REGIONS = ['Africa', 'Asia', 'Europe', 'North America', 'Latin America', 'Oceania', 'Balkanas', 'Central Eurasia'];
 
-// Популярные страны для предзагрузки Local планов
+// ВСЕ страны для предзагрузки Local планов (для мгновенной загрузки)
 const POPULAR_COUNTRIES = [
-    'US', 'GB', 'DE', 'FR', 'IT', 'ES', 'JP', 'CN', 'AU', 'CA',
-    'TH', 'VN', 'ID', 'MY', 'SG', 'KR', 'TR', 'AE', 'EG', 'BR',
-    'MX', 'NL', 'CH', 'AT', 'PL', 'CZ', 'GR', 'PT', 'IE', 'SE',
-    'NO', 'DK', 'FI', 'RU', 'UA', 'IN', 'PH', 'NZ', 'ZA', 'IL'
+    // Европа
+    'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR',
+    'DE', 'GR', 'HU', 'IS', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT',
+    'NL', 'NO', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'CH',
+    'GB', 'AL', 'BA', 'ME', 'MK', 'RS', 'XK', 'AD', 'MC', 'SM',
+    'LI', 'AX', 'FO', 'GI', 'IM', 'JE', 'GG',
+    // Азия
+    'CN', 'JP', 'KR', 'TW', 'HK', 'MO', 'SG', 'MY', 'TH', 'VN',
+    'ID', 'PH', 'IN', 'PK', 'BD', 'LK', 'NP', 'KH', 'LA', 'MM',
+    'MN', 'KZ', 'UZ', 'KG', 'TJ', 'AZ', 'GE', 'AM',
+    // Ближний Восток
+    'AE', 'SA', 'QA', 'KW', 'BH', 'OM', 'JO', 'IL', 'TR', 'EG',
+    // Америка
+    'US', 'CA', 'MX', 'BR', 'AR', 'CL', 'CO', 'PE', 'EC', 'VE',
+    'PA', 'CR', 'GT', 'DO', 'PR', 'JM', 'TT', 'BB', 'BS',
+    // Океания
+    'AU', 'NZ', 'FJ', 'PG',
+    // Африка
+    'ZA', 'EG', 'MA', 'TN', 'KE', 'NG', 'GH', 'TZ', 'UG', 'ET',
+    // СНГ
+    'RU', 'UA', 'BY', 'MD'
 ];
 
 function log(message) {
