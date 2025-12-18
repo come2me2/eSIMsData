@@ -997,6 +997,15 @@ body {
     transition: opacity 0.2s ease;
 }
 
+.next-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.next-btn-stars {
+    margin-bottom: 10px; /* немного выше кнопки Purchase */
+}
+
 .next-btn:active {
     opacity: 0.8;
 }
