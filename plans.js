@@ -27,39 +27,75 @@ const countryData = {
     code: urlParams.get('code') || 'AF'
 };
 
-// Plans data - загружаются динамически из API
+// Plans data - загружаются из статических файлов (мгновенно) или API
 let standardPlans = [];
 let unlimitedPlans = [];
 
-// Функция загрузки планов из API
+// Функция загрузки планов - приоритет: статические файлы -> API
 async function loadPlansFromAPI(countryCode) {
+    const startTime = performance.now();
+    
     try {
-        const params = new URLSearchParams();
-        if (countryCode) {
-            params.append('country', countryCode);
+        let data = null;
+        
+        // 1. Пробуем DataLoader (статические файлы + localStorage)
+        if (window.DataLoader && typeof window.DataLoader.loadLocalPlans === 'function') {
+            try {
+                console.log('⚡ Loading plans via DataLoader...');
+                data = await window.DataLoader.loadLocalPlans(countryCode);
+            } catch (e) {
+                console.warn('DataLoader failed:', e.message);
+            }
         }
         
-        const response = await fetch(`/api/esimgo/plans?${params.toString()}`);
-        const result = await response.json();
+        // 2. Пробуем статический JSON напрямую
+        if (!data) {
+            try {
+                const staticPath = `/data/plans-local-${countryCode.toLowerCase()}.json`;
+                console.log('📁 Trying static file:', staticPath);
+                const response = await fetch(staticPath);
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        data = result.data;
+                        console.log('✅ Loaded from static file');
+                    }
+                }
+            } catch (e) {
+                console.warn('Static file not available:', e.message);
+            }
+        }
         
-        if (result.success && result.data) {
-            standardPlans = result.data.standard || [];
-            unlimitedPlans = result.data.unlimited || [];
+        // 3. Fallback на API
+        if (!data) {
+            console.log('🔄 Falling back to API...');
+            const params = new URLSearchParams();
+            params.append('country', countryCode);
+            params.append('category', 'local');
+            
+            const response = await fetch(`/api/esimgo/plans?${params.toString()}`);
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                data = result.data;
+            }
+        }
+        
+        if (data) {
+            standardPlans = data.standard || [];
+            unlimitedPlans = data.unlimited || [];
             
             // Добавляем ID для совместимости
             standardPlans.forEach((plan, index) => {
-                if (!plan.id) {
-                    plan.id = `plan${index + 1}`;
-                }
+                if (!plan.id) plan.id = `plan${index + 1}`;
             });
             
             unlimitedPlans.forEach((plan, index) => {
-                if (!plan.id) {
-                    plan.id = `unlimited${index + 1}`;
-                }
+                if (!plan.id) plan.id = `unlimited${index + 1}`;
             });
             
-            console.log('Plans loaded from API:', {
+            const loadTime = (performance.now() - startTime).toFixed(0);
+            console.log(`✅ Plans loaded in ${loadTime}ms:`, {
                 standard: standardPlans.length,
                 unlimited: unlimitedPlans.length
             });
@@ -68,21 +104,24 @@ async function loadPlansFromAPI(countryCode) {
         }
     } catch (error) {
         console.error('Error loading plans:', error);
-        // Fallback к захардкоженным планам
-        standardPlans = [
-            { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
-            { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
-            { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
-            { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
-        ];
-        
-        unlimitedPlans = [
-            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-        ];
     }
+    
+    // Fallback к захардкоженным планам
+    console.warn('⚠️ Using fallback plans');
+    standardPlans = [
+        { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
+        { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
+        { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
+        { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
+    ];
+    
+    unlimitedPlans = [
+        { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
+        { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
+        { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
+        { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
+    ];
+    
     return false;
 }
 
