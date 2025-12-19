@@ -242,27 +242,49 @@ function handleNavigationClick(section) {
     } else if (section === 'Help') {
         navigate('help.html');
     }
-});
+}
 
 // Load region plans using DataLoader (static JSON -> API)
 async function loadRegionPlans(regionName) {
+    console.log('🔵 Loading region plans for:', regionName);
+    
     try {
         let data = null;
         if (window.DataLoader && typeof window.DataLoader.loadRegionPlans === 'function') {
+            console.log('⚡ Using DataLoader.loadRegionPlans');
             data = await window.DataLoader.loadRegionPlans(regionName);
+            if (data) {
+                console.log('✅ Plans loaded via DataLoader:', {
+                    standard: data.standard?.length || 0,
+                    unlimited: data.unlimited?.length || 0
+                });
+            }
         } else {
+            console.log('📁 DataLoader not available, trying static file');
             // Fallback: direct static file (slug like europe, latin-america)
             const slug = String(regionName || '').toLowerCase().replace(/\s+/g, '-');
-            const resp = await fetch(`/data/plans-region-${slug}.json`);
+            const staticPath = `/data/plans-region-${slug}.json`;
+            console.log('📁 Trying static file:', staticPath);
+            const resp = await fetch(staticPath);
             if (resp.ok) {
                 const json = await resp.json();
-                if (json && json.success && json.data) data = json.data;
+                if (json && json.success && json.data) {
+                    data = json.data;
+                    console.log('✅ Plans loaded from static file');
+                }
+            } else {
+                console.warn('⚠️ Static file not found:', staticPath);
             }
         }
 
         if (data) {
             standardPlans = data.standard || [];
             unlimitedPlans = data.unlimited || [];
+
+            console.log('📊 Plans parsed:', {
+                standard: standardPlans.length,
+                unlimited: unlimitedPlans.length
+            });
 
             // Ensure ids for selection compatibility
             standardPlans.forEach((p, idx) => { if (!p.id) p.id = `plan${idx + 1}`; });
@@ -276,14 +298,18 @@ async function loadRegionPlans(regionName) {
             // Устанавливаем выбранный план по умолчанию после загрузки
             if (!selectedPlanId && standardPlans.length > 0) {
                 selectedPlanId = standardPlans[0].id;
+                console.log('✅ Default plan selected:', selectedPlanId);
             }
             
             return true;
+        } else {
+            console.warn('⚠️ No plans data received');
         }
     } catch (e) {
         console.error('❌ Failed to load region plans:', e);
     }
 
+    console.warn('⚠️ No plans available, showing empty list');
     standardPlans = [];
     unlimitedPlans = [];
     return false;
@@ -291,27 +317,40 @@ async function loadRegionPlans(regionName) {
 
 // Setup region info
 function setupRegionInfo() {
+    console.log('🔵 Setting up region info for:', regionData.name);
+    
     const iconElement = document.getElementById('regionIcon');
     const nameElement = document.getElementById('regionName');
     const infoTextElement = document.getElementById('regionInfoText');
     
+    if (!iconElement) {
+        console.error('❌ regionIcon element not found');
+    }
+    if (!nameElement) {
+        console.error('❌ regionName element not found');
+    }
+    
     const iconFileName = regionIconMap[regionData.name] || 'Afrrica.png';
     const iconPath = `Region/${iconFileName}`;
+    console.log('📍 Icon path:', iconPath);
     
     if (iconElement) {
         // Для иконки Африки добавляем специальный класс для уменьшения размера
         const isAfrica = regionData.name === 'Africa';
         const imgClass = isAfrica ? 'region-icon-africa' : '';
-        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionData.name} icon"${imgClass ? ` class="${imgClass}"` : ''}>`;
+        iconElement.innerHTML = `<img src="${iconPath}" alt="${regionData.name} icon"${imgClass ? ` class="${imgClass}"` : ''} onerror="console.error('Failed to load icon:', this.src); this.style.display='none';">`;
+        console.log('✅ Icon set');
     }
     
     if (nameElement) {
         nameElement.textContent = regionData.name;
+        console.log('✅ Region name set:', regionData.name);
     }
     
     const countryCount = regionCountryCounts[regionData.name] || 25;
     if (infoTextElement) {
         infoTextElement.textContent = `Supported in countries: ${countryCount}`;
+        console.log('✅ Info text set');
     }
 }
 
@@ -348,9 +387,26 @@ function setupSegmentedControl() {
 // Render plans list
 function renderPlans() {
     const plansList = document.getElementById('plansList');
+    if (!plansList) {
+        console.error('❌ plansList element not found');
+        return;
+    }
+    
     plansList.innerHTML = '';
     
     const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
+    
+    console.log('🔵 Rendering plans:', {
+        type: currentPlanType,
+        count: plans.length,
+        selectedPlanId
+    });
+    
+    if (plans.length === 0) {
+        plansList.innerHTML = '<div class="no-plans">No plans available</div>';
+        console.warn('⚠️ No plans to render');
+        return;
+    }
     
     plans.forEach(plan => {
         const planItem = document.createElement('div');
