@@ -157,34 +157,42 @@ let selectedPlanId = 'plan2'; // Default selected for standard
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
-    // Проверяем, что countryData корректно установлен
-    if (!countryData.code || countryData.code === 'XX') {
-        console.error('❌ Invalid country code, redirecting to home');
-        window.location.href = 'index.html?segment=local';
-        return;
+    try {
+        // Проверяем, что countryData корректно установлен
+        if (!countryData || !countryData.code || countryData.code === 'XX' || !countryData.name || countryData.name === 'Unknown') {
+            console.error('❌ Invalid country data, redirecting to home');
+            window.location.href = 'index.html?segment=local';
+            return;
+        }
+        
+        console.log('🚀 Initializing plans page for:', countryData);
+        
+        setupCountryInfo();
+        setupSegmentedControl();
+        
+        // Загружаем реальные планы из API
+        const loaded = await loadPlansFromAPI(countryData.code);
+        
+        if (!loaded) {
+            console.warn('⚠️ Failed to load plans, showing empty list');
+        }
+        
+        // Рендерим планы после загрузки
+        renderPlans();
+        updateInfoBox();
+        setupNextButton();
+        setupNavigation();
+        
+        // Убеждаемся, что нижнее меню всегда видно
+        ensureBottomNavVisible();
+        setTimeout(ensureBottomNavVisible, 100);
+    } catch (error) {
+        console.error('❌ Error initializing plans page:', error);
+        // Если была ошибка с параметрами, перенаправляем на главную
+        if (error.message === 'Missing country parameters') {
+            window.location.href = 'index.html?segment=local';
+        }
     }
-    
-    console.log('🚀 Initializing plans page for:', countryData);
-    
-    setupCountryInfo();
-    setupSegmentedControl();
-    
-    // Загружаем реальные планы из API
-    const loaded = await loadPlansFromAPI(countryData.code);
-    
-    if (!loaded) {
-        console.warn('⚠️ Failed to load plans, showing empty list');
-    }
-    
-    // Рендерим планы после загрузки
-    renderPlans();
-    updateInfoBox();
-    setupNextButton();
-    setupNavigation();
-    
-    // Убеждаемся, что нижнее меню всегда видно
-    ensureBottomNavVisible();
-    setTimeout(ensureBottomNavVisible, 100);
 });
 
 // Ensure bottom navigation is always visible
