@@ -126,27 +126,17 @@ async function loadPlansFromAPI(countryCode) {
             });
             
             return true;
+        } else {
+            console.warn('⚠️ No plans data received');
         }
     } catch (error) {
-        console.error('Error loading plans:', error);
+        console.error('❌ Error loading plans:', error);
     }
     
-    // Fallback к захардкоженным планам
-    console.warn('⚠️ Using fallback plans');
-    standardPlans = [
-        { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
-        { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
-        { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
-        { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
-    ];
-    
-    unlimitedPlans = [
-        { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-        { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-        { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-        { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-    ];
-    
+    // Не используем fallback планы - показываем пустой список
+    console.warn('⚠️ No plans available for country:', countryCode);
+    standardPlans = [];
+    unlimitedPlans = [];
     return false;
 }
 
