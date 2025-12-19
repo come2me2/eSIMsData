@@ -1032,7 +1032,23 @@ function setupOrderDetails() {
         `;
         
         // Store original price (используем реальную цену из API или fallback)
-        originalPrice = selectedPlan.price || '$ 9.99';
+        // Проверяем priceValue (финальная цена) или price (себестоимость)
+        let priceToUse = selectedPlan.priceValue || selectedPlan.price || '$ 9.99';
+        
+        // Убеждаемся, что цена в правильном формате
+        if (typeof priceToUse === 'number') {
+            originalPrice = `$ ${priceToUse.toFixed(2)}`;
+        } else if (typeof priceToUse === 'string') {
+            // Если уже в формате "$ 9.99", используем как есть
+            if (priceToUse.startsWith('$')) {
+                originalPrice = priceToUse;
+            } else {
+                // Если просто число, добавляем "$ "
+                originalPrice = `$ ${priceToUse}`;
+            }
+        } else {
+            originalPrice = '$ 9.99';
+        }
         
         console.log('Setup order details with plan:', {
             planId: orderData.planId,
