@@ -50,31 +50,84 @@ const globalCountries = [
     'Tunisia', 'Uzbekistan', 'Vanuatu'
 ];
 
-// Plans data
-const standardPlans = [
-    { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
-    { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
-    { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
-    { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
-];
-
-const unlimitedPlans = [
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-];
+// Plans data - загружаются динамически из API
+let standardPlans = [];
+let unlimitedPlans = [];
+let plansLoaded = false;
 
 let currentPlanType = 'standard';
-let selectedPlanId = 'plan2'; // Default selected for standard
+let selectedPlanId = null; // Будет установлен после загрузки планов
+
+// Загрузка реальных планов из API
+async function loadGlobalPlans() {
+    try {
+        console.log('🔵 Loading global plans...');
+        
+        let data = null;
+        
+        // Пробуем загрузить через DataLoader
+        if (window.DataLoader && typeof window.DataLoader.loadGlobalPlans === 'function') {
+            data = await window.DataLoader.loadGlobalPlans();
+        }
+        
+        // Fallback: direct API
+        if (!data) {
+            const apiUrl = '/api/esimgo/plans?category=global';
+            const response = await fetch(apiUrl);
+            const result = await response.json();
+            if (result.success && result.data) {
+                data = result.data;
+            }
+        }
+        
+        if (data) {
+            standardPlans = data.standard || [];
+            unlimitedPlans = data.unlimited || [];
+            
+            // Сортируем unlimited планы по duration и data для консистентности
+            if (unlimitedPlans.length > 0) {
+                unlimitedPlans.sort((a, b) => {
+                    const durationA = parseInt(a.duration?.match(/\d+/)?.[0] || '0');
+                    const durationB = parseInt(b.duration?.match(/\d+/)?.[0] || '0');
+                    if (durationA !== durationB) {
+                        return durationA - durationB;
+                    }
+                    const dataA = parseInt(a.data?.match(/\d+/)?.[0] || '0');
+                    const dataB = parseInt(b.data?.match(/\d+/)?.[0] || '0');
+                    return dataA - dataB;
+                });
+            }
+            
+            plansLoaded = true;
+            
+            // Устанавливаем первый план как выбранный по умолчанию
+            if (standardPlans.length > 0) {
+                selectedPlanId = standardPlans[0].id || standardPlans[0].bundle_name;
+            } else if (unlimitedPlans.length > 0) {
+                selectedPlanId = unlimitedPlans[0].id || unlimitedPlans[0].bundle_name;
+            }
+            
+            console.log('✅ Global plans loaded:', {
+                standard: standardPlans.length,
+                unlimited: unlimitedPlans.length,
+                firstPlan: standardPlans[0] || unlimitedPlans[0]
+            });
+            
+            // Обновляем отображение
+            renderPlans();
+            updateInfoBox();
+        } else {
+            console.warn('⚠️ No global plans data received');
+        }
+    } catch (error) {
+        console.error('❌ Error loading global plans:', error);
+    }
+}
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     setupMainSegmentedControl();
     setupSegmentedControl();
-    renderPlans();
-    updateInfoBox();
-    setupNextButton();
     setupCountriesList();
     setupNavigation();
     
@@ -82,6 +135,14 @@ document.addEventListener('DOMContentLoaded', () => {
     ensureBottomNavVisible();
     setTimeout(ensureBottomNavVisible, 100);
     setTimeout(ensureBottomNavVisible, 300);
+    
+    // Загружаем планы
+    await loadGlobalPlans();
+    
+    // Рендерим планы после загрузки
+    renderPlans();
+    updateInfoBox();
+    setupNextButton();
 });
 
 // Ensure bottom navigation is always visible
@@ -168,14 +229,28 @@ function setupSegmentedControl() {
 // Render plans list
 function renderPlans() {
     const plansList = document.getElementById('plansList');
+    if (!plansList) return;
+    
     plansList.innerHTML = '';
     
     const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
     
+    if (plans.length === 0) {
+        plansList.innerHTML = '<div class="no-plans">Loading plans...</div>';
+        return;
+    }
+    
     plans.forEach(plan => {
+        // Определяем ID плана (может быть id или bundle_name)
+        const planId = plan.id || plan.bundle_name;
+        const isSelected = selectedPlanId === planId || selectedPlanId === plan.id || selectedPlanId === plan.bundle_name;
+        
         const planItem = document.createElement('div');
-        planItem.className = `plan-item ${selectedPlanId === plan.id ? 'selected' : ''}`;
-        planItem.dataset.planId = plan.id;
+        planItem.className = `plan-item ${isSelected ? 'selected' : ''}`;
+        planItem.dataset.planId = planId;
+        
+        // Определяем цену (приоритет: priceValue > price > fallback)
+        const price = plan.priceValue || plan.price || '$ 9.99';
         
         planItem.innerHTML = `
             <div class="plan-info">
@@ -183,9 +258,9 @@ function renderPlans() {
                 <div class="plan-duration">${plan.duration}</div>
             </div>
             <div class="plan-right">
-                <div class="plan-price">${plan.price}</div>
-                <div class="radio-button ${selectedPlanId === plan.id ? 'selected' : ''}">
-                    ${selectedPlanId === plan.id ? 
+                <div class="plan-price">${price}</div>
+                <div class="radio-button ${isSelected ? 'selected' : ''}">
+                    ${isSelected ? 
                         '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>' : 
                         ''
                     }
@@ -194,7 +269,7 @@ function renderPlans() {
         `;
         
         planItem.addEventListener('click', () => {
-            selectPlan(plan.id);
+            selectPlan(planId);
         });
         
         plansList.appendChild(planItem);
@@ -205,6 +280,7 @@ function renderPlans() {
 function selectPlan(planId) {
     selectedPlanId = planId;
     renderPlans();
+    updateInfoBox();
     
     if (tg) {
         tg.HapticFeedback.impactOccurred('light');
