@@ -221,6 +221,27 @@ function ensureBottomNavVisible() {
     }
 }
 
+// Ensure Next button is always visible
+function ensureNextButtonVisible() {
+    const nextButtonContainer = document.querySelector('.bottom-button-container');
+    if (nextButtonContainer) {
+        nextButtonContainer.style.display = 'block';
+        nextButtonContainer.style.visibility = 'visible';
+        nextButtonContainer.style.opacity = '1';
+        nextButtonContainer.style.zIndex = '1001';
+        nextButtonContainer.style.position = 'fixed';
+        nextButtonContainer.style.pointerEvents = 'auto';
+    }
+    
+    const nextBtn = document.getElementById('nextBtn');
+    if (nextBtn) {
+        nextBtn.style.display = 'block';
+        nextBtn.style.visibility = 'visible';
+        nextBtn.style.opacity = '1';
+        nextBtn.style.pointerEvents = 'auto';
+    }
+}
+
 // Setup bottom navigation
 function setupNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
