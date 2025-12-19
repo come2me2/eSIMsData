@@ -451,8 +451,13 @@ function renderPlans() {
         planItem.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('🔵 Plan item clicked:', plan.id, 'currentPlanType:', currentPlanType);
-            selectPlan(plan.id);
+            console.log('🔵 Plan item clicked:', {
+                planId: plan.id,
+                bundle_name: plan.bundle_name,
+                currentPlanType: currentPlanType,
+                region: regionData.name
+            });
+            selectPlan(plan.id || plan.bundle_name);
             // НЕ перенаправляем на region-unlimited.html - остаемся на той же странице
         });
         

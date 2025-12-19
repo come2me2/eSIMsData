@@ -166,13 +166,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const regionName = urlParams.get('region') || 'Africa';
 const regionInfo = regionData[regionName] || regionData['Africa'];
 
-// Если в URL есть параметр plan, используем его как selectedPlanId
-const urlPlan = urlParams.get('plan');
-if (urlPlan) {
-    selectedPlanId = urlPlan;
-    console.log('Plan from URL:', urlPlan);
-}
-
 // Plans data - будут загружены из API
 let unlimitedPlans = [
     { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
@@ -182,6 +175,13 @@ let unlimitedPlans = [
 ];
 
 let selectedPlanId = null; // Будет установлен после загрузки планов
+
+// Если в URL есть параметр plan, используем его как selectedPlanId
+const urlPlan = urlParams.get('plan');
+if (urlPlan) {
+    selectedPlanId = urlPlan;
+    console.log('Plan from URL:', urlPlan);
+}
 
 // Функция загрузки планов из API
 async function loadPlansFromAPI(regionName, useCache = true) {
