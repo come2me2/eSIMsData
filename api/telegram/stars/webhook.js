@@ -6,8 +6,16 @@
  * При успешной оплате создаёт заказ через eSIM Go API и отправляет пользователю статус.
  */
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+// Загружаем переменные окружения с проверкой
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
+
+// Проверяем при загрузке модуля
+if (!BOT_TOKEN) {
+    console.error('❌ TELEGRAM_BOT_TOKEN not found in webhook.js');
+} else {
+    console.log('✅ TELEGRAM_BOT_TOKEN available in webhook.js');
+}
 
 // Простейшая идемпотентность на время жизни процесса
 const processedPayments = new Set();
