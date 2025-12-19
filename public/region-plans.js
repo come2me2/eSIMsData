@@ -371,9 +371,10 @@ async function loadPlansFromAPI(regionName, useCache = true) {
                 }
             });
             
+            // Для unlimited планов используем bundle_name как ID, если он есть
             unlimitedPlans.forEach((plan, index) => {
                 if (!plan.id) {
-                    plan.id = `unlimited${index + 1}`;
+                    plan.id = plan.bundle_name || `unlimited${index + 1}`;
                 }
             });
             
@@ -489,7 +490,16 @@ function setupSegmentedControl() {
             btn.classList.add('active');
             
             currentPlanType = btn.dataset.planType;
-            selectedPlanId = currentPlanType === 'unlimited' ? 'unlimited2' : 'plan2'; // Set default selection
+            
+            // Устанавливаем выбранный план по умолчанию из реальных загруженных планов
+            if (currentPlanType === 'unlimited') {
+                // Используем первый план из unlimitedPlans, если он есть
+                selectedPlanId = unlimitedPlans.length > 0 ? unlimitedPlans[0].id : null;
+            } else {
+                // Для standard используем первый план из standardPlans
+                selectedPlanId = standardPlans.length > 0 ? standardPlans[0].id : 'plan2';
+            }
+            
             renderPlans();
             updateInfoBox();
         });
@@ -625,24 +635,14 @@ function setupNextButton() {
             tg.HapticFeedback.impactOccurred('medium');
         }
         
-        // Navigate based on plan type
-        const params = new URLSearchParams({
-            region: regionData.name,
-            plan: selectedPlanId
+        // Navigate to checkout screen for both standard and unlimited plans
+        const checkoutParams = new URLSearchParams({
+            type: 'region',
+            name: regionData.name,
+            plan: selectedPlanId,
+            planType: currentPlanType
         });
-        
-        if (currentPlanType === 'unlimited') {
-            window.location.href = `region-unlimited.html?${params.toString()}`;
-        } else {
-            // Navigate to checkout screen
-            const checkoutParams = new URLSearchParams({
-                type: 'region',
-                name: regionData.name,
-                plan: selectedPlanId,
-                planType: currentPlanType
-            });
-            window.location.href = `checkout.html?${checkoutParams.toString()}`;
-        }
+        window.location.href = `checkout.html?${checkoutParams.toString()}`;
     });
 }
 

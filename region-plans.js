@@ -11,13 +11,12 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
     
     // Показываем кнопку "назад" в Telegram
-    // При возврате назад переходим на Local страницу (главная)
+    // При возврате назад переходим на главную вкладку Region (там BackButton будет работать → Local)
     if (tg.BackButton) {
         tg.BackButton.show();
         tg.BackButton.onClick(() => {
             tg.HapticFeedback.impactOccurred('light');
-            // Переходим на Local страницу (главная)
-            window.location.href = 'local-countries.html';
+            window.location.href = 'index.html?segment=region';
         });
     }
 }
@@ -180,33 +179,68 @@ const regionData = {
     name: urlParams.get('region') || 'Africa'
 };
 
-// Plans data
-const standardPlans = [
-    { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
-    { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
-    { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
-    { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
-];
-
-const unlimitedPlans = [
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-    { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-    { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-];
+// Plans data (загружаются из статических файлов через DataLoader)
+let standardPlans = [];
+let unlimitedPlans = [];
 
 let currentPlanType = 'standard';
-let selectedPlanId = 'plan2'; // Default selected for standard
+let selectedPlanId = null; // Будет установлен после загрузки планов
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     setupRegionInfo();
     setupSegmentedControl();
+    await loadRegionPlans(regionData.name);
     renderPlans();
     updateInfoBox();
     setupNextButton();
     setupCountriesList();
 });
+
+// Load region plans using DataLoader (static JSON -> API)
+async function loadRegionPlans(regionName) {
+    try {
+        let data = null;
+        if (window.DataLoader && typeof window.DataLoader.loadRegionPlans === 'function') {
+            data = await window.DataLoader.loadRegionPlans(regionName);
+        } else {
+            // Fallback: direct static file (slug like europe, latin-america)
+            const slug = String(regionName || '').toLowerCase().replace(/\s+/g, '-');
+            const resp = await fetch(`/data/plans-region-${slug}.json`);
+            if (resp.ok) {
+                const json = await resp.json();
+                if (json && json.success && json.data) data = json.data;
+            }
+        }
+
+        if (data) {
+            standardPlans = data.standard || [];
+            unlimitedPlans = data.unlimited || [];
+
+            // Ensure ids for selection compatibility
+            standardPlans.forEach((p, idx) => { if (!p.id) p.id = `plan${idx + 1}`; });
+            // Для unlimited планов используем bundle_name как ID, если он есть
+            unlimitedPlans.forEach((p, idx) => { 
+                if (!p.id) {
+                    p.id = p.bundle_name || `unlimited${idx + 1}`;
+                }
+            });
+            
+            // Устанавливаем выбранный план по умолчанию после загрузки
+            if (!selectedPlanId && standardPlans.length > 0) {
+                selectedPlanId = standardPlans[0].id;
+            }
+            
+            return true;
+        }
+    } catch (e) {
+        console.error('❌ Failed to load region plans:', e);
+    }
+
+    standardPlans = [];
+    unlimitedPlans = [];
+    return false;
+}
 
 // Setup region info
 function setupRegionInfo() {
@@ -246,7 +280,16 @@ function setupSegmentedControl() {
             btn.classList.add('active');
             
             currentPlanType = btn.dataset.planType;
-            selectedPlanId = currentPlanType === 'unlimited' ? 'unlimited2' : 'plan2'; // Set default selection
+            
+            // Устанавливаем выбранный план по умолчанию из реальных загруженных планов
+            if (currentPlanType === 'unlimited') {
+                // Используем первый план из unlimitedPlans, если он есть
+                selectedPlanId = unlimitedPlans.length > 0 ? unlimitedPlans[0].id : null;
+            } else {
+                // Для standard используем первый план из standardPlans
+                selectedPlanId = standardPlans.length > 0 ? standardPlans[0].id : 'plan2';
+            }
+            
             renderPlans();
             updateInfoBox();
         });
@@ -366,24 +409,14 @@ function setupNextButton() {
             tg.HapticFeedback.impactOccurred('medium');
         }
         
-        // Navigate based on plan type
-        const params = new URLSearchParams({
-            region: regionData.name,
-            plan: selectedPlanId
+        // Navigate to checkout screen for both standard and unlimited plans
+        const checkoutParams = new URLSearchParams({
+            type: 'region',
+            name: regionData.name,
+            plan: selectedPlanId,
+            planType: currentPlanType
         });
-        
-        if (currentPlanType === 'unlimited') {
-            window.location.href = `region-unlimited.html?${params.toString()}`;
-        } else {
-            // Navigate to checkout screen
-            const checkoutParams = new URLSearchParams({
-                type: 'region',
-                name: regionData.name,
-                plan: selectedPlanId,
-                planType: currentPlanType
-            });
-            window.location.href = `checkout.html?${checkoutParams.toString()}`;
-        }
+        window.location.href = `checkout.html?${checkoutParams.toString()}`;
     });
 }
 

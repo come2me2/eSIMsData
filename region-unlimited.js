@@ -11,13 +11,12 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
     
     // Показываем кнопку "назад" в Telegram
-    // При возврате назад переходим на Local страницу (главная)
+    // При возврате назад возвращаемся к списку регионов
     if (tg.BackButton) {
         tg.BackButton.show();
         tg.BackButton.onClick(() => {
             tg.HapticFeedback.impactOccurred('light');
-            // Переходим на Local страницу (главная)
-            window.location.href = 'local-countries.html';
+            window.location.href = 'index.html?segment=region';
         });
     }
 }
@@ -167,23 +166,200 @@ const urlParams = new URLSearchParams(window.location.search);
 const regionName = urlParams.get('region') || 'Africa';
 const regionInfo = regionData[regionName] || regionData['Africa'];
 
-// Plans data
-const unlimitedPlans = [
+// Если в URL есть параметр plan, используем его как selectedPlanId
+const urlPlan = urlParams.get('plan');
+if (urlPlan) {
+    selectedPlanId = urlPlan;
+    console.log('Plan from URL:', urlPlan);
+}
+
+// Plans data - будут загружены из API
+let unlimitedPlans = [
     { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
     { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
     { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
     { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
 ];
 
-let selectedPlanId = 'unlimited2'; // Default selected
+let selectedPlanId = null; // Будет установлен после загрузки планов
+
+// Функция загрузки планов из API
+async function loadPlansFromAPI(regionName, useCache = true) {
+    console.log('🔵 loadPlansFromAPI (unlimited) called with region:', regionName, 'useCache:', useCache);
+    
+    // Кэширование включено - сначала проверяем кэш для мгновенной загрузки
+    const cacheKey = `region_plans_cache_${regionName}`;
+    const cacheTimestampKey = `region_plans_cache_timestamp_${regionName}`;
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
+    
+    // Сначала проверяем кэш для мгновенной загрузки
+    if (useCache) {
+        try {
+            const cachedData = localStorage.getItem(cacheKey);
+            const cacheTimestamp = localStorage.getItem(cacheTimestampKey);
+            
+            if (cachedData && cacheTimestamp) {
+                const cacheAge = Date.now() - parseInt(cacheTimestamp);
+                if (cacheAge < CACHE_TTL) {
+                    console.log(`✅ Loading ${regionName} unlimited plans from localStorage cache (instant load)`);
+                    const result = JSON.parse(cachedData);
+                    
+                    if (result.success && result.data) {
+                        unlimitedPlans = result.data.unlimited || [];
+                        
+                        // Добавляем ID для совместимости
+                        unlimitedPlans.forEach((plan, index) => {
+                            if (!plan.id) {
+                                plan.id = plan.bundle_name || `unlimited${index + 1}`;
+                            }
+                        });
+                        
+                        if (unlimitedPlans.length > 0 && !selectedPlanId) {
+                            selectedPlanId = unlimitedPlans[0].id;
+                        }
+                        
+                        // Обновляем UI с кэшированными данными
+                        renderPlans();
+                        
+                        // Обновляем из API в фоне
+                        setTimeout(() => {
+                            loadPlansFromAPI(regionName, false).then((success) => {
+                                if (success) {
+                                    renderPlans();
+                                }
+                            });
+                        }, 100);
+                        return true;
+                    }
+                } else {
+                    console.log('⚠️ Cache expired, fetching fresh data');
+                    localStorage.removeItem(cacheKey);
+                    localStorage.removeItem(cacheTimestampKey);
+                }
+            }
+        } catch (cacheError) {
+            console.warn('⚠️ Error reading from cache:', cacheError);
+        }
+    }
+    
+    try {
+        const params = new URLSearchParams();
+        if (regionName) {
+            params.append('region', regionName);
+        }
+        
+        const apiUrl = `/api/esimgo/region-plans?${params.toString()}`;
+        console.log('🔵 Fetching region unlimited plans from API:', apiUrl);
+        
+        const response = await fetch(apiUrl);
+        console.log('🔵 Response status:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ API Error Response:', errorText);
+            throw new Error(`API returned ${response.status}: ${errorText.substring(0, 100)}`);
+        }
+        
+        const result = await response.json();
+        console.log('🔵 API response:', result);
+        
+        // Сохраняем в кэш
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(result));
+            localStorage.setItem(cacheTimestampKey, Date.now().toString());
+            console.log(`✅ ${regionName} unlimited plans saved to localStorage cache`);
+        } catch (cacheError) {
+            console.warn('⚠️ Error saving to cache:', cacheError);
+        }
+        
+        if (result.success && result.data) {
+            unlimitedPlans = result.data.unlimited || [];
+            
+            // Добавляем ID для совместимости - используем bundle_name как основной ID
+            unlimitedPlans.forEach((plan, index) => {
+                if (!plan.id) {
+                    // Приоритет: bundle_name > сгенерированный ID
+                    plan.id = plan.bundle_name || `unlimited${index + 1}`;
+                }
+                // Убеждаемся, что bundle_name сохранен для использования в checkout
+                if (plan.bundle_name && plan.id !== plan.bundle_name) {
+                    // Если ID отличается от bundle_name, сохраняем bundle_name отдельно
+                    plan.originalBundleName = plan.bundle_name;
+                }
+            });
+            
+            // Устанавливаем план из URL, если он есть и найден в загруженных планах
+            const urlPlan = urlParams.get('plan');
+            if (urlPlan) {
+                const foundPlan = unlimitedPlans.find(p => 
+                    p.id === urlPlan || 
+                    p.bundle_name === urlPlan ||
+                    p.originalBundleName === urlPlan
+                );
+                if (foundPlan) {
+                    // Используем ID плана (который может быть bundle_name)
+                    selectedPlanId = foundPlan.id;
+                    console.log('✅ Plan from URL found and selected:', selectedPlanId, 'bundle_name:', foundPlan.bundle_name);
+                } else {
+                    console.warn('⚠️ Plan from URL not found in loaded plans:', urlPlan);
+                    console.warn('⚠️ Available plan IDs:', unlimitedPlans.map(p => ({ id: p.id, bundle_name: p.bundle_name })));
+                    // Если план не найден, используем первый доступный
+                    if (unlimitedPlans.length > 0) {
+                        selectedPlanId = unlimitedPlans[0].id;
+                        console.log('⚠️ Using first available plan instead:', selectedPlanId);
+                    }
+                }
+            } else if (unlimitedPlans.length > 0 && !selectedPlanId) {
+                selectedPlanId = unlimitedPlans[0].id;
+                console.log('✅ No plan in URL, using first plan:', selectedPlanId);
+            }
+            
+            console.log(`✅ Loaded ${unlimitedPlans.length} unlimited plans from API`);
+            return true;
+        } else {
+            console.warn('❌ Failed to load plans from API - result.success is false or no data');
+            console.warn('Result:', result);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error loading plans from API:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
+        // Fallback к захардкоженным планам
+        unlimitedPlans = [
+            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
+            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
+            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
+            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
+        ];
+        if (!selectedPlanId) {
+            selectedPlanId = 'unlimited2';
+        }
+        console.warn('⚠️ Using fallback plans (hardcoded)');
+        return false;
+    }
+}
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('region-unlimited.js: DOMContentLoaded');
+    console.log('Region name:', regionName);
+    
     setupRegionInfo();
     setupSegmentedControl();
+    
+    // Загружаем безлимитные тарифы из API
+    console.log('🔵 Loading unlimited plans from API');
+    await loadPlansFromAPI(regionName);
+    
     renderPlans();
     setupNextButton();
     setupCountriesList();
+    
+    console.log('region-unlimited.js: Initialization complete');
+    console.log('Selected plan ID:', selectedPlanId);
 });
 
 // Setup region info
@@ -237,11 +413,22 @@ function setupSegmentedControl() {
 // Render plans list
 function renderPlans() {
     const plansList = document.getElementById('plansList');
+    if (!plansList) {
+        console.error('plansList element not found');
+        return;
+    }
     plansList.innerHTML = '';
     
+    console.log('🔵 Rendering plans:', unlimitedPlans.length, 'selectedPlanId:', selectedPlanId);
+    
     unlimitedPlans.forEach(plan => {
+        // Проверяем, выбран ли этот план (сравниваем по ID или bundle_name)
+        const isSelected = selectedPlanId === plan.id || 
+                          selectedPlanId === plan.bundle_name ||
+                          (plan.bundle_name && selectedPlanId === plan.bundle_name);
+        
         const planItem = document.createElement('div');
-        planItem.className = `plan-item ${selectedPlanId === plan.id ? 'selected' : ''}`;
+        planItem.className = `plan-item ${isSelected ? 'selected' : ''}`;
         planItem.dataset.planId = plan.id;
         
         planItem.innerHTML = `
@@ -251,8 +438,8 @@ function renderPlans() {
             </div>
             <div class="plan-right">
                 <div class="plan-price">${plan.price}</div>
-                <div class="radio-button ${selectedPlanId === plan.id ? 'selected' : ''}">
-                    ${selectedPlanId === plan.id ? 
+                <div class="radio-button ${isSelected ? 'selected' : ''}">
+                    ${isSelected ? 
                         '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>' : 
                         ''
                     }
@@ -270,7 +457,15 @@ function renderPlans() {
 
 // Select plan
 function selectPlan(planId) {
-    selectedPlanId = planId;
+    // Находим план по ID, чтобы убедиться, что используем правильный ID
+    const plan = unlimitedPlans.find(p => p.id === planId || p.bundle_name === planId);
+    if (plan) {
+        selectedPlanId = plan.id; // Используем ID из загруженного плана
+        console.log('✅ Plan selected:', selectedPlanId, 'bundle_name:', plan.bundle_name);
+    } else {
+        selectedPlanId = planId; // Fallback на переданный ID
+        console.warn('⚠️ Plan not found in loaded plans, using provided ID:', planId);
+    }
     renderPlans();
     
     if (tg) {
@@ -321,28 +516,67 @@ function setupCountriesList() {
 
 // Setup next button
 function setupNextButton() {
-    document.getElementById('nextBtn').addEventListener('click', () => {
+    const nextBtn = document.getElementById('nextBtn');
+    if (!nextBtn) {
+        console.error('nextBtn element not found');
+        return;
+    }
+    
+    nextBtn.addEventListener('click', () => {
+        console.log('🔵 Next button clicked');
+        console.log('🔵 selectedPlanId:', selectedPlanId);
+        console.log('🔵 regionName:', regionName);
+        console.log('🔵 unlimitedPlans:', unlimitedPlans);
+        
         if (!selectedPlanId) {
+            console.warn('❌ No plan selected');
             if (tg) {
                 tg.showAlert('Please select a plan');
             } else {
                 alert('Please select a plan');
             }
-            return;
+            return false;
         }
         
         if (tg) {
-            tg.HapticFeedback.impactOccurred('medium');
+            try {
+                tg.HapticFeedback.impactOccurred('medium');
+            } catch (e) {
+                console.warn('HapticFeedback error:', e);
+            }
         }
+        
+        // Находим выбранный план, чтобы убедиться, что используем правильный ID
+        const selectedPlan = unlimitedPlans.find(p => 
+            p.id === selectedPlanId || 
+            p.bundle_name === selectedPlanId
+        );
+        
+        // Используем ID плана (который может быть bundle_name)
+        const planIdForCheckout = selectedPlan ? selectedPlan.id : selectedPlanId;
+        
+        console.log('🔵 Selected plan for checkout:', {
+            selectedPlanId: selectedPlanId,
+            planIdForCheckout: planIdForCheckout,
+            bundle_name: selectedPlan?.bundle_name,
+            plan: selectedPlan
+        });
         
         // Navigate to checkout screen
         const params = new URLSearchParams({
             type: 'region',
             name: regionName,
-            plan: selectedPlanId,
+            plan: planIdForCheckout,
             planType: 'unlimited'
         });
-        window.location.href = `checkout.html?${params.toString()}`;
+        
+        const checkoutUrl = `checkout.html?${params.toString()}`;
+        console.log('🔵 Navigating to checkout:', checkoutUrl);
+        
+        // Используем window.location.assign для более надежного перехода
+        window.location.assign(checkoutUrl);
+        
+        return false; // Предотвращаем стандартное поведение кнопки
     });
 }
 

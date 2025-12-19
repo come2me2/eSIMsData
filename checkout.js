@@ -15,7 +15,8 @@ if (tg) {
         tg.BackButton.show();
         tg.BackButton.onClick(() => {
             tg.HapticFeedback.impactOccurred('light');
-            window.history.back();
+            // Возвращаемся на главную (Local)
+            window.location.href = 'index.html?segment=local';
         });
     }
 }
@@ -35,93 +36,321 @@ let standardPlans = [];
 let unlimitedPlans = [];
 
 /**
- * Загрузка реальных планов из eSIM Go API
+ * Загрузка реальных планов для checkout:
+ * - country: local plans по коду страны
+ * - region: region plans по названию региона
+ * - global: global plans
+ *
+ * Приоритет: DataLoader (static JSON) -> API.
  */
-async function loadPlansFromAPI(countryCode) {
-    console.log('🔵 loadPlansFromAPI called with countryCode:', countryCode);
-    
+async function loadPlansForCheckout() {
+    console.log('🔵 loadPlansForCheckout called with orderData:', orderData);
+
     try {
-        const params = new URLSearchParams();
-        if (countryCode) {
-            params.append('country', countryCode);
+        let data = null;
+
+        if (window.DataLoader) {
+            if (orderData.type === 'country' && orderData.code && typeof window.DataLoader.loadLocalPlans === 'function') {
+                data = await window.DataLoader.loadLocalPlans(orderData.code);
+            } else if (orderData.type === 'region' && orderData.name && typeof window.DataLoader.loadRegionPlans === 'function') {
+                data = await window.DataLoader.loadRegionPlans(orderData.name);
+            } else if (orderData.type === 'global' && typeof window.DataLoader.loadGlobalPlans === 'function') {
+                data = await window.DataLoader.loadGlobalPlans();
+            }
         }
-        
-        const apiUrl = `/api/esimgo/plans?${params.toString()}`;
-        console.log('🔵 Fetching plans from:', apiUrl);
-        
-        const response = await fetch(apiUrl);
-        console.log('🔵 Response status:', response.status, response.statusText);
-        
-        const result = await response.json();
-        console.log('🔵 API response:', result);
-        
-        if (result.success && result.data) {
-            standardPlans = result.data.standard || [];
-            unlimitedPlans = result.data.unlimited || [];
-            
+
+        // Fallback: direct API for country (legacy)
+        if (!data && orderData.type === 'country') {
+            const params = new URLSearchParams();
+            if (orderData.code) params.append('country', orderData.code);
+            params.append('category', 'local');
+            const apiUrl = `/api/esimgo/plans?${params.toString()}`;
+            const response = await fetch(apiUrl);
+            const result = await response.json();
+            if (result.success && result.data) data = result.data;
+        }
+
+        // Fallback: direct API for region
+        if (!data && orderData.type === 'region' && orderData.name) {
+            const apiUrl = `/api/esimgo/region-plans?region=${encodeURIComponent(orderData.name)}`;
+            const response = await fetch(apiUrl);
+            const result = await response.json();
+            if (result.success && result.data) data = result.data;
+        }
+
+        // Fallback: direct API for global
+        if (!data && orderData.type === 'global') {
+            const apiUrl = `/api/esimgo/plans?category=global`;
+            const response = await fetch(apiUrl);
+            const result = await response.json();
+            if (result.success && result.data) data = result.data;
+        }
+
+        if (data) {
+            standardPlans = data.standard || [];
+            unlimitedPlans = data.unlimited || [];
+
+            // Сортируем unlimited планы по duration и data для консистентности
+            if (unlimitedPlans.length > 0) {
+                unlimitedPlans.sort((a, b) => {
+                    // Сначала по duration (7 Days перед 30 Days)
+                    const durationA = parseInt(a.duration?.match(/\d+/)?.[0] || '0');
+                    const durationB = parseInt(b.duration?.match(/\d+/)?.[0] || '0');
+                    if (durationA !== durationB) {
+                        return durationA - durationB;
+                    }
+                    // Если duration одинаковый, сортируем по data (если есть различия)
+                    return (a.data || '').localeCompare(b.data || '');
+                });
+            }
+
             // Добавляем ID для совместимости (если нет)
-            standardPlans.forEach((plan, index) => {
-                if (!plan.id) {
-                    plan.id = `plan${index + 1}`;
-                }
-            });
-            
-            unlimitedPlans.forEach((plan, index) => {
-                if (!plan.id) {
-                    plan.id = `unlimited${index + 1}`;
-                }
-            });
-            
-            console.log('Plans loaded from API:', {
+            standardPlans.forEach((plan, index) => { if (!plan.id) plan.id = `plan${index + 1}`; });
+            unlimitedPlans.forEach((plan, index) => { if (!plan.id) plan.id = `unlimited${index + 1}`; });
+
+            console.log('✅ Plans loaded for checkout:', {
+                type: orderData.type,
+                name: orderData.name,
+                code: orderData.code,
+                planId: orderData.planId,
+                planType: orderData.planType,
                 standard: standardPlans.length,
                 unlimited: unlimitedPlans.length,
-                country: countryCode,
-                sampleStandard: standardPlans[0] || null,
-                sampleUnlimited: unlimitedPlans[0] || null
+                unlimitedPlans: unlimitedPlans.map(p => ({ id: p.id, data: p.data, duration: p.duration, price: p.price }))
             });
-            
-            // Логируем первые планы для отладки
-            if (standardPlans.length > 0) {
-                console.log('First standard plan:', standardPlans[0]);
-            }
-            if (unlimitedPlans.length > 0) {
-                console.log('First unlimited plan:', unlimitedPlans[0]);
-            }
-            
+
             return true;
-        } else {
-            console.warn('❌ Failed to load plans from API - result.success is false or no data');
-            console.warn('Result:', result);
-            return false;
         }
     } catch (error) {
-        console.error('❌ Error loading plans from API:', error);
-        console.error('Error details:', {
-            message: error.message,
-            stack: error.stack
-        });
-        // Fallback к захардкоженным планам
-        standardPlans = [
-            { data: '1 GB', duration: '7 Days', price: '$ 9.99', id: 'plan1' },
-            { data: '2 GB', duration: '7 Days', price: '$ 9.99', id: 'plan2' },
-            { data: '3 GB', duration: '30 Days', price: '$ 9.99', id: 'plan3' },
-            { data: '5 GB', duration: '30 Days', price: '$ 9.99', id: 'plan4' }
-        ];
-        
-        unlimitedPlans = [
-            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited1' },
-            { data: '∞ GB', duration: '7 Days', price: '$ 9.99', id: 'unlimited2' },
-            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited3' },
-            { data: '∞ GB', duration: '30 Days', price: '$ 9.99', id: 'unlimited4' }
-        ];
-        return false;
+        console.error('❌ Error loading checkout plans:', error);
     }
+
+    // Hard fallback (kept minimal)
+    standardPlans = [];
+    unlimitedPlans = [];
+    return false;
 }
 
 // Store original price and discount state
 let originalPrice = '';
 let isPromoApplied = false;
 let discountPercent = 0;
+
+// ===== Payment method (UI only for now) =====
+const PAYMENT_METHODS = {
+    stars: 'Telegram Stars',
+    stripe: 'Bank Cards',
+    cryptomus: 'Crypto Payments'
+};
+
+let selectedPaymentMethod = localStorage.getItem('checkout_payment_method') || '';
+if (selectedPaymentMethod && !PAYMENT_METHODS[selectedPaymentMethod]) {
+    // reset old values from previous versions (card/ton/etc)
+    selectedPaymentMethod = '';
+    localStorage.removeItem('checkout_payment_method');
+}
+
+function setupPaymentMethodUI() {
+    const btn = document.getElementById('paymentMethodBtn');
+    const subtitle = document.getElementById('paymentMethodSubtitle');
+    const icon = document.querySelector('#paymentMethodBtn .payment-method-icon');
+    const overlay = document.getElementById('paymentSheetOverlay');
+    const sheet = document.getElementById('paymentSheet');
+    const closeBtn = document.getElementById('paymentSheetClose');
+    const list = document.getElementById('paymentSheetList');
+
+    if (!btn || !subtitle || !overlay || !sheet || !closeBtn || !list) {
+        console.error('❌ Payment method UI elements not found:', {
+            btn: !!btn,
+            subtitle: !!subtitle,
+            overlay: !!overlay,
+            sheet: !!sheet,
+            closeBtn: !!closeBtn,
+            list: !!list
+        });
+        return;
+    }
+    
+    console.log('✅ Payment method UI initialized');
+
+    const getIconPath = (method) => {
+        if (method === 'stars') {
+            return '/icons/Telegram Stars.svg';
+        }
+        if (method === 'stripe') {
+            return '/icons/Bank Cards eSIMsData.svg';
+        }
+        if (method === 'cryptomus') {
+            return '/icons/Crypto Payments eSIMsData.svg';
+        }
+        // default icon (до выбора метода)
+        return '/icons/Payment Method eSIMsData.svg';
+    };
+
+    const iconHtml = (method) => {
+        const iconPath = getIconPath(method);
+        return `<img src="${iconPath}" alt="${PAYMENT_METHODS[method] || 'Payment method'}" style="width:100%;height:100%;object-fit:contain;">`;
+    };
+
+    const updateSubtitle = () => {
+        subtitle.textContent = PAYMENT_METHODS[selectedPaymentMethod] || 'Not selected';
+        
+        // Добавляем/убираем класс для активного состояния
+        if (selectedPaymentMethod) {
+            btn.setAttribute('data-selected', 'true');
+        } else {
+            btn.removeAttribute('data-selected');
+        }
+        
+        if (icon) {
+            // keep container styling; swap contents
+            const iconPath = getIconPath(selectedPaymentMethod);
+            console.log('💳 Updating payment method icon:', {
+                method: selectedPaymentMethod || 'default',
+                iconPath
+            });
+            icon.innerHTML = iconHtml(selectedPaymentMethod);
+            
+            // Проверяем, что иконка загрузилась
+            const img = icon.querySelector('img');
+            if (img) {
+                img.onerror = function() {
+                    console.error('❌ Failed to load payment icon:', iconPath);
+                    // Fallback на дефолтную иконку
+                    this.src = '/icons/Payment Method eSIMsData.svg';
+                };
+                img.onload = function() {
+                    console.log('✅ Payment icon loaded:', iconPath);
+                };
+            }
+        }
+    };
+
+    const syncSelected = () => {
+        const items = list.querySelectorAll('.sheet-item');
+        items.forEach(item => {
+            const key = item.getAttribute('data-payment-method');
+            if (key === selectedPaymentMethod) item.classList.add('selected');
+            else item.classList.remove('selected');
+        });
+    };
+
+    const open = () => {
+        console.log('💳 Opening payment method sheet');
+        console.log('💳 Overlay:', overlay, 'hidden:', overlay?.hidden);
+        console.log('💳 Sheet:', sheet, 'hidden:', sheet?.hidden);
+        
+        if (!overlay || !sheet) {
+            console.error('❌ Overlay or sheet not found!');
+            return;
+        }
+        
+        overlay.hidden = false;
+        sheet.hidden = false;
+        document.body.style.overflow = 'hidden';
+        syncSelected();
+
+        // Start transition on next frame (ensures CSS applies before adding class)
+        requestAnimationFrame(() => {
+            overlay.classList.add('is-open');
+            sheet.classList.add('is-open');
+            console.log('✅ Sheet opened, classes added. Overlay hidden:', overlay.hidden, 'Sheet hidden:', sheet.hidden);
+        });
+
+        if (tg) {
+            try {
+                tg.HapticFeedback.impactOccurred('light');
+            } catch (e) {
+                console.warn('⚠️ HapticFeedback error:', e);
+            }
+        }
+    };
+
+    const close = () => {
+        // animate out, then hide
+        overlay.classList.remove('is-open');
+        sheet.classList.remove('is-open');
+
+        const finish = () => {
+            overlay.hidden = true;
+            sheet.hidden = true;
+            document.body.style.overflow = '';
+        };
+
+        // If reduced motion or transitions not supported, finish immediately
+        const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced) {
+            finish();
+            return;
+        }
+
+        let done = false;
+        const onEnd = () => {
+            if (done) return;
+            done = true;
+            sheet.removeEventListener('transitionend', onEnd);
+            finish();
+        };
+        sheet.addEventListener('transitionend', onEnd);
+
+        // Safety timeout (in case transitionend doesn't fire in WebView)
+        setTimeout(onEnd, 300);
+    };
+
+    // Обработчик открытия модального окна
+    btn.addEventListener('click', (e) => {
+        console.log('💳 Payment method button clicked');
+        e.preventDefault();
+        e.stopPropagation();
+        open();
+    });
+    
+    // Для touch устройств
+    btn.addEventListener('touchend', (e) => {
+        console.log('💳 Payment method button touched');
+        e.preventDefault();
+        e.stopPropagation();
+        open();
+    });
+    
+    const handleClose = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        close();
+        return false;
+    };
+    
+    closeBtn.addEventListener('click', handleClose, true);
+    closeBtn.addEventListener('touchstart', handleClose, { passive: false, capture: true });
+    closeBtn.onclick = handleClose;
+    
+    overlay.addEventListener('click', handleClose, true);
+    overlay.addEventListener('touchstart', handleClose, { passive: false, capture: true });
+    overlay.onclick = handleClose;
+
+    // ESC to close (desktop)
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !sheet.hidden) close();
+    });
+
+    list.addEventListener('click', (e) => {
+        const item = e.target.closest('.sheet-item');
+        if (!item) return;
+        const key = item.getAttribute('data-payment-method');
+        if (!key) return;
+        selectedPaymentMethod = key;
+        localStorage.setItem('checkout_payment_method', selectedPaymentMethod);
+        updateSubtitle();
+        syncSelected();
+        if (tg) tg.HapticFeedback.impactOccurred('light');
+        close();
+    });
+
+    updateSubtitle();
+    syncSelected();
+}
 
 /**
  * Поиск bundle name по параметрам
@@ -150,7 +379,203 @@ async function findBundleName(countryCode, dataAmount, duration, unlimited = fal
 }
 
 /**
- * Обработка покупки
+ * Инициирование оплаты через Telegram Stars
+ */
+async function initiateStarsPayment(auth) {
+    const purchaseBtn = document.getElementById('purchaseBtn');
+    const originalText = purchaseBtn.textContent;
+    
+    // Проверка, что мы в Telegram Web App
+    if (!tg || !tg.openInvoice) {
+        alert('Оплата через Telegram Stars доступна только внутри Telegram');
+        return;
+    }
+    
+    try {
+        purchaseBtn.textContent = 'Creating invoice...';
+        purchaseBtn.disabled = true;
+        
+        if (tg) {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+        
+        // Получаем выбранный план
+        const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
+        
+        // Улучшенная логика поиска плана
+        let selectedPlan = plans.find(p => p.id === orderData.planId || p.bundle_name === orderData.planId);
+        
+        // Если план не найден и это unlimited план с ID вида unlimitedN, пытаемся найти по индексу
+        if (!selectedPlan && orderData.planType === 'unlimited' && orderData.planId) {
+            const idMatch = orderData.planId.match(/unlimited(\d+)/);
+            if (idMatch) {
+                const index = parseInt(idMatch[1]) - 1; // unlimited1 = index 0, unlimited2 = index 1, etc.
+                if (index >= 0 && index < plans.length) {
+                    selectedPlan = plans[index];
+                }
+            }
+        }
+        
+        if (!selectedPlan) {
+            throw new Error(`Plan not found: planId=${orderData.planId}, planType=${orderData.planType}, available plans: ${plans.length}`);
+        }
+        
+        // Получаем bundle_name
+        let bundleName = selectedPlan.bundle_name;
+        if (!bundleName) {
+            // Если bundle_name нет, нужно найти его
+            bundleName = await findBundleName(
+                orderData.code,
+                selectedPlan.dataAmount || (parseInt(selectedPlan.data.match(/\d+/)?.[0] || '0') * 1000),
+                selectedPlan.durationDays || parseInt(selectedPlan.duration.match(/\d+/)?.[0] || '0'),
+                orderData.planType === 'unlimited'
+            );
+        }
+        
+        // Получаем себестоимость тарифа (priceValue должен быть себестоимостью)
+        // ⚠️ ВАЖНО: priceValue должна быть себестоимостью (cost), а не финальной ценой!
+        let costPrice = selectedPlan.priceValue;
+        if (!costPrice && selectedPlan.price) {
+            // Парсим цену из строки (например, "$ 2.26")
+            const priceMatch = selectedPlan.price.toString().match(/([\d.,]+)/);
+            if (priceMatch) {
+                costPrice = parseFloat(priceMatch[1].replace(',', '.'));
+            }
+        }
+        
+        if (!costPrice || costPrice <= 0) {
+            throw new Error('Invalid plan cost. Please contact support.');
+        }
+        
+        console.log('💫 Initiating Stars payment:', {
+            plan: selectedPlan,
+            bundleName,
+            costPrice,
+            country: orderData.code
+        });
+        
+        // Валидация данных Telegram
+        const validation = await auth.validateOnServer('/api/validate-telegram');
+        if (!validation.valid) {
+            throw new Error(validation.error || 'Validation failed');
+        }
+        
+        // Создаем инвойс через API
+        purchaseBtn.textContent = 'Creating invoice...';
+        const invoiceResponse = await fetch('/api/telegram/stars/create-invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plan_id: orderData.planId,
+                plan_type: orderData.planType,
+                bundle_name: bundleName,
+                country_code: orderData.code,
+                country_name: orderData.name,
+                price: costPrice, // ⚠️ Себестоимость тарифа
+                currency: 'USD',
+                telegram_user_id: auth.getUserId(),
+                telegram_username: auth.getUsername()
+            })
+        });
+        
+        const invoiceResult = await invoiceResponse.json();
+        
+        if (!invoiceResult.success || !invoiceResult.invoiceLink) {
+            throw new Error(invoiceResult.error || 'Failed to create invoice');
+        }
+        
+        console.log('✅ Invoice created:', {
+            invoiceLink: invoiceResult.invoiceLink,
+            amountStars: invoiceResult.amountStars
+        });
+        
+        // Восстанавливаем кнопку
+        purchaseBtn.textContent = originalText;
+        purchaseBtn.disabled = false;
+        
+        // Для Stars createInvoiceLink возвращает полный URL вида https://t.me/invoice/...
+        // tg.openInvoice() принимает либо slug (последняя часть URL), либо полный URL
+        const invoiceLink = invoiceResult.invoiceLink;
+        console.log('💫 Invoice link:', invoiceLink);
+        
+        // Проверяем формат ссылки
+        let invoiceId;
+        if (invoiceLink.startsWith('https://t.me/invoice/')) {
+            // Извлекаем slug из полного URL
+            invoiceId = invoiceLink.split('/').pop();
+        } else if (invoiceLink.startsWith('invoice/')) {
+            // Уже в формате invoice/...
+            invoiceId = invoiceLink.replace('invoice/', '');
+        } else {
+            // Пробуем использовать как есть
+            invoiceId = invoiceLink;
+        }
+        
+        console.log('💫 Invoice ID to open:', invoiceId);
+        
+        // Открываем инвойс через Telegram
+        const invoiceCallback = (status) => {
+            console.log('💫 Invoice status:', status);
+            
+            if (status === 'paid') {
+                // Успешная оплата - заказ будет создан через webhook
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                    tg.showAlert('✅ Payment successful! Your eSIM will be sent to you shortly.');
+                }
+                // Можно перенаправить на страницу успеха или показать сообщение
+                setTimeout(() => {
+                    window.location.href = 'index.html?segment=local';
+                }, 2000);
+            } else if (status === 'cancelled') {
+                // Пользователь отменил оплату
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                    tg.showAlert('Payment cancelled.');
+                }
+            } else if (status === 'failed') {
+                // Ошибка оплаты
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                    tg.showAlert('Payment failed. Please try again.');
+                }
+            } else if (status === 'pending') {
+                // Платеж в обработке
+                console.log('Payment is pending...');
+            }
+        };
+        
+        // Открываем инвойс (передаем slug)
+        try {
+            tg.openInvoice(invoiceId, invoiceCallback);
+        } catch (error) {
+            console.error('❌ openInvoice error:', error);
+            // Пробуем передать полный URL
+            if (invoiceLink.startsWith('https://')) {
+                tg.openInvoice(invoiceLink, invoiceCallback);
+            } else {
+                throw new Error('Invalid invoice format: ' + invoiceLink);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Stars payment error:', error);
+        
+        // Восстанавливаем кнопку
+        purchaseBtn.textContent = originalText;
+        purchaseBtn.disabled = false;
+        
+        if (tg) {
+            tg.HapticFeedback.notificationOccurred('error');
+            tg.showAlert('Error: ' + error.message);
+        } else {
+            alert('Error: ' + error.message);
+        }
+    }
+}
+
+/**
+ * Обработка покупки (legacy метод для других способов оплаты)
  */
 async function processPurchase(orderWithUser, auth, tg) {
     const purchaseBtn = document.getElementById('purchaseBtn');
@@ -165,12 +590,24 @@ async function processPurchase(orderWithUser, auth, tg) {
         }
         
         // Определяем параметры плана
-        const selectedPlan = orderWithUser.planType === 'unlimited' 
-            ? unlimitedPlans.find(p => p.id === orderWithUser.planId || p.bundle_name === orderWithUser.planId)
-            : standardPlans.find(p => p.id === orderWithUser.planId || p.bundle_name === orderWithUser.planId);
+        const plans = orderWithUser.planType === 'unlimited' ? unlimitedPlans : standardPlans;
+        
+        // Улучшенная логика поиска плана
+        let selectedPlan = plans.find(p => p.id === orderWithUser.planId || p.bundle_name === orderWithUser.planId);
+        
+        // Если план не найден и это unlimited план с ID вида unlimitedN, пытаемся найти по индексу
+        if (!selectedPlan && orderWithUser.planType === 'unlimited' && orderWithUser.planId) {
+            const idMatch = orderWithUser.planId.match(/unlimited(\d+)/);
+            if (idMatch) {
+                const index = parseInt(idMatch[1]) - 1; // unlimited1 = index 0, unlimited2 = index 1, etc.
+                if (index >= 0 && index < plans.length) {
+                    selectedPlan = plans[index];
+                }
+            }
+        }
         
         if (!selectedPlan) {
-            throw new Error('Plan not found');
+            throw new Error(`Plan not found: planId=${orderWithUser.planId}, planType=${orderWithUser.planType}, available plans: ${plans.length}`);
         }
         
         // Если у плана есть bundle_name (из API), используем его напрямую
@@ -403,12 +840,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Можно показать предупреждение или перенаправить
     }
     
-    // Загружаем реальные планы из API
+    // Загружаем реальные планы для checkout
     console.log('🔵 DOMContentLoaded - orderData:', orderData);
-    const countryCode = orderData?.code || null;
-    console.log('🔵 Loading plans for country:', countryCode);
-    
-    const plansLoaded = await loadPlansFromAPI(countryCode);
+    const plansLoaded = await loadPlansForCheckout();
     
     console.log('🔵 Plans loaded status:', plansLoaded, {
         standardCount: standardPlans.length,
@@ -418,6 +852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     setupOrderDetails();
     setupPromoCode();
+    setupPaymentMethodUI();
     setupPurchaseButton();
     
     // Если планы загрузились, обновляем отображение
@@ -471,7 +906,26 @@ function setupOrderDetails() {
         return; // Выходим, updateOrderDetailsWithRealPlans обновит позже
     }
     
-    const selectedPlan = plans.find(p => p.id === orderData.planId) || plans[0];
+    // Улучшенная логика поиска плана:
+    // 1. Сначала ищем по точному совпадению ID или bundle_name
+    // 2. Если не найдено и это unlimited план, пытаемся найти по индексу (unlimited1 = index 0, unlimited2 = index 1, etc.)
+    let selectedPlan = plans.find(p => p.id === orderData.planId || p.bundle_name === orderData.planId);
+    
+    // Если план не найден и это unlimited план с ID вида unlimitedN, пытаемся найти по индексу
+    if (!selectedPlan && orderData.planType === 'unlimited' && orderData.planId) {
+        const idMatch = orderData.planId.match(/unlimited(\d+)/);
+        if (idMatch) {
+            const index = parseInt(idMatch[1]) - 1; // unlimited1 = index 0, unlimited2 = index 1, etc.
+            if (index >= 0 && index < plans.length) {
+                selectedPlan = plans[index];
+            }
+        }
+    }
+    
+    // Если все еще не найден, используем первый план как fallback
+    if (!selectedPlan) {
+        selectedPlan = plans[0];
+    }
     
     if (selectedPlan) {
         planDetailsElement.innerHTML = `
@@ -513,7 +967,27 @@ function updateOrderDetailsWithRealPlans() {
     
     // Находим выбранный план
     const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
-    const selectedPlan = plans.find(p => p.id === orderData.planId) || plans[0];
+    
+    // Улучшенная логика поиска плана:
+    // 1. Сначала ищем по точному совпадению ID или bundle_name
+    // 2. Если не найдено и это unlimited план, пытаемся найти по индексу (unlimited1 = index 0, unlimited2 = index 1, etc.)
+    let selectedPlan = plans.find(p => p.id === orderData.planId || p.bundle_name === orderData.planId);
+    
+    // Если план не найден и это unlimited план с ID вида unlimitedN, пытаемся найти по индексу
+    if (!selectedPlan && orderData.planType === 'unlimited' && orderData.planId) {
+        const idMatch = orderData.planId.match(/unlimited(\d+)/);
+        if (idMatch) {
+            const index = parseInt(idMatch[1]) - 1; // unlimited1 = index 0, unlimited2 = index 1, etc.
+            if (index >= 0 && index < plans.length) {
+                selectedPlan = plans[index];
+            }
+        }
+    }
+    
+    // Если все еще не найден, используем первый план как fallback
+    if (!selectedPlan) {
+        selectedPlan = plans[0];
+    }
     
     if (selectedPlan) {
         // Обновляем детали плана
@@ -648,6 +1122,24 @@ function setupPurchaseButton() {
             return;
         }
         
+        // Проверяем выбранный метод оплаты
+        if (selectedPaymentMethod === 'stars') {
+            // Оплата через Telegram Stars
+            await initiateStarsPayment(auth);
+            return;
+        }
+        
+        // Для других методов оплаты (Bank Cards, Crypto Payments) - показываем сообщение
+        if (selectedPaymentMethod && selectedPaymentMethod !== 'stars') {
+            if (tg) {
+                tg.showAlert(`${PAYMENT_METHODS[selectedPaymentMethod]} payment will be available soon.`);
+            } else {
+                alert(`${PAYMENT_METHODS[selectedPaymentMethod]} payment will be available soon.`);
+            }
+            return;
+        }
+        
+        // Если метод оплаты не выбран, используем стандартный процесс (legacy)
         if (tg) {
             tg.HapticFeedback.impactOccurred('medium');
         }
