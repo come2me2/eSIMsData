@@ -284,6 +284,25 @@ function renderPlans() {
     });
 }
 
+// Format price with dollar sign
+function formatPrice(price) {
+    if (!price) return '$ 9.99';
+    
+    // Если цена уже содержит символ $, возвращаем как есть
+    if (typeof price === 'string' && price.includes('$')) {
+        return price;
+    }
+    
+    // Если цена - число или строка с числом, добавляем символ $
+    const priceNum = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : price;
+    if (!isNaN(priceNum)) {
+        return `$ ${priceNum.toFixed(2)}`;
+    }
+    
+    // Fallback
+    return `$ ${price}`;
+}
+
 // Select plan
 function selectPlan(planId) {
     selectedPlanId = planId;
