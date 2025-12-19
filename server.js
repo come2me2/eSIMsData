@@ -4,15 +4,39 @@
  */
 
 const path = require('path');
+const fs = require('fs');
+
 // Загружаем переменные окружения из .env файла (явно указываем путь)
 // Пробуем несколько путей для надежности
 const envPath = path.join(__dirname, '.env');
-require('dotenv').config({ path: envPath });
+const envLocalPath = path.join(__dirname, '.env.local');
+
+// Загружаем .env файл
+if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+    console.log('✅ Loaded .env from:', envPath);
+} else if (fs.existsSync(envLocalPath)) {
+    require('dotenv').config({ path: envLocalPath });
+    console.log('✅ Loaded .env.local from:', envLocalPath);
+} else {
+    // Пробуем загрузить без указания пути (dotenv найдет сам)
+    require('dotenv').config();
+    console.log('⚠️ Loading .env from default location');
+}
 
 // Проверяем, что критичные переменные окружения загружены
-if (!process.env.TELEGRAM_BOT_TOKEN) {
-    console.warn('⚠️ TELEGRAM_BOT_TOKEN не найден в переменных окружения');
-    console.warn('   Проверьте файл .env в корне проекта');
+const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
+if (!botToken) {
+    console.error('❌ TELEGRAM_BOT_TOKEN не найден в переменных окружения!');
+    console.error('   Проверьте файл .env в корне проекта');
+    console.error('   Путь к .env:', envPath);
+    console.error('   Файл существует:', fs.existsSync(envPath));
+} else {
+    console.log('✅ TELEGRAM_BOT_TOKEN loaded:', botToken.substring(0, 10) + '...');
+    // Устанавливаем для совместимости
+    if (!process.env.TELEGRAM_BOT_TOKEN && process.env.BOT_TOKEN) {
+        process.env.TELEGRAM_BOT_TOKEN = process.env.BOT_TOKEN;
+    }
 }
 
 const express = require('express');
