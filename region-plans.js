@@ -442,7 +442,23 @@ function setupCountriesList() {
 
 // Setup next button
 function setupNextButton() {
-    document.getElementById('nextBtn').addEventListener('click', () => {
+    const nextBtn = document.getElementById('nextBtn');
+    if (!nextBtn) {
+        console.error('❌ Next button not found');
+        return;
+    }
+    
+    // Удаляем старые обработчики, если они есть
+    const newNextBtn = nextBtn.cloneNode(true);
+    nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+    
+    newNextBtn.addEventListener('click', () => {
+        console.log('🔵 Next button clicked:', {
+            selectedPlanId,
+            currentPlanType,
+            region: regionData.name
+        });
+        
         if (!selectedPlanId) {
             if (tg) {
                 tg.showAlert('Please select a plan');
@@ -463,7 +479,10 @@ function setupNextButton() {
             plan: selectedPlanId,
             planType: currentPlanType
         });
-        window.location.href = `checkout.html?${checkoutParams.toString()}`;
+        
+        const checkoutUrl = `checkout.html?${checkoutParams.toString()}`;
+        console.log('📍 Navigating to checkout:', checkoutUrl);
+        window.location.href = checkoutUrl;
     });
 }
 
