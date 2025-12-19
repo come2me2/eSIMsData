@@ -910,6 +910,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupPaymentMethodUI();
     setupPurchaseButton();
     setupNavigation();
+    setupBackButton();
     
     // Убеждаемся, что нижнее меню всегда видно
     ensureBottomNavVisible();
@@ -920,6 +921,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateOrderDetailsWithRealPlans();
     }
 });
+
+// Setup back button to return to plans page
+function setupBackButton() {
+    if (!tg || !tg.BackButton) {
+        return;
+    }
+    
+    tg.BackButton.show();
+    tg.BackButton.onClick(() => {
+        if (tg && tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+        
+        // Возвращаемся на соответствующую страницу со списком тарифов
+        if (orderData.type === 'country') {
+            // Local: возвращаемся на plans.html с параметрами страны
+            const params = new URLSearchParams({
+                country: orderData.name,
+                code: orderData.code
+            });
+            window.location.href = `plans.html?${params.toString()}`;
+        } else if (orderData.type === 'region') {
+            // Region: возвращаемся на region-plans.html с параметром региона
+            const params = new URLSearchParams({
+                region: orderData.name
+            });
+            window.location.href = `region-plans.html?${params.toString()}`;
+        } else if (orderData.type === 'global') {
+            // Global: возвращаемся на global-plans.html
+            window.location.href = 'global-plans.html';
+        } else {
+            // Fallback: возвращаемся на главную
+            window.location.href = 'index.html?segment=local';
+        }
+    });
+}
 
 // Ensure bottom navigation is always visible
 function ensureBottomNavVisible() {
