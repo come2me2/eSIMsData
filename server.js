@@ -3,10 +3,11 @@
  * Развертывание на VPS Contabo
  */
 
-require('dotenv').config();
+const path = require('path');
+// Загружаем переменные окружения из .env файла (явно указываем путь)
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const fs = require('fs');
 
 const app = express();
@@ -27,10 +28,20 @@ app.use((req, res, next) => {
 });
 
 // Статические файлы из public директории
+// Важно: HTML и data-loader.js НЕ кэшируем агрессивно — это позволяет принудительно
+// обновлять клиентов (cache reset) и быстрее выкатывать фиксы.
 app.use(express.static(path.join(__dirname, 'public'), {
     maxAge: '1y',
     etag: true,
-    lastModified: true
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+        const base = path.basename(filePath);
+        if (base.endsWith('.html') || base === 'data-loader.js') {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
 }));
 
 // API Routes - eSIM Go endpoints
@@ -50,7 +61,8 @@ const apiRoutes = {
     '/api/webhook': require('./api/webhook'),
     '/api/cache/refresh': require('./api/cache/refresh'),
     '/api/telegram/stars/create-invoice': require('./api/telegram/stars/create-invoice'),
-    '/api/telegram/stars/webhook': require('./api/telegram/stars/webhook')
+    '/api/telegram/stars/webhook': require('./api/telegram/stars/webhook'),
+    '/api/orders': require('./api/orders')
 };
 
 // Регистрация API routes
@@ -81,7 +93,19 @@ app.get('*', (req, res) => {
             error: 'API endpoint not found'
         });
     }
+    
+    // Специальная обработка для checkout.html - не кэшируем
+    if (req.path === '/checkout.html' || req.path === '/checkout') {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        return res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+    }
+    
     // Иначе отдать index.html для SPA
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

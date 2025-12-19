@@ -189,19 +189,64 @@ module.exports = async function handler(req, res) {
             const success = orderRes.statusCode === 200 && orderRes.data && orderRes.data.success;
 
             if (success) {
-                const orderRef =
-                    (orderRes.data.data && orderRes.data.data.orderReference) ||
-                    (orderRes.data.data && orderRes.data.data.reference) ||
-                    'order created';
-
-                await sendStatusMessage(message.chat.id, [
+                const orderData = orderRes.data.data;
+                const orderRef = orderData.orderReference || orderData.reference || 'order created';
+                const assignments = orderData.assignments || null;
+                
+                // Сохраняем заказ через API
+                try {
+                    const saveOrderReq = {
+                        telegram_user_id: payloadObj.uid || (message.from && message.from.id),
+                        orderReference: orderRef,
+                        iccid: assignments?.iccid || null,
+                        matchingId: assignments?.matchingId || null,
+                        smdpAddress: assignments?.smdpAddress || null,
+                        country_code: payloadObj.cc || null,
+                        country_name: payloadObj.cn || null,
+                        plan_id: payloadObj.pid || null,
+                        plan_type: payloadObj.pt || null,
+                        bundle_name: payloadObj.bn || null,
+                        price: orderData.total || null,
+                        currency: orderData.currency || null,
+                        status: orderData.status || 'completed',
+                        createdAt: new Date().toISOString()
+                    };
+                    
+                    // Вызываем API для сохранения заказа
+                    const saveOrderRes = createMockRes();
+                    const saveOrderHandler = require('../orders');
+                    await Promise.resolve(saveOrderHandler(createMockReq(saveOrderReq), saveOrderRes));
+                    
+                    if (saveOrderRes.statusCode === 200) {
+                        console.log('✅ Order saved to database:', orderRef);
+                    } else {
+                        console.warn('⚠️ Failed to save order to database:', saveOrderRes.data);
+                    }
+                } catch (saveError) {
+                    console.error('❌ Error saving order to database:', saveError);
+                    // Не критично, продолжаем
+                }
+                
+                // Формируем сообщение для пользователя
+                let messageText = [
                     '✅ <b>Оплата через Stars успешно</b>',
-                    `Платёж: <code>${paymentId}</code>`,
-                    `План: ${payloadObj.pid}`,
-                    `Страна: ${payloadObj.cc || ''}`,
-                    `Заказ: <code>${orderRef}</code>`,
-                    'eSIM выдаётся, проверьте чат или раздел "My eSIMs"'
-                ].join('\n'));
+                    `План: ${payloadObj.pid || 'N/A'}`,
+                    `Страна: ${payloadObj.cc || payloadObj.cn || 'N/A'}`,
+                    `Заказ: <code>${orderRef}</code>`
+                ];
+                
+                if (assignments && assignments.iccid) {
+                    messageText.push('');
+                    messageText.push('📱 <b>eSIM готов к использованию!</b>');
+                    messageText.push(`ICCID: <code>${assignments.iccid}</code>`);
+                    messageText.push('');
+                    messageText.push('Откройте раздел "My eSIMs" в приложении для получения QR кода.');
+                } else {
+                    messageText.push('');
+                    messageText.push('eSIM обрабатывается. Проверьте раздел "My eSIMs" через несколько минут.');
+                }
+                
+                await sendStatusMessage(message.chat.id, messageText.join('\n'));
             } else {
                 await sendStatusMessage(message.chat.id, [
                     '⚠️ Оплата прошла, но заказ не создан.',

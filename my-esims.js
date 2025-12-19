@@ -23,67 +23,131 @@ if (tg) {
     }
 }
 
-// Sample eSIM data
-// Set to empty array [] to show "No Orders" state
-const esimsData = [
-    {
-        id: '#99999',
-        date: '2023-10-01',
-        status: 'completed',
-        hasDetails: true,
-        country: 'Germany',
-        code: 'DE',
-        plan: '1GB',
-        duration: '7 Days',
-        price: '$ 9.99',
-        activationDate: '2023-10-01',
-        expiryDate: '2023-10-08',
-        iccid: '8943108161005541531',
-        matchingId: 'JQ-1UAFOB-1B3U4SN',
-        rspUrl: 'rsp.truphone.com'
-    },
-    {
-        id: '#99999',
-        date: '2023-10-01',
-        status: 'canceled',
-        hasDetails: false
-    },
-    {
-        id: '#99999',
-        date: '2023-10-01',
-        status: 'onhold',
-        hasDetails: false
-    },
-    {
-        id: '#99999',
-        date: '2023-10-01',
-        status: 'onhold',
-        hasDetails: false
-    },
-    {
-        id: '#99999',
-        date: '2023-10-01',
-        status: 'onhold',
-        hasDetails: false
+// Глобальная переменная для хранения заказов
+let esimsData = [];
+
+// Загрузить заказы из localStorage
+function loadOrdersFromLocalStorage() {
+    try {
+        const stored = localStorage.getItem('esim_orders');
+        if (stored) {
+            const orders = JSON.parse(stored);
+            return orders.map(order => ({
+                id: `#${order.orderReference?.substring(0, 8) || 'N/A'}`,
+                date: order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit' 
+                }) : 'N/A',
+                status: order.status || 'completed',
+                hasDetails: !!(order.iccid && order.matchingId),
+                country: order.country_name || '',
+                code: order.country_code || '',
+                plan: order.plan_id || '',
+                duration: '', // Можно добавить из плана
+                price: order.price ? `${order.currency || '$'} ${order.price}` : '',
+                activationDate: order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '',
+                expiryDate: '', // Можно добавить из плана
+                iccid: order.iccid || '',
+                matchingId: order.matchingId || '',
+                rspUrl: order.smdpAddress || '',
+                orderReference: order.orderReference || '',
+                bundle_name: order.bundle_name || ''
+            }));
+        }
+    } catch (error) {
+        console.error('Error loading orders from localStorage:', error);
     }
-];
+    return [];
+}
+
+// Загрузить заказы с сервера
+async function loadOrdersFromServer(userId) {
+    try {
+        const response = await fetch(`/api/orders?telegram_user_id=${userId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            // Сохраняем в localStorage для офлайн доступа
+            const ordersToStore = result.data.map(order => ({
+                orderReference: order.orderReference,
+                iccid: order.iccid,
+                matchingId: order.matchingId,
+                smdpAddress: order.smdpAddress,
+                country_code: order.country_code,
+                country_name: order.country_name,
+                plan_id: order.plan_id,
+                plan_type: order.plan_type,
+                bundle_name: order.bundle_name,
+                price: order.price,
+                currency: order.currency,
+                status: order.status,
+                createdAt: order.createdAt
+            }));
+            localStorage.setItem('esim_orders', JSON.stringify(ordersToStore));
+            
+            // Преобразуем в формат для отображения
+            return result.data.map(order => ({
+                id: `#${order.orderReference?.substring(0, 8) || 'N/A'}`,
+                date: order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit' 
+                }) : 'N/A',
+                status: order.status || 'completed',
+                hasDetails: !!(order.iccid && order.matchingId),
+                country: order.country_name || '',
+                code: order.country_code || '',
+                plan: order.plan_id || '',
+                duration: '', // Можно добавить из плана
+                price: order.price ? `${order.currency || '$'} ${order.price}` : '',
+                activationDate: order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '',
+                expiryDate: '', // Можно добавить из плана
+                iccid: order.iccid || '',
+                matchingId: order.matchingId || '',
+                rspUrl: order.smdpAddress || '',
+                orderReference: order.orderReference || '',
+                bundle_name: order.bundle_name || ''
+            }));
+        }
+    } catch (error) {
+        console.error('Error loading orders from server:', error);
+    }
+    return [];
+}
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Telegram Auth - получение Telegram ID пользователя
     const auth = window.telegramAuth;
+    let userId = null;
+    
     if (auth && auth.isAuthenticated()) {
-        const userId = auth.getUserId();
+        userId = auth.getUserId();
         console.log('My eSIMs - Loading for user:', userId);
         
         // Сохранить userId для использования при загрузке заказов
         window.currentUserId = userId;
         
-        // Когда будет сервер, можно загрузить заказы пользователя:
-        // loadUserESims(userId);
+        // Сначала загружаем из localStorage (быстро)
+        esimsData = loadOrdersFromLocalStorage();
+        renderESimsList();
+        
+        // Затем загружаем с сервера (синхронизация)
+        const serverOrders = await loadOrdersFromServer(userId);
+        if (serverOrders.length > 0) {
+            esimsData = serverOrders;
+            renderESimsList();
+        }
+    } else {
+        // Если нет авторизации, загружаем только из localStorage
+        esimsData = loadOrdersFromLocalStorage();
+        renderESimsList();
     }
     
-    renderESimsList();
     setupNavigation();
     setupScrollPreservation();
 });
@@ -271,18 +335,19 @@ function navigateToOrderDetails(esim) {
     }
     
     const params = new URLSearchParams({
-        id: esim.id,
-        date: esim.date,
+        id: esim.id || esim.orderReference || '',
+        date: esim.date || '',
         country: esim.country || '',
         code: esim.code || '',
-        plan: esim.plan || '',
+        plan: esim.plan || esim.bundle_name || '',
         duration: esim.duration || '',
         price: esim.price || '',
         activationDate: esim.activationDate || '',
         expiryDate: esim.expiryDate || '',
         iccid: esim.iccid || '',
         matchingId: esim.matchingId || '',
-        rspUrl: esim.rspUrl || ''
+        rspUrl: esim.rspUrl || esim.smdpAddress || '',
+        orderReference: esim.orderReference || ''
     });
     
     window.location.href = `order-details.html?${params.toString()}`;
