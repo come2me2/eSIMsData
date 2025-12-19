@@ -1202,11 +1202,13 @@ body {
     padding: 16px !important;
     background-color: var(--bg-primary) !important;
     border-top: 0.5px solid var(--border-color) !important;
-    z-index: 1001 !important; /* Выше нижнего меню (1002) */
+    z-index: 1001 !important; /* Выше нижнего меню (1000), но ниже модальных окон */
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
+    pointer-events: auto !important;
+    -webkit-transform: translateX(-50%) !important;
 }
 
 .next-btn {
