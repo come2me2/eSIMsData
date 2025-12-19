@@ -157,7 +157,7 @@ function ensureBottomNavVisible() {
         bottomNav.style.opacity = '1';
         bottomNav.style.position = 'fixed';
         bottomNav.style.bottom = '0';
-        bottomNav.style.zIndex = '1000';
+        bottomNav.style.zIndex = '1002'; // Выше кнопки Next (1001)
     }
 }
 
