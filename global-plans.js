@@ -258,7 +258,7 @@ function renderPlans() {
         planItem.dataset.planId = planId;
         
         // Определяем цену (приоритет: priceValue > price > fallback)
-        const price = plan.priceValue || plan.price || '$ 9.99';
+        const price = plan.priceValue || plan.price || '9.99';
         
         planItem.innerHTML = `
             <div class="plan-info">
@@ -266,7 +266,7 @@ function renderPlans() {
                 <div class="plan-duration">${plan.duration}</div>
             </div>
             <div class="plan-right">
-                <div class="plan-price">${price}</div>
+                <div class="plan-price">${formatPrice(price)}</div>
                 <div class="radio-button ${isSelected ? 'selected' : ''}">
                     ${isSelected ? 
                         '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>' : 
