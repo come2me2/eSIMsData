@@ -11,14 +11,7 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
     
     // Показываем кнопку "назад" в Telegram
-    if (tg.BackButton) {
-        tg.BackButton.show();
-        tg.BackButton.onClick(() => {
-            tg.HapticFeedback.impactOccurred('light');
-            // Возвращаемся на главную (Local)
-            window.location.href = 'index.html?segment=local';
-        });
-    }
+    // Обработчик будет установлен после загрузки orderData в DOMContentLoaded
 }
 
 // Get order data from URL
@@ -64,25 +57,25 @@ async function loadPlansForCheckout() {
             const params = new URLSearchParams();
             if (orderData.code) params.append('country', orderData.code);
             params.append('category', 'local');
-            const apiUrl = `/api/esimgo/plans?${params.toString()}`;
+        const apiUrl = `/api/esimgo/plans?${params.toString()}`;
             const response = await fetch(apiUrl);
             const result = await response.json();
             if (result.success && result.data) data = result.data;
         }
-
+        
         // Fallback: direct API for region
         if (!data && orderData.type === 'region' && orderData.name) {
             const apiUrl = `/api/esimgo/region-plans?region=${encodeURIComponent(orderData.name)}`;
-            const response = await fetch(apiUrl);
+        const response = await fetch(apiUrl);
             const result = await response.json();
             if (result.success && result.data) data = result.data;
         }
-
+        
         // Fallback: direct API for global
         if (!data && orderData.type === 'global') {
             const apiUrl = `/api/esimgo/plans?category=global`;
             const response = await fetch(apiUrl);
-            const result = await response.json();
+        const result = await response.json();
             if (result.success && result.data) data = result.data;
         }
 
@@ -118,7 +111,7 @@ async function loadPlansForCheckout() {
                 unlimited: unlimitedPlans.length,
                 unlimitedPlans: unlimitedPlans.map(p => ({ id: p.id, data: p.data, duration: p.duration, price: p.price }))
             });
-
+            
             return true;
         }
     } catch (error) {
@@ -128,7 +121,7 @@ async function loadPlansForCheckout() {
     // Hard fallback (kept minimal)
     standardPlans = [];
     unlimitedPlans = [];
-    return false;
+        return false;
 }
 
 // Store original price and discount state
