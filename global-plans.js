@@ -402,52 +402,6 @@ function setupNextButton() {
     });
 }
 
-
-    plansList.innerHTML = '';
-    
-    const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
-    
-    if (plans.length === 0) {
-        plansList.innerHTML = '<div class="no-plans">Loading plans...</div>';
-        return;
-    }
-    
-    plans.forEach(plan => {
-        // Определяем ID плана (может быть id или bundle_name)
-        const planId = plan.id || plan.bundle_name;
-        const isSelected = selectedPlanId === planId || selectedPlanId === plan.id || selectedPlanId === plan.bundle_name;
-        
-        const planItem = document.createElement('div');
-        planItem.className = `plan-item ${isSelected ? 'selected' : ''}`;
-        planItem.dataset.planId = planId;
-        
-        // Определяем цену (приоритет: priceValue > price > fallback)
-        const price = plan.priceValue || plan.price || '9.99';
-        
-        planItem.innerHTML = `
-            <div class="plan-info">
-                <div class="plan-data">${plan.data}</div>
-                <div class="plan-duration">${plan.duration}</div>
-            </div>
-            <div class="plan-right">
-                <div class="plan-price">${formatPrice(price)}</div>
-                <div class="radio-button ${isSelected ? 'selected' : ''}">
-                    ${isSelected ? 
-                        '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>' : 
-                        ''
-                    }
-                </div>
-            </div>
-        `;
-        
-        planItem.addEventListener('click', () => {
-            selectPlan(planId);
-        });
-        
-        plansList.appendChild(planItem);
-    });
-}
-
 // Format price with dollar sign
 function formatPrice(price) {
     if (!price) return '$ 9.99';
