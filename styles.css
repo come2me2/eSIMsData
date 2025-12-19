@@ -1193,17 +1193,20 @@ body {
 
 /* Bottom Button Container */
 .bottom-button-container {
-    position: fixed;
-    bottom: calc(60px + env(safe-area-inset-bottom)); /* Размещаем над нижним меню */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 428px;
-    padding: 16px;
-    background-color: var(--bg-primary);
-    border-top: 0.5px solid var(--border-color);
+    position: fixed !important;
+    bottom: calc(60px + env(safe-area-inset-bottom)) !important; /* Размещаем над нижним меню */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 100% !important;
+    max-width: 428px !important;
+    padding: 16px !important;
+    background-color: var(--bg-primary) !important;
+    border-top: 0.5px solid var(--border-color) !important;
     z-index: 1001 !important; /* Выше нижнего меню (1000) */
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .next-btn {
@@ -1217,6 +1220,9 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: opacity 0.2s ease;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .next-btn:active {
