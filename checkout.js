@@ -1279,6 +1279,11 @@ function setupPromoCode() {
 function setupPurchaseButton() {
     const purchaseBtn = document.getElementById('purchaseBtn');
     
+    if (!purchaseBtn) {
+        console.error('❌ Purchase button not found in DOM');
+        return;
+    }
+    
     // Убеждаемся, что кнопка активна
     purchaseBtn.disabled = false;
     purchaseBtn.style.opacity = '1';
