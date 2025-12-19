@@ -417,6 +417,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Убеждаемся, что нижнее меню всегда видно
     ensureBottomNavVisible();
+    setTimeout(ensureBottomNavVisible, 100);
+    setTimeout(ensureBottomNavVisible, 300);
+    setTimeout(ensureBottomNavVisible, 500);
     
     // Non-critical operations - execute when idle
     if ('requestIdleCallback' in window) {
@@ -839,6 +842,8 @@ document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
         console.log('👁️ Страница стала видимой, обновляем BackButton');
         setTimeout(updateBackButton, 50);
+        // Убеждаемся, что меню видно при возврате на страницу
+        ensureBottomNavVisible();
     }
 });
 
