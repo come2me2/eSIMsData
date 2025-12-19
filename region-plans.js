@@ -376,7 +376,9 @@ function renderPlans() {
         planItem.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            console.log('🔵 Plan item clicked:', plan.id, 'currentPlanType:', currentPlanType);
             selectPlan(plan.id);
+            // НЕ перенаправляем на region-unlimited.html - остаемся на той же странице
         });
         
         plansList.appendChild(planItem);
