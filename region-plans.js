@@ -195,6 +195,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateInfoBox();
     setupNextButton();
     setupCountriesList();
+    setupNavigation();
+});
+
+// Setup bottom navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const label = item.querySelector('.nav-label').textContent;
+            handleNavigationClick(label);
+        });
+    });
+}
+
+// Handle navigation click
+function handleNavigationClick(section) {
+    if (tg) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+    
+    const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+    
+    if (section === 'Account') {
+        navigate('account.html');
+    } else if (section === 'Buy eSIM') {
+        navigate('index.html');
+    } else if (section === 'Help') {
+        navigate('help.html');
+    }
 });
 
 // Load region plans using DataLoader (static JSON -> API)

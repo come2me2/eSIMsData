@@ -15,7 +15,8 @@ if (tg) {
         tg.BackButton.show();
         tg.BackButton.onClick(() => {
             tg.HapticFeedback.impactOccurred('light');
-            window.history.back();
+            // Возвращаемся на главную (Local), чтобы появился "Закрыть"
+            window.location.href = 'index.html?segment=local';
         });
     }
 }
@@ -75,6 +76,36 @@ document.addEventListener('DOMContentLoaded', () => {
     updateInfoBox();
     setupNextButton();
     setupCountriesList();
+    setupNavigation();
+});
+
+// Setup bottom navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const label = item.querySelector('.nav-label').textContent;
+            handleNavigationClick(label);
+        });
+    });
+}
+
+// Handle navigation click
+function handleNavigationClick(section) {
+    if (tg) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+    
+    const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+    
+    if (section === 'Account') {
+        navigate('account.html');
+    } else if (section === 'Buy eSIM') {
+        navigate('index.html');
+    } else if (section === 'Help') {
+        navigate('help.html');
+    }
 });
 
 // Setup main segmented control (Region, Local, Global)

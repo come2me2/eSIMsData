@@ -15,7 +15,8 @@ if (tg) {
         tg.BackButton.show();
         tg.BackButton.onClick(() => {
             tg.HapticFeedback.impactOccurred('light');
-            window.history.back();
+            // Возвращаемся на главную (Local)
+            window.location.href = 'index.html?segment=local';
         });
     }
 }
@@ -140,6 +141,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderPlans();
     updateInfoBox();
     setupNextButton();
+    setupNavigation();
+});
+
+// Setup bottom navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const label = item.querySelector('.nav-label').textContent;
+            handleNavigationClick(label);
+        });
+    });
+}
+
+// Handle navigation click
+function handleNavigationClick(section) {
+    if (window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+    }
+    
+    const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+    
+    if (section === 'Account') {
+        navigate('account.html');
+    } else if (section === 'Buy eSIM') {
+        navigate('index.html');
+    } else if (section === 'Help') {
+        navigate('help.html');
+    }
 });
 
 // Version for cache busting - increment when flags are updated

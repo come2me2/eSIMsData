@@ -423,24 +423,61 @@ async function initiateStarsPayment(auth) {
         // Получаем bundle_name
         let bundleName = selectedPlan.bundle_name;
         if (!bundleName) {
-            // Если bundle_name нет, нужно найти его
-            bundleName = await findBundleName(
-                orderData.code,
-                selectedPlan.dataAmount || (parseInt(selectedPlan.data.match(/\d+/)?.[0] || '0') * 1000),
-                selectedPlan.durationDays || parseInt(selectedPlan.duration.match(/\d+/)?.[0] || '0'),
-                orderData.planType === 'unlimited'
-            );
+            // Для Region и Global планов bundle_name должен быть в самом плане
+            // Если его нет, используем plan_id как fallback
+            if (orderData.type === 'region' || orderData.type === 'global') {
+                bundleName = selectedPlan.id || orderData.planId;
+                console.log('💫 Using plan ID as bundle_name for region/global:', bundleName);
+            } else {
+                // Для country планов пытаемся найти bundle через API
+                let countryCodeForBundle = orderData.code;
+                if (countryCodeForBundle) {
+                    try {
+                        bundleName = await findBundleName(
+                            countryCodeForBundle,
+                            selectedPlan.dataAmount || (parseInt(selectedPlan.data.match(/\d+/)?.[0] || '0') * 1000),
+                            selectedPlan.durationDays || parseInt(selectedPlan.duration.match(/\d+/)?.[0] || '0'),
+                            orderData.planType === 'unlimited'
+                        );
+                    } catch (error) {
+                        console.warn('⚠️ Could not find bundle via API, using plan ID:', error);
+                        bundleName = selectedPlan.id || orderData.planId;
+                    }
+                } else {
+                    bundleName = selectedPlan.id || orderData.planId;
+                }
+            }
         }
         
-        // Получаем себестоимость тарифа (priceValue должен быть себестоимостью)
-        // ⚠️ ВАЖНО: priceValue должна быть себестоимостью (cost), а не финальной ценой!
+        // Получаем себестоимость тарифа
+        // ⚠️ ВАЖНО: Для расчета Stars нужна СЕБЕСТОИМОСТЬ (cost), а не финальная цена!
+        // 
+        // Для Region и Global планов priceValue может быть финальной ценой (с маржой),
+        // поэтому нужно убрать маржу: себестоимость = финальная_цена / (1 + маржа)
+        // 
+        // Для Local планов priceValue обычно уже себестоимость (cost)
         let costPrice = selectedPlan.priceValue;
+        
+        // Если priceValue нет, пытаемся получить из price строки
         if (!costPrice && selectedPlan.price) {
-            // Парсим цену из строки (например, "$ 2.26")
             const priceMatch = selectedPlan.price.toString().match(/([\d.,]+)/);
             if (priceMatch) {
                 costPrice = parseFloat(priceMatch[1].replace(',', '.'));
             }
+        }
+        
+        // Для Region и Global планов priceValue обычно финальная цена (с маржой)
+        // Убираем маржу, чтобы получить себестоимость
+        if (costPrice && (orderData.type === 'region' || orderData.type === 'global')) {
+            // Если это финальная цена, убираем маржу: cost = price / (1 + margin)
+            // Маржа = 29% = 0.29
+            const MARGIN = 0.29;
+            costPrice = costPrice / (1 + MARGIN);
+            console.log('💫 Converted final price to cost for region/global:', {
+                originalPrice: selectedPlan.priceValue || selectedPlan.price,
+                costPrice: costPrice,
+                margin: MARGIN
+            });
         }
         
         if (!costPrice || costPrice <= 0) {
@@ -451,7 +488,10 @@ async function initiateStarsPayment(auth) {
             plan: selectedPlan,
             bundleName,
             costPrice,
-            country: orderData.code
+            priceValue: selectedPlan.priceValue,
+            price: selectedPlan.price,
+            country: orderData.code,
+            type: orderData.type
         });
         
         // Валидация данных Telegram
@@ -462,6 +502,17 @@ async function initiateStarsPayment(auth) {
         
         // Создаем инвойс через API
         purchaseBtn.textContent = 'Creating invoice...';
+        
+        // Для Region и Global используем имя региона/глобального плана как country_code
+        let countryCode = orderData.code;
+        if (!countryCode && orderData.type === 'region') {
+            // Для регионов используем название региона как код (например, "Asia", "Europe")
+            countryCode = orderData.name || 'REGION';
+        } else if (!countryCode && orderData.type === 'global') {
+            // Для глобальных планов используем "GLOBAL"
+            countryCode = 'GLOBAL';
+        }
+        
         const invoiceResponse = await fetch('/api/telegram/stars/create-invoice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -469,8 +520,8 @@ async function initiateStarsPayment(auth) {
                 plan_id: orderData.planId,
                 plan_type: orderData.planType,
                 bundle_name: bundleName,
-                country_code: orderData.code,
-                country_name: orderData.name,
+                country_code: countryCode,
+                country_name: orderData.name || (orderData.type === 'global' ? 'Global' : orderData.name),
                 price: costPrice, // ⚠️ Себестоимость тарифа
                 currency: 'USD',
                 telegram_user_id: auth.getUserId(),
@@ -854,10 +905,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupPromoCode();
     setupPaymentMethodUI();
     setupPurchaseButton();
+    setupNavigation();
     
     // Если планы загрузились, обновляем отображение
     if (plansLoaded && (standardPlans.length > 0 || unlimitedPlans.length > 0)) {
         updateOrderDetailsWithRealPlans();
+    }
+});
+
+// Setup bottom navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const label = item.querySelector('.nav-label').textContent;
+            handleNavigationClick(label);
+        });
+    });
+}
+
+// Handle navigation click
+function handleNavigationClick(section) {
+    if (tg) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+    
+    const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+    
+    if (section === 'Account') {
+        navigate('account.html');
+    } else if (section === 'Buy eSIM') {
+        navigate('index.html');
+    } else if (section === 'Help') {
+        navigate('help.html');
     }
 });
 
@@ -1110,7 +1191,14 @@ function setupPromoCode() {
 
 // Setup purchase button
 function setupPurchaseButton() {
-    document.getElementById('purchaseBtn').addEventListener('click', async () => {
+    const purchaseBtn = document.getElementById('purchaseBtn');
+    
+    // Убеждаемся, что кнопка активна
+    purchaseBtn.disabled = false;
+    purchaseBtn.style.opacity = '1';
+    purchaseBtn.style.cursor = 'pointer';
+    
+    purchaseBtn.addEventListener('click', async () => {
         const auth = window.telegramAuth;
         
         // Проверка авторизации
@@ -1135,6 +1223,17 @@ function setupPurchaseButton() {
                 tg.showAlert(`${PAYMENT_METHODS[selectedPaymentMethod]} payment will be available soon.`);
             } else {
                 alert(`${PAYMENT_METHODS[selectedPaymentMethod]} payment will be available soon.`);
+            }
+            return;
+        }
+        
+        // Если метод оплаты не выбран, просим выбрать метод
+        if (!selectedPaymentMethod) {
+            if (tg) {
+                tg.HapticFeedback.notificationOccurred('error');
+                tg.showAlert('Please select a payment method first.');
+            } else {
+                alert('Please select a payment method first.');
             }
             return;
         }
