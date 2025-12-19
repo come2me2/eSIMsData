@@ -23,10 +23,25 @@ if (tg) {
 
 // Get country data from URL
 const urlParams = new URLSearchParams(window.location.search);
+const countryName = urlParams.get('country');
+const countryCode = urlParams.get('code');
+
+// Проверяем, что параметры действительно есть в URL
+if (!countryName || !countryCode) {
+    console.error('❌ Missing country parameters in URL:', { country: countryName, code: countryCode });
+    // Если параметры отсутствуют, перенаправляем на главную
+    if (!countryName && !countryCode) {
+        console.warn('⚠️ No country parameters found, redirecting to home');
+        window.location.href = 'index.html?segment=local';
+    }
+}
+
 const countryData = {
-    name: urlParams.get('country') || 'Afghanistan',
-    code: urlParams.get('code') || 'AF'
+    name: decodeURIComponent(countryName || 'Unknown'),
+    code: countryCode || 'XX'
 };
+
+console.log('📍 Country data from URL:', countryData);
 
 // Plans data - загружаются из статических файлов (мгновенно) или API
 let standardPlans = [];
@@ -34,7 +49,13 @@ let unlimitedPlans = [];
 
 // Функция загрузки планов - приоритет: статические файлы -> API
 async function loadPlansFromAPI(countryCode) {
+    if (!countryCode || countryCode === 'XX') {
+        console.error('❌ Invalid country code:', countryCode);
+        return false;
+    }
+    
     const startTime = performance.now();
+    console.log('🔵 Loading plans for country code:', countryCode);
     
     try {
         let data = null;
@@ -42,8 +63,11 @@ async function loadPlansFromAPI(countryCode) {
         // 1. Пробуем DataLoader (статические файлы + localStorage)
         if (window.DataLoader && typeof window.DataLoader.loadLocalPlans === 'function') {
             try {
-                console.log('⚡ Loading plans via DataLoader...');
+                console.log('⚡ Loading plans via DataLoader for code:', countryCode);
                 data = await window.DataLoader.loadLocalPlans(countryCode);
+                if (data) {
+                    console.log('✅ Plans loaded via DataLoader');
+                }
             } catch (e) {
                 console.warn('DataLoader failed:', e.message);
             }
@@ -131,11 +155,24 @@ let selectedPlanId = 'plan2'; // Default selected for standard
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
+    // Проверяем, что countryData корректно установлен
+    if (!countryData.code || countryData.code === 'XX') {
+        console.error('❌ Invalid country code, redirecting to home');
+        window.location.href = 'index.html?segment=local';
+        return;
+    }
+    
+    console.log('🚀 Initializing plans page for:', countryData);
+    
     setupCountryInfo();
     setupSegmentedControl();
     
     // Загружаем реальные планы из API
-    await loadPlansFromAPI(countryData.code);
+    const loaded = await loadPlansFromAPI(countryData.code);
+    
+    if (!loaded) {
+        console.warn('⚠️ Failed to load plans, showing empty list');
+    }
     
     // Рендерим планы после загрузки
     renderPlans();
@@ -188,7 +225,7 @@ function handleNavigationClick(section) {
     } else if (section === 'Help') {
         navigate('help.html');
     }
-});
+}
 
 // Version for cache busting - increment when flags are updated
 const FLAG_VERSION = 'v7'; // Updated: force refresh for missing flags (AX, BM, etc.)
