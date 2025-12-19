@@ -503,11 +503,22 @@ async function initiateStarsPayment(auth) {
         // Создаем инвойс через API
         purchaseBtn.textContent = 'Creating invoice...';
         
-        // Для Region и Global используем имя региона/глобального плана как country_code
+        // Для Region и Global используем короткие коды без пробелов
         let countryCode = orderData.code;
         if (!countryCode && orderData.type === 'region') {
-            // Для регионов используем название региона как код (например, "Asia", "Europe")
-            countryCode = orderData.name || 'REGION';
+            // Маппинг регионов на короткие коды без пробелов для Telegram API
+            const regionCodeMap = {
+                'Africa': 'AFRICA',
+                'Asia': 'ASIA',
+                'Europe': 'EUROPE',
+                'Latin America': 'LATAM',
+                'North America': 'NA',
+                'Balkanas': 'BALKANAS',
+                'Central Eurasia': 'CIS',
+                'Oceania': 'OCEANIA'
+            };
+            // Используем маппинг или преобразуем название в код (убираем пробелы, делаем uppercase)
+            countryCode = regionCodeMap[orderData.name] || (orderData.name || 'REGION').replace(/\s+/g, '').toUpperCase();
         } else if (!countryCode && orderData.type === 'global') {
             // Для глобальных планов используем "GLOBAL"
             countryCode = 'GLOBAL';
