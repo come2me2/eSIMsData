@@ -357,10 +357,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderPlans();
     setupNextButton();
     setupCountriesList();
+    setupNavigation();
+    
+    // Убеждаемся, что нижнее меню всегда видно
+    ensureBottomNavVisible();
+    setTimeout(ensureBottomNavVisible, 100);
+    setTimeout(ensureBottomNavVisible, 300);
     
     console.log('region-unlimited.js: Initialization complete');
     console.log('Selected plan ID:', selectedPlanId);
 });
+
+// Ensure bottom navigation is always visible
+function ensureBottomNavVisible() {
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) {
+        bottomNav.style.display = 'flex';
+        bottomNav.style.visibility = 'visible';
+        bottomNav.style.opacity = '1';
+        bottomNav.style.position = 'fixed';
+        bottomNav.style.bottom = '0';
+        bottomNav.style.zIndex = '1002';
+    }
+}
+
+// Setup bottom navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const label = item.querySelector('.nav-label').textContent;
+            handleNavigationClick(label);
+        });
+    });
+}
+
+// Handle navigation click
+function handleNavigationClick(section) {
+    if (tg) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+    
+    const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+    
+    if (section === 'Account') {
+        navigate('account.html');
+    } else if (section === 'Buy eSIM') {
+        navigate('index.html');
+    } else if (section === 'Help') {
+        navigate('help.html');
+    }
+}
 
 // Setup region info
 function setupRegionInfo() {

@@ -334,8 +334,10 @@ function setupSegmentedControl() {
                 selectedPlanId = unlimitedPlans.length > 0 ? unlimitedPlans[0].id : null;
             } else {
                 // Для standard используем первый план из standardPlans
-                selectedPlanId = standardPlans.length > 0 ? standardPlans[0].id : 'plan2';
+                selectedPlanId = standardPlans.length > 0 ? standardPlans[0].id : null;
             }
+            
+            console.log('🔄 Plan type changed to:', currentPlanType, 'selectedPlanId:', selectedPlanId);
             
             renderPlans();
             updateInfoBox();
@@ -371,7 +373,9 @@ function renderPlans() {
             </div>
         `;
         
-        planItem.addEventListener('click', () => {
+        planItem.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             selectPlan(plan.id);
         });
         
