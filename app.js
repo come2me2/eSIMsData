@@ -416,12 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
     
     // Убеждаемся, что нижнее меню всегда видно
-    const bottomNav = document.querySelector('.bottom-nav');
-    if (bottomNav) {
-        bottomNav.style.display = 'flex';
-        bottomNav.style.visibility = 'visible';
-        bottomNav.style.opacity = '1';
-    }
+    ensureBottomNavVisible();
     
     // Non-critical operations - execute when idle
     if ('requestIdleCallback' in window) {
@@ -562,8 +557,25 @@ function setupSegmentedControl() {
             
             currentSegment = btn.dataset.segment;
             updateContent();
+            
+            // Убеждаемся, что меню видно после переключения
+            setTimeout(ensureBottomNavVisible, 50);
+            setTimeout(ensureBottomNavVisible, 200);
         });
     });
+}
+
+// Ensure bottom navigation is always visible
+function ensureBottomNavVisible() {
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) {
+        bottomNav.style.display = 'flex';
+        bottomNav.style.visibility = 'visible';
+        bottomNav.style.opacity = '1';
+        bottomNav.style.position = 'fixed';
+        bottomNav.style.bottom = '0';
+        bottomNav.style.zIndex = '1000';
+    }
 }
 
 // Update content based on current segment
@@ -594,6 +606,9 @@ function updateContent() {
         if (countryList) countryList.style.display = 'flex';
         renderCountries();
     }
+    
+    // Убеждаемся, что меню всегда видно после обновления контента
+    ensureBottomNavVisible();
     
     // Обновляем кнопку BackButton при изменении контента
     updateBackButton();

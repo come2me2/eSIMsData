@@ -77,7 +77,25 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNextButton();
     setupCountriesList();
     setupNavigation();
+    
+    // Убеждаемся, что нижнее меню всегда видно
+    ensureBottomNavVisible();
+    setTimeout(ensureBottomNavVisible, 100);
+    setTimeout(ensureBottomNavVisible, 300);
 });
+
+// Ensure bottom navigation is always visible
+function ensureBottomNavVisible() {
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) {
+        bottomNav.style.display = 'flex';
+        bottomNav.style.visibility = 'visible';
+        bottomNav.style.opacity = '1';
+        bottomNav.style.position = 'fixed';
+        bottomNav.style.bottom = '0';
+        bottomNav.style.zIndex = '1000';
+    }
+}
 
 // Setup bottom navigation
 function setupNavigation() {
