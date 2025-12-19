@@ -27,9 +27,21 @@ class TelegramAuth {
         this.tg.ready();
         this.tg.expand();
         
-        // Настройка цветов темы
-        this.tg.setHeaderColor('#FFFFFF');
-        this.tg.setBackgroundColor('#F2F2F7');
+        // Настройка цветов темы (только если поддерживается в этой версии)
+        try {
+            if (this.tg.setHeaderColor && this.tg.version && parseFloat(this.tg.version) >= 6.1) {
+                this.tg.setHeaderColor('#FFFFFF');
+            }
+        } catch (e) {
+            // Игнорируем, если не поддерживается
+        }
+        try {
+            if (this.tg.setBackgroundColor && this.tg.version && parseFloat(this.tg.version) >= 6.1) {
+                this.tg.setBackgroundColor('#F2F2F7');
+            }
+        } catch (e) {
+            // Игнорируем, если не поддерживается
+        }
         
         // Получение данных пользователя
         this.user = this.tg.initDataUnsafe?.user || null;

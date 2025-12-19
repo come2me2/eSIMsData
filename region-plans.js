@@ -6,9 +6,21 @@ if (tg) {
     tg.ready();
     tg.expand();
     
-    // Set theme colors
-    tg.setHeaderColor('#FFFFFF');
-    tg.setBackgroundColor('#F2F2F7');
+    // Set theme colors (only if supported in this version)
+    try {
+        if (tg.setHeaderColor && tg.version && parseFloat(tg.version) >= 6.1) {
+            tg.setHeaderColor('#FFFFFF');
+        }
+    } catch (e) {
+        // Ignore if not supported
+    }
+    try {
+        if (tg.setBackgroundColor && tg.version && parseFloat(tg.version) >= 6.1) {
+            tg.setBackgroundColor('#F2F2F7');
+        }
+    } catch (e) {
+        // Ignore if not supported
+    }
     
     // Показываем кнопку "назад" в Telegram
     // При возврате назад переходим на главную вкладку Region (там BackButton будет работать → Local)
