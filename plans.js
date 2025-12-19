@@ -42,15 +42,15 @@ const countryCode = urlParams.get('code');
 if (!countryName || !countryCode) {
     console.error('❌ Missing country parameters in URL:', { country: countryName, code: countryCode });
     // Если параметры отсутствуют, перенаправляем на главную
-    if (!countryName && !countryCode) {
-        console.warn('⚠️ No country parameters found, redirecting to home');
-        window.location.href = 'index.html?segment=local';
-    }
+    console.warn('⚠️ No country parameters found, redirecting to home');
+    window.location.href = 'index.html?segment=local';
+    // Останавливаем выполнение скрипта
+    throw new Error('Missing country parameters');
 }
 
 const countryData = {
-    name: decodeURIComponent(countryName || 'Unknown'),
-    code: countryCode || 'XX'
+    name: decodeURIComponent(countryName),
+    code: countryCode
 };
 
 console.log('📍 Country data from URL:', countryData);
