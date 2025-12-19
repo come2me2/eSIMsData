@@ -200,12 +200,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Убеждаемся, что нижнее меню всегда видно
     ensureBottomNavVisible();
     setTimeout(ensureBottomNavVisible, 100);
-    setTimeout(ensureBottomNavVisible, 300);
-    
-    // Убеждаемся, что кнопка Next всегда видна
-    ensureNextButtonVisible();
-    setTimeout(ensureNextButtonVisible, 100);
-    setTimeout(ensureNextButtonVisible, 300);
 });
 
 // Ensure bottom navigation is always visible
@@ -218,27 +212,6 @@ function ensureBottomNavVisible() {
         bottomNav.style.position = 'fixed';
         bottomNav.style.bottom = '0';
         bottomNav.style.zIndex = '1000';
-    }
-}
-
-// Ensure Next button is always visible
-function ensureNextButtonVisible() {
-    const nextButtonContainer = document.querySelector('.bottom-button-container');
-    if (nextButtonContainer) {
-        nextButtonContainer.style.display = 'block';
-        nextButtonContainer.style.visibility = 'visible';
-        nextButtonContainer.style.opacity = '1';
-        nextButtonContainer.style.zIndex = '1001';
-        nextButtonContainer.style.position = 'fixed';
-        nextButtonContainer.style.pointerEvents = 'auto';
-    }
-    
-    const nextBtn = document.getElementById('nextBtn');
-    if (nextBtn) {
-        nextBtn.style.display = 'block';
-        nextBtn.style.visibility = 'visible';
-        nextBtn.style.opacity = '1';
-        nextBtn.style.pointerEvents = 'auto';
     }
 }
 
