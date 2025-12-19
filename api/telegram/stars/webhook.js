@@ -6,6 +6,16 @@
  * При успешной оплате создаёт заказ через eSIM Go API и отправляет пользователю статус.
  */
 
+// Загружаем переменные окружения из .env файла (на случай, если они не загружены в server.js)
+const path = require('path');
+if (!process.env.TELEGRAM_BOT_TOKEN && !process.env.BOT_TOKEN) {
+    try {
+        require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+    } catch (e) {
+        // Игнорируем ошибки загрузки .env
+    }
+}
+
 // Загружаем переменные окружения с проверкой
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;

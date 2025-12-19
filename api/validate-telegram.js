@@ -7,6 +7,16 @@
  * Документация: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
  */
 
+// Загружаем переменные окружения из .env файла (на случай, если они не загружены в server.js)
+const path = require('path');
+if (!process.env.TELEGRAM_BOT_TOKEN && !process.env.BOT_TOKEN) {
+    try {
+        require('dotenv').config({ path: path.join(__dirname, '../.env') });
+    } catch (e) {
+        // Игнорируем ошибки загрузки .env
+    }
+}
+
 const crypto = require('crypto');
 
 /**
