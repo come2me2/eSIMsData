@@ -287,17 +287,36 @@ async function loadRegionPlans(regionName) {
             });
 
             // Ensure ids for selection compatibility
-            standardPlans.forEach((p, idx) => { if (!p.id) p.id = `plan${idx + 1}`; });
+            standardPlans.forEach((p, idx) => { 
+                if (!p.id) {
+                    // Используем bundle_name как приоритетный ID
+                    p.id = p.bundle_name || `plan${idx + 1}`;
+                }
+                // Убеждаемся, что bundle_name сохранен
+                if (!p.bundle_name && p.id) {
+                    p.bundle_name = p.id;
+                }
+            });
             // Для unlimited планов используем bundle_name как ID, если он есть
             unlimitedPlans.forEach((p, idx) => { 
                 if (!p.id) {
+                    // Используем bundle_name как приоритетный ID
                     p.id = p.bundle_name || `unlimited${idx + 1}`;
                 }
+                // Убеждаемся, что bundle_name сохранен
+                if (!p.bundle_name && p.id) {
+                    p.bundle_name = p.id;
+                }
+            });
+            
+            console.log('📋 Plans IDs set:', {
+                standard: standardPlans.map(p => ({ id: p.id, bundle_name: p.bundle_name })).slice(0, 3),
+                unlimited: unlimitedPlans.map(p => ({ id: p.id, bundle_name: p.bundle_name })).slice(0, 3)
             });
             
             // Устанавливаем выбранный план по умолчанию после загрузки
             if (!selectedPlanId && standardPlans.length > 0) {
-                selectedPlanId = standardPlans[0].id;
+                selectedPlanId = standardPlans[0].id || standardPlans[0].bundle_name;
                 console.log('✅ Default plan selected:', selectedPlanId);
             }
             
