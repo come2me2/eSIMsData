@@ -361,7 +361,7 @@ function renderPlans() {
                 <div class="plan-duration">${plan.duration}</div>
             </div>
             <div class="plan-right">
-                <div class="plan-price">${plan.price}</div>
+                <div class="plan-price">${plan.priceValue || plan.price || '$ 9.99'}</div>
                 <div class="radio-button ${selectedPlanId === plan.id ? 'selected' : ''}">
                     ${selectedPlanId === plan.id ? 
                         '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>' : 
