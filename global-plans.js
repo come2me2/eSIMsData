@@ -219,7 +219,15 @@ function setupSegmentedControl() {
             btn.classList.add('active');
             
             currentPlanType = btn.dataset.planType;
-            selectedPlanId = currentPlanType === 'unlimited' ? 'unlimited2' : 'plan2'; // Set default selection
+            
+            // Устанавливаем первый план как выбранный по умолчанию
+            const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
+            if (plans.length > 0) {
+                selectedPlanId = plans[0].id || plans[0].bundle_name;
+            } else {
+                selectedPlanId = null;
+            }
+            
             renderPlans();
             updateInfoBox();
         });
