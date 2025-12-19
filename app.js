@@ -748,12 +748,25 @@ function handleCountryClick(country) {
     if (tg) {
         tg.HapticFeedback.impactOccurred('light');
     }
+    
+    // Проверяем, что у страны есть необходимые данные
+    if (!country || !country.name || !country.code) {
+        console.error('❌ Invalid country data:', country);
+        return;
+    }
+    
+    console.log('🌍 Navigating to plans for:', country.name, country.code);
+    
     // Navigate to plans page with country data
+    // URLSearchParams автоматически кодирует специальные символы
     const params = new URLSearchParams({
         country: country.name,
         code: country.code
     });
-    window.location.href = `plans.html?${params.toString()}`;
+    
+    const url = `plans.html?${params.toString()}`;
+    console.log('📍 Navigation URL:', url);
+    window.location.href = url;
 }
 
 // Handle navigation click
