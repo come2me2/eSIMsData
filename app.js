@@ -336,6 +336,39 @@ const regions = [
 const urlParams = new URLSearchParams(window.location.search);
 let currentSegment = urlParams.get('segment') || 'local';
 
+function setSegment(segment) {
+    currentSegment = segment || 'local';
+    // обновляем URL без перезагрузки
+    try {
+        const u = new URL(window.location.href);
+        u.searchParams.set('segment', currentSegment);
+        window.history.replaceState({}, '', u.toString());
+    } catch (_) {}
+
+    // обновляем активные кнопки
+    const segmentButtons = document.querySelectorAll('.segment-btn');
+    segmentButtons.forEach(btn => {
+        if (btn.dataset.segment === currentSegment) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+
+    updateContent();
+}
+
+function setTelegramBackHandler(handler) {
+    if (!tg || !tg.BackButton) return;
+    // Telegram WebApp >= 6.1 поддерживает offClick
+    try {
+        if (window.__tgBackHandler && typeof tg.BackButton.offClick === 'function') {
+            tg.BackButton.offClick(window.__tgBackHandler);
+        }
+    } catch (_) {}
+    window.__tgBackHandler = handler;
+    try {
+        tg.BackButton.onClick(handler);
+    } catch (_) {}
+}
+
 // Initialize app with optimized loading
 document.addEventListener('DOMContentLoaded', () => {
     // Telegram Auth - проверка авторизации
@@ -381,6 +414,14 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
     setupSegmentedControl();
     setupNavigation();
+    
+    // Убеждаемся, что нижнее меню всегда видно
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) {
+        bottomNav.style.display = 'flex';
+        bottomNav.style.visibility = 'visible';
+        bottomNav.style.opacity = '1';
+    }
     
     // Non-critical operations - execute when idle
     if ('requestIdleCallback' in window) {
@@ -732,12 +773,9 @@ function updateBackButton() {
                        pathname === '/index.html';
     
     if (!isMainPage) {
-        // На других страницах (не index.html) показываем кнопку Back
+        // На других страницах (не index.html) показываем кнопку Back и идём назад по истории
         tg.BackButton.show();
-        console.log('🔙 BackButton показана', {
-            pathname: pathname,
-            href: window.location.href
-        });
+        setTelegramBackHandler(() => window.history.back());
         return;
     }
     
@@ -745,19 +783,16 @@ function updateBackButton() {
     // На вкладке Local - скрываем BackButton (показываем Close)
     // На вкладках Region и Global - показываем BackButton (показываем Back)
     if (currentSegment === 'local') {
+        // На Local скрываем BackButton, чтобы Telegram показывал "Закрыть"
         tg.BackButton.hide();
-        console.log('🔙 BackButton скрыта (Local - показываем Close)', {
-            pathname: pathname,
-            segment: currentSegment,
-            href: window.location.href
-        });
+        setTelegramBackHandler(() => {});
     } else {
-        // Region или Global - показываем BackButton
+        // На Region/Global показываем BackButton.
         tg.BackButton.show();
-        console.log('🔙 BackButton показана (Region/Global - показываем Back)', {
-            pathname: pathname,
-            segment: currentSegment,
-            href: window.location.href
+        // По нажатию — возвращаемся на Local внутри главной страницы.
+        setTelegramBackHandler(() => {
+            if (tg) tg.HapticFeedback.impactOccurred('light');
+            setSegment('local');
         });
     }
 }
@@ -792,38 +827,7 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// Периодическая проверка (на случай, если другие обработчики не сработали)
-// Проверяем каждые 500ms, но только если мы на главной странице
-setInterval(() => {
-    const pathname = window.location.pathname;
-    const isMainPage = pathname.endsWith('index.html') || 
-                       pathname === '/' || 
-                       pathname.endsWith('/') ||
-                       pathname === '/index.html';
-    if (isMainPage && tg && tg.BackButton) {
-        // Если мы на главной странице - обновляем кнопку в зависимости от сегмента
-        // На Local - скрываем, на Region/Global - показываем
-        if (currentSegment === 'local') {
-    tg.BackButton.hide();
-        } else {
-            tg.BackButton.show();
-        }
-    }
-}, 500);
-
-// Обработчик для случаев, когда страница восстанавливается из кеша (bfcache)
-window.addEventListener('pageshow', (event) => {
-    // event.persisted = true означает, что страница была восстановлена из кеша
-    if (event.persisted) {
-        console.log('📄 Страница восстановлена из кеша, обновляем BackButton');
-        setTimeout(updateBackButton, 100);
-    }
-});
-
-// Также обновляем при загрузке страницы (на случай, если что-то пропустили)
-window.addEventListener('load', () => {
-    setTimeout(updateBackButton, 100);
-});
+// Убрали периодический setInterval — он создавал гонки/неустойчивость в Telegram WebView.
 
 // Также обновляем при изменении сегмента через setupSegmentedControl
 const originalSetupSegmentedControl = setupSegmentedControl;

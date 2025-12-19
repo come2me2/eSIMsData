@@ -376,19 +376,21 @@ body {
 
 /* Bottom Navigation */
 .bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 428px;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    background-color: var(--bg-primary);
-    border-top: 0.5px solid var(--border-color);
-    padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
-    z-index: 100;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 100% !important;
+    max-width: 428px !important;
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    background-color: var(--bg-primary) !important;
+    border-top: 0.5px solid var(--border-color) !important;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom)) !important;
+    z-index: 1000 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .nav-item {
@@ -727,6 +729,13 @@ body {
     overflow-y: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.checkout-content > * {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .checkout-content::-webkit-scrollbar {
@@ -907,6 +916,260 @@ body {
     margin-top: 12px;
     text-align: left;
     padding-left: 4px;
+}
+
+/* Payment method card (Checkout) */
+.payment-method-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 0;
+    margin-bottom: 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background-color 0.2s ease;
+    text-align: left;
+    position: relative;
+    z-index: 1;
+    /* Убираем дефолтные стили button */
+    appearance: none;
+    -webkit-appearance: none;
+    font-family: inherit;
+    font-size: inherit;
+    /* Убеждаемся, что блок растягивается на всю ширину */
+    flex-shrink: 0;
+}
+
+.payment-method-card:active {
+    background-color: var(--bg-secondary);
+}
+
+.payment-method-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.payment-method-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background-color: transparent;
+    color: #007AFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+    transition: width 0.2s ease, height 0.2s ease;
+}
+
+/* Увеличиваем иконку когда метод оплаты выбран */
+.payment-method-card[data-selected="true"] .payment-method-icon {
+    width: 44px;
+    height: 44px;
+}
+
+.payment-method-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.payment-method-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.payment-method-title {
+    font-size: 17px;
+    font-weight: 400;
+    color: var(--text-primary);
+    line-height: 22px;
+}
+
+.payment-method-subtitle {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    line-height: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.payment-method-chevron {
+    width: 8px;
+    height: 14px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+
+/* Bottom sheet */
+.sheet-overlay {
+    position: fixed;
+    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 180ms ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sheet {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    width: 100%;
+    max-width: 428px;
+    background: var(--bg-primary);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+    z-index: 10000;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(16px);
+    opacity: 0;
+    transition: transform 220ms cubic-bezier(.2,.9,.2,1), opacity 180ms ease;
+    will-change: transform, opacity;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sheet-overlay.is-open {
+    opacity: 1;
+}
+
+.sheet.is-open {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sheet,
+    .sheet-overlay {
+        transition: none !important;
+    }
+}
+
+.sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sheet-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.sheet-close {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.sheet-list {
+    padding: 10px 10px 0;
+}
+
+.sheet-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: var(--bg-primary);
+    cursor: pointer;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.sheet-item:active {
+    background: var(--bg-secondary);
+}
+
+.sheet-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.sheet-item-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-primary);
+}
+
+.pm-icon-svg {
+    width: 26px;
+    height: 26px;
+    display: block;
+}
+
+/* Brand-ish colors */
+.pm-stars { background: #F3F0FF; color: #7C3AED; }
+.pm-stripe { background: #EEF2FF; color: #635BFF; }
+.pm-cryptomus { background: #ECFDF5; color: #10B981; }
+
+.sheet-item-label {
+    font-size: 17px;
+    font-weight: 400;
+    color: var(--text-primary);
+    line-height: 22px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sheet-item-radio {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.sheet-item.selected .sheet-item-radio {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    box-shadow: inset 0 0 0 5px #fff;
 }
 
 .checkout-total-price-old {
