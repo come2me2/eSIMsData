@@ -124,7 +124,7 @@ function handleNavigationClick(section) {
     } else if (section === 'Help') {
         navigate('help.html');
     }
-});
+}
 
 // Setup main segmented control (Region, Local, Global)
 function setupMainSegmentedControl() {
