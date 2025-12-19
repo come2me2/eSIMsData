@@ -561,6 +561,7 @@ function setupNextButton() {
         });
         
         if (!selectedPlanId) {
+            console.warn('⚠️ No plan selected');
             if (tg) {
                 tg.showAlert('Please select a plan');
             } else {
@@ -569,15 +570,42 @@ function setupNextButton() {
             return;
         }
         
+        // Проверяем, что выбранный план существует в загруженных планах
+        const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
+        const selectedPlan = plans.find(p => p.id === selectedPlanId || p.bundle_name === selectedPlanId);
+        
+        if (!selectedPlan) {
+            console.error('❌ Selected plan not found in loaded plans:', {
+                selectedPlanId,
+                currentPlanType,
+                availablePlans: plans.map(p => ({ id: p.id, bundle_name: p.bundle_name })).slice(0, 5)
+            });
+            if (tg) {
+                tg.showAlert('Selected plan not found. Please select again.');
+            } else {
+                alert('Selected plan not found. Please select again.');
+            }
+            return;
+        }
+        
+        console.log('✅ Selected plan found:', {
+            id: selectedPlan.id,
+            bundle_name: selectedPlan.bundle_name,
+            price: selectedPlan.price || selectedPlan.priceValue
+        });
+        
         if (tg) {
             tg.HapticFeedback.impactOccurred('medium');
         }
         
         // Navigate to checkout screen for both standard and unlimited plans
+        // Используем bundle_name если есть, иначе id
+        const planIdForCheckout = selectedPlan.bundle_name || selectedPlan.id || selectedPlanId;
+        
         const checkoutParams = new URLSearchParams({
             type: 'region',
             name: regionData.name,
-            plan: selectedPlanId,
+            plan: planIdForCheckout,
             planType: currentPlanType
         });
         
