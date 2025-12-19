@@ -5,7 +5,16 @@
 
 const path = require('path');
 // Загружаем переменные окружения из .env файла (явно указываем путь)
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+// Пробуем несколько путей для надежности
+const envPath = path.join(__dirname, '.env');
+require('dotenv').config({ path: envPath });
+
+// Проверяем, что критичные переменные окружения загружены
+if (!process.env.TELEGRAM_BOT_TOKEN) {
+    console.warn('⚠️ TELEGRAM_BOT_TOKEN не найден в переменных окружения');
+    console.warn('   Проверьте файл .env в корне проекта');
+}
+
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');

@@ -120,7 +120,7 @@ function validateByHash(initData, botToken) {
         if (!botToken) {
             return { 
                 valid: false, 
-                error: 'BOT_TOKEN not configured. Add it to Vercel Environment Variables.', 
+                error: 'BOT_TOKEN not configured. Please set TELEGRAM_BOT_TOKEN environment variable on the server.', 
                 method: 'hash' 
             };
         }
@@ -245,8 +245,8 @@ module.exports = async function handler(req, res) {
             hasInitData: !!initData,
             initDataType: typeof initData,
             initDataLength: initData?.length || 0,
-            hasBotToken: !!process.env.BOT_TOKEN,
-            botTokenLength: process.env.BOT_TOKEN?.length || 0
+            hasBotToken: !!(process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN),
+            botTokenLength: (process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN)?.length || 0
         });
         
         let result;
@@ -256,10 +256,11 @@ module.exports = async function handler(req, res) {
         
         // 2. Если signature нет или ошибка - используем hash (HMAC-SHA256)
         if (!result.valid && result.fallback) {
-            const botToken = process.env.BOT_TOKEN;
+            // Поддерживаем оба варианта имени переменной для совместимости
+            const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
             
             if (!botToken) {
-                console.warn('BOT_TOKEN not set in environment variables');
+                console.warn('TELEGRAM_BOT_TOKEN or BOT_TOKEN not set in environment variables');
             }
             
             result = validateByHash(initData, botToken);
