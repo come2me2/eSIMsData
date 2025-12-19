@@ -419,7 +419,7 @@ function renderPlans() {
                 <div class="plan-duration">${plan.duration}</div>
             </div>
             <div class="plan-right">
-                <div class="plan-price">${plan.priceValue || plan.price || '$ 9.99'}</div>
+                <div class="plan-price">${formatPrice(plan.priceValue || plan.price || '9.99')}</div>
                 <div class="radio-button ${selectedPlanId === plan.id ? 'selected' : ''}">
                     ${selectedPlanId === plan.id ? 
                         '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>' : 
@@ -441,8 +441,28 @@ function renderPlans() {
     });
 }
 
+// Format price with dollar sign
+function formatPrice(price) {
+    if (!price) return '$ 9.99';
+    
+    // Если цена уже содержит символ $, возвращаем как есть
+    if (typeof price === 'string' && price.includes('$')) {
+        return price;
+    }
+    
+    // Если цена - число или строка с числом, добавляем символ $
+    const priceNum = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : price;
+    if (!isNaN(priceNum)) {
+        return `$ ${priceNum.toFixed(2)}`;
+    }
+    
+    // Fallback
+    return `$ ${price}`;
+}
+
 // Select plan
 function selectPlan(planId) {
+    console.log('🔵 Plan selected:', planId);
     selectedPlanId = planId;
     renderPlans();
     
