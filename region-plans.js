@@ -200,6 +200,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Убеждаемся, что нижнее меню всегда видно
     ensureBottomNavVisible();
     setTimeout(ensureBottomNavVisible, 100);
+    setTimeout(ensureBottomNavVisible, 300);
+    
+    // Убеждаемся, что кнопка Next всегда видна
+    ensureNextButtonVisible();
+    setTimeout(ensureNextButtonVisible, 100);
+    setTimeout(ensureNextButtonVisible, 300);
 });
 
 // Ensure bottom navigation is always visible
