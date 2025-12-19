@@ -735,7 +735,13 @@ body {
 
 .checkout-content > * {
     width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
+}
+
+.checkout-content .payment-method-card {
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
 .checkout-content::-webkit-scrollbar {

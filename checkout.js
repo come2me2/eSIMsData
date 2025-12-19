@@ -957,7 +957,7 @@ function handleNavigationClick(section) {
     } else if (section === 'Help') {
         navigate('help.html');
     }
-});
+}
 
 // Setup order details
 function setupOrderDetails() {
