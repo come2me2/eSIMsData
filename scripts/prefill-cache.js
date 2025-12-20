@@ -144,48 +144,109 @@ async function prefillRegionPlansCache() {
 }
 
 /**
- * Предзаполнить кэш для Local планов (опционально, для популярных стран)
+ * Предзаполнить кэш для Local планов для всех стран
+ * Загружает список стран из кэша и предзаполняет планы для каждой страны параллельно батчами
  */
 async function prefillLocalPlansCache() {
-    log('🔄 Prefilling local plans cache for popular countries...');
-    // Популярные страны для предзаполнения
-    const popularCountries = ['US', 'GB', 'DE', 'FR', 'IT', 'ES', 'JP', 'CN', 'AU', 'CA'];
+    log('🔄 Prefilling local plans cache for all countries...');
+    
+    // Получаем список всех стран из кэша
+    let allCountries = [];
+    try {
+        const cachedCountries = cache.get('countries:all', cache.getTTL('countries'));
+        if (cachedCountries && Array.isArray(cachedCountries)) {
+            allCountries = cachedCountries.map(c => c.code).filter(code => code && code.length >= 2 && code.length <= 5);
+            log(`📋 Found ${allCountries.length} countries in cache`);
+        } else {
+            // Если кэш пуст, загружаем страны сначала
+            log('⚠️ Countries cache is empty, loading countries first...');
+            const req = createMockReq();
+            const res = createMockRes();
+            await countriesHandler(req, res);
+            
+            if (res.statusCode === 200 && res.data && res.data.success && Array.isArray(res.data.data)) {
+                allCountries = res.data.data.map(c => c.code).filter(code => code && code.length >= 2 && code.length <= 5);
+                log(`📋 Loaded ${allCountries.length} countries from API`);
+            } else {
+                log('❌ Failed to load countries, using fallback list');
+                // Fallback: используем популярные страны
+                allCountries = ['US', 'GB', 'DE', 'FR', 'IT', 'ES', 'JP', 'CN', 'AU', 'CA'];
+            }
+        }
+    } catch (error) {
+        log(`❌ Error loading countries: ${error.message}, using fallback list`);
+        // Fallback: используем популярные страны
+        allCountries = ['US', 'GB', 'DE', 'FR', 'IT', 'ES', 'JP', 'CN', 'AU', 'CA'];
+    }
+    
     const results = {
         success: 0,
         failed: 0,
+        skipped: 0,
         errors: []
     };
     
-    for (const countryCode of popularCountries) {
-        try {
-            log(`🔄 Prefilling ${countryCode} local plans cache...`);
-            const req = createMockReq({ country: countryCode, category: 'local' });
-            const res = createMockRes();
-            
-            await plansHandler(req, res);
-            
-            if (res.statusCode === 200 && res.data && res.data.success) {
-                const standardCount = res.data.data?.standard?.length || 0;
-                const unlimitedCount = res.data.data?.unlimited?.length || 0;
-                if (standardCount > 0 || unlimitedCount > 0) {
-                    log(`✅ ${countryCode} local plans cache prefilled: ${standardCount} standard, ${unlimitedCount} unlimited`);
-                    results.success++;
+    // Обрабатываем страны батчами по 5 параллельно для оптимизации
+    const batchSize = 5;
+    log(`🔄 Processing ${allCountries.length} countries in batches of ${batchSize}...`);
+    
+    for (let i = 0; i < allCountries.length; i += batchSize) {
+        const batch = allCountries.slice(i, i + batchSize);
+        const batchNumber = Math.floor(i / batchSize) + 1;
+        const totalBatches = Math.ceil(allCountries.length / batchSize);
+        
+        log(`\n📦 Batch ${batchNumber}/${totalBatches}: Processing ${batch.join(', ')}...`);
+        
+        const batchPromises = batch.map(async (countryCode) => {
+            try {
+                const req = createMockReq({ country: countryCode, category: 'local' });
+                const res = createMockRes();
+                
+                await plansHandler(req, res);
+                
+                if (res.statusCode === 200 && res.data && res.data.success) {
+                    const standardCount = res.data.data?.standard?.length || 0;
+                    const unlimitedCount = res.data.data?.unlimited?.length || 0;
+                    if (standardCount > 0 || unlimitedCount > 0) {
+                        log(`✅ ${countryCode}: ${standardCount} standard, ${unlimitedCount} unlimited`);
+                        return { success: true, countryCode, standard: standardCount, unlimited: unlimitedCount };
+                    } else {
+                        log(`⚠️ ${countryCode}: no plans found`);
+                        return { success: false, countryCode, skipped: true };
+                    }
                 } else {
-                    log(`⚠️ ${countryCode} has no plans, skipping`);
+                    const errorMsg = res.data?.error || 'Unknown error';
+                    log(`❌ ${countryCode}: ${errorMsg}`);
+                    return { success: false, countryCode, error: errorMsg };
                 }
-            } else {
-                log(`❌ Failed to prefill ${countryCode} local plans cache`);
-                results.failed++;
-                results.errors.push({ country: countryCode, error: res.data?.error || 'Unknown error' });
+            } catch (error) {
+                log(`❌ ${countryCode}: ${error.message}`);
+                return { success: false, countryCode, error: error.message };
             }
-        } catch (error) {
-            log(`❌ Error prefilling ${countryCode} local plans cache: ${error.message}`);
-            results.failed++;
-            results.errors.push({ country: countryCode, error: error.message });
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        
+        batchResults.forEach(result => {
+            if (result.success) {
+                results.success++;
+            } else if (result.skipped) {
+                results.skipped++;
+            } else {
+                results.failed++;
+                if (result.error) {
+                    results.errors.push({ country: result.countryCode, error: result.error });
+                }
+            }
+        });
+        
+        // Небольшая задержка между батчами, чтобы не перегружать API
+        if (i + batchSize < allCountries.length) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
     
-    log(`✅ Local plans cache prefilled: ${results.success} success, ${results.failed} failed`);
+    log(`\n✅ Local plans cache prefilled: ${results.success} success, ${results.skipped} skipped (no plans), ${results.failed} failed`);
     return results;
 }
 
@@ -249,5 +310,8 @@ async function main() {
 
 // Запускаем
 main();
+
+
+
 
 
