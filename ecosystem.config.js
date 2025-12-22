@@ -30,7 +30,10 @@ module.exports = {
         autorestart: true,
         watch: false,
         max_memory_restart: '1G',
-        min_uptime: '10s',
-        max_restarts: 3
+        min_uptime: '30s',
+        max_restarts: 5,
+        restart_delay: 5000,
+        listen_timeout: 10000,
+        kill_timeout: 5000
     }]
 };
