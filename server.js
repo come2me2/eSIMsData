@@ -239,32 +239,6 @@ async function warmupCache() {
     }
 }
 
-// Запуск сервера
-app.listen(PORT, async () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📁 Serving static files from: ${path.join(__dirname, 'public')}`);
-    console.log(`🔑 ESIMGO_API_KEY: ${process.env.ESIMGO_API_KEY ? '✓ Set' : '✗ Not set'}`);
-    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`\n📋 Available API endpoints:`);
-    Object.keys(apiRoutes).forEach(route => {
-        console.log(`   ${route}`);
-    });
-    
-    // Прогреваем кэш после старта сервера
-    await warmupCache();
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received, shutting down gracefully...');
-    process.exit(0);
-});
-
-process.on('SIGINT', () => {
-    console.log('SIGINT received, shutting down gracefully...');
-    process.exit(0);
-});
-
 // Fallback для всех остальных маршрутов - отдаем index.html (SPA)
 app.get('*', (req, res) => {
     // Если это API запрос, вернуть 404
