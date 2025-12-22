@@ -265,12 +265,6 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
-
-        }
-    });
-    console.log(`✓ Registered route: ${route}`);
-});
-
 // Fallback для всех остальных маршрутов - отдаем index.html (SPA)
 app.get('*', (req, res) => {
     // Если это API запрос, вернуть 404
