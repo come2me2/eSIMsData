@@ -172,7 +172,7 @@ body {
 /* Main Content */
 .main-content {
     flex: 1;
-    padding: 16px 16px calc(70px + env(safe-area-inset-bottom)); /* Padding для нижнего меню */
+    padding: 16px 16px 180px; /* Увеличено для кнопки Next (80px) + нижнего меню (80px) + отступ */
     overflow-y: auto;
 }
 
@@ -476,7 +476,7 @@ body {
 /* Plans Content */
 .plans-content {
     flex: 1;
-    padding: 0 16px calc(140px + env(safe-area-inset-bottom)); /* Padding для нижнего меню и кнопки Next */
+    padding: 0 16px 180px; /* Увеличено для кнопки Next (80px) + нижнего меню (80px) + отступ */
     overflow-y: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -1235,6 +1235,11 @@ body {
 
 .next-btn:active {
     opacity: 0.8;
+}
+
+/* На странице checkout кнопка Purchase должна быть выше bottom-nav */
+body.checkout-page .bottom-button-container {
+    bottom: 80px !important;
 }
 
 @supports (padding: max(0px)) {
