@@ -1232,7 +1232,7 @@ body {
 /* Bottom Button Container */
 .bottom-button-container {
     position: fixed;
-    bottom: 80px;
+    bottom: 0;
     left: 50%;
     transform: translateX(-50%);
     width: 100%;
@@ -1245,6 +1245,11 @@ body {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
+}
+
+/* На странице checkout кнопка Purchase должна быть выше bottom-nav */
+body.checkout-page .bottom-button-container {
+    bottom: 80px;
 }
 
 .next-btn {
