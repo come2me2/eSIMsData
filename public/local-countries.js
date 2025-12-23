@@ -463,6 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(hideBackButton, 50);
     
     initializeApp();
+    setupNavigation();
     
     // Принудительно скрываем BackButton после инициализации (чтобы показать Close)
     hideBackButton();
@@ -470,6 +471,29 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(hideBackButton, 200);
     setTimeout(hideBackButton, 300);
 });
+
+// Setup bottom navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    navItems.forEach((item) => {
+        item.addEventListener('click', () => {
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            
+            const label = item.querySelector('.nav-label')?.textContent;
+            
+            if (label === 'Account') {
+                window.location.href = 'account.html';
+            } else if (label === 'Buy eSIM') {
+                window.location.href = 'index.html';
+            } else if (label === 'Help') {
+                window.location.href = 'help.html';
+            }
+        });
+    });
+}
 
 // Также обновляем BackButton при возврате на страницу
 window.addEventListener('popstate', () => {
@@ -541,10 +565,3 @@ window.addEventListener('focus', () => {
 });
 
 // Дополнительная проверка при полной загрузке страницы
-window.addEventListener('load', () => {
-    console.log('📄 Local страница полностью загружена, скрываем BackButton');
-    hideBackButton();
-    setTimeout(hideBackButton, 100);
-    setTimeout(hideBackButton, 300);
-});
-
