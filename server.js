@@ -361,41 +361,6 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
-
-    if (route === '/api/admin/auth/login') {
-        app.post(route, async (req, res) => {
-            try {
-                req.path = '/login';
-                await handler(req, res);
-            } catch (error) {
-                console.error(`Error in ${route}:`, error);
-                if (!res.headersSent) {
-                    res.status(500).json({
-                        success: false,
-                        error: error.message || 'Internal server error'
-                    });
-                }
-            }
-        });
-    } else {
-        // Поддержка всех методов для каждого endpoint
-        app.all(route, async (req, res) => {
-            try {
-                await handler(req, res);
-            } catch (error) {
-                console.error(`Error in ${route}:`, error);
-                if (!res.headersSent) {
-                    res.status(500).json({
-                        success: false,
-                        error: error.message || 'Internal server error'
-                    });
-                }
-            }
-        });
-    }
-    console.log(`✓ Registered route: ${route}`);
-});
-
 // Fallback для всех остальных маршрутов - отдаем index.html (SPA)
 app.get('*', (req, res) => {
     // Если это API запрос, вернуть 404
