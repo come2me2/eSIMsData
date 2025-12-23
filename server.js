@@ -227,6 +227,11 @@ app.get('*', (req, res) => {
         });
     }
     
+    // Пропускаем запросы к админке - они обрабатываются статическими файлами выше
+    if (req.path.startsWith('/admin/')) {
+        // Если файл не найден статическими файлами, вернем 404
+        return res.status(404).send('File not found');
+    }
     
     // Специальная обработка для checkout.html - не кэшируем
     if (req.path === '/checkout.html' || req.path === '/checkout') {
