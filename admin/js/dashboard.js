@@ -154,13 +154,23 @@ const Dashboard = {
 
 // Initialize dashboard on page load
 document.addEventListener('DOMContentLoaded', () => {
-    Dashboard.loadStats();
-    Dashboard.loadRecentOrders();
+    // Проверяем, что Auth доступен
+    if (typeof Auth === 'undefined') {
+        console.error('Auth is not defined. Make sure auth.js is loaded before dashboard.js');
+        return;
+    }
     
-    // Refresh stats every 5 minutes
-    setInterval(() => {
+    try {
         Dashboard.loadStats();
         Dashboard.loadRecentOrders();
-    }, 5 * 60 * 1000);
+        
+        // Refresh stats every 5 minutes
+        setInterval(() => {
+            Dashboard.loadStats();
+            Dashboard.loadRecentOrders();
+        }, 5 * 60 * 1000);
+    } catch (error) {
+        console.error('Error initializing dashboard:', error);
+    }
 });
 

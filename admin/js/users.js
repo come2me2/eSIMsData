@@ -64,13 +64,23 @@ const Users = {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    Users.loadUsers();
+    // Проверяем, что Auth доступен
+    if (typeof Auth === 'undefined') {
+        console.error('Auth is not defined. Make sure auth.js is loaded before users.js');
+        return;
+    }
     
-    const refreshBtn = document.getElementById('refreshBtn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-            Users.loadUsers();
-        });
+    try {
+        Users.loadUsers();
+        
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                Users.loadUsers();
+            });
+        }
+    } catch (error) {
+        console.error('Error initializing users page:', error);
     }
 });
 

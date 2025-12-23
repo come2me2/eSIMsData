@@ -341,38 +341,48 @@ const Orders = {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    Orders.loadOrders();
-    
-    // Status filter
-    const statusFilter = document.getElementById('statusFilter');
-    if (statusFilter) {
-        statusFilter.addEventListener('change', (e) => {
-            Orders.currentStatus = e.target.value;
-            Orders.currentPage = 1;
-            Orders.loadOrders(1, e.target.value);
-        });
+    // Проверяем, что Auth доступен
+    if (typeof Auth === 'undefined') {
+        console.error('Auth is not defined. Make sure auth.js is loaded before orders.js');
+        return;
     }
     
-    // Refresh button
-    const refreshBtn = document.getElementById('refreshBtn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-            Orders.loadOrders(Orders.currentPage, Orders.currentStatus);
-        });
-    }
-    
-    // Close modal
-    const closeModal = document.getElementById('closeModal');
-    const orderModal = document.getElementById('orderModal');
-    if (closeModal && orderModal) {
-        closeModal.addEventListener('click', () => {
-            orderModal.classList.add('hidden');
-        });
-        orderModal.addEventListener('click', (e) => {
-            if (e.target === orderModal) {
+    try {
+        Orders.loadOrders();
+        
+        // Status filter
+        const statusFilter = document.getElementById('statusFilter');
+        if (statusFilter) {
+            statusFilter.addEventListener('change', (e) => {
+                Orders.currentStatus = e.target.value;
+                Orders.currentPage = 1;
+                Orders.loadOrders(1, e.target.value);
+            });
+        }
+        
+        // Refresh button
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                Orders.loadOrders(Orders.currentPage, Orders.currentStatus);
+            });
+        }
+        
+        // Close modal
+        const closeModal = document.getElementById('closeModal');
+        const orderModal = document.getElementById('orderModal');
+        if (closeModal && orderModal) {
+            closeModal.addEventListener('click', () => {
                 orderModal.classList.add('hidden');
-            }
-        });
+            });
+            orderModal.addEventListener('click', (e) => {
+                if (e.target === orderModal) {
+                    orderModal.classList.add('hidden');
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error initializing orders page:', error);
     }
 });
 

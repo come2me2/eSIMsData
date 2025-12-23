@@ -228,20 +228,30 @@ const Settings = {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    Settings.loadSettings();
-    
-    const promocodeForm = document.getElementById('promocodeForm');
-    if (promocodeForm) {
-        promocodeForm.addEventListener('submit', (e) => Settings.createPromocode(e));
+    // Проверяем, что Auth доступен
+    if (typeof Auth === 'undefined') {
+        console.error('Auth is not defined. Make sure auth.js is loaded before settings.js');
+        return;
     }
     
-    const promocodeModal = document.getElementById('promocodeModal');
-    if (promocodeModal) {
-        promocodeModal.addEventListener('click', (e) => {
-            if (e.target === promocodeModal) {
-                Settings.closePromocodeModal();
-            }
-        });
+    try {
+        Settings.loadSettings();
+        
+        const promocodeForm = document.getElementById('promocodeForm');
+        if (promocodeForm) {
+            promocodeForm.addEventListener('submit', (e) => Settings.createPromocode(e));
+        }
+        
+        const promocodeModal = document.getElementById('promocodeModal');
+        if (promocodeModal) {
+            promocodeModal.addEventListener('click', (e) => {
+                if (e.target === promocodeModal) {
+                    Settings.closePromocodeModal();
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error initializing settings page:', error);
     }
 });
 
