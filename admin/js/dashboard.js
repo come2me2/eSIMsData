@@ -99,7 +99,8 @@ const Dashboard = {
 
         tbody.innerHTML = orders.map(order => {
             const statusClass = this.getStatusClass(order.status);
-            const date = new Date(order.createdAt).toLocaleDateString('ru-RU', {
+            const orderDate = order.createdAt || order.date || new Date();
+            const date = new Date(orderDate).toLocaleDateString('ru-RU', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
