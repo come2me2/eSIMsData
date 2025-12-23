@@ -148,23 +148,6 @@ Object.entries(apiRoutes).forEach(([route, handler]) => {
 });
 
 // Fallback для всех остальных маршрутов - отдаем index.html (SPA)
-app.get('*', (req, res) => {
-    // Если это API запрос, вернуть 404
-    if (req.path.startsWith('/api/')) {
-        return res.status(404).json({
-            success: false,
-            error: 'API endpoint not found'
-        });
-    }
-    
-    // Специальная обработка для checkout.html - не кэшируем
-    if (req.path === '/checkout.html' || req.path === '/checkout') {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-        return res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
-    }
-    
     // Иначе отдать index.html для SPA
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
@@ -242,23 +225,6 @@ async function warmupCache() {
 }
 
 // Fallback для всех остальных маршрутов - отдаем index.html (SPA)
-app.get('*', (req, res) => {
-    // Если это API запрос, вернуть 404
-    if (req.path.startsWith('/api/')) {
-        return res.status(404).json({
-            success: false,
-            error: 'API endpoint not found'
-        });
-    }
-    
-    // Специальная обработка для checkout.html - не кэшируем
-    if (req.path === '/checkout.html' || req.path === '/checkout') {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-        return res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
-    }
-    
     // Иначе отдать index.html для SPA
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
@@ -368,6 +334,14 @@ app.get('*', (req, res) => {
         return res.status(404).json({
             success: false,
             error: 'API endpoint not found'
+        });
+    }
+    
+    // Пропускаем запросы к админке - они обрабатываются статическими файлами
+    if (req.path.startsWith('/admin/')) {
+        return res.status(404).json({
+            success: false,
+            error: 'Admin file not found'
         });
     }
     
