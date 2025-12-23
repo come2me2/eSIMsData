@@ -59,9 +59,13 @@ const Auth = {
             ...options.headers
         };
 
+        // Если body уже строка, используем как есть, иначе преобразуем в JSON
+        const body = options.body ? (typeof options.body === 'string' ? options.body : JSON.stringify(options.body)) : undefined;
+
         const response = await fetch(url, {
-            ...options,
-            headers
+            method: options.method || 'GET',
+            headers,
+            body: body
         });
 
         if (response.status === 401) {
