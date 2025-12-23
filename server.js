@@ -60,15 +60,16 @@ app.use((req, res, next) => {
 });
 
 // Статические файлы из public директории
-// Важно: HTML и data-loader.js НЕ кэшируем агрессивно — это позволяет принудительно
-// обновлять клиентов (cache reset) и быстрее выкатывать фиксы.
+// Важно: HTML, JS и CSS НЕ кэшируем агрессивно — это позволяет принудительно
+// обновлять клиентов (cache reset) и быстрее выкатывать фиксы, особенно для Telegram Mini App.
 app.use(express.static(path.join(__dirname, 'public'), {
     maxAge: '1y',
     etag: true,
     lastModified: true,
     setHeaders: (res, filePath) => {
         const base = path.basename(filePath);
-        if (base.endsWith('.html') || base === 'data-loader.js') {
+        // Не кэшируем HTML, JS и CSS файлы для актуальной версии в Telegram Mini App
+        if (base.endsWith('.html') || base.endsWith('.js') || base.endsWith('.css')) {
             res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
             res.setHeader('Pragma', 'no-cache');
             res.setHeader('Expires', '0');
