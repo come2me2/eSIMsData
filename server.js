@@ -313,13 +313,18 @@ process.on('SIGINT', () => {
 
 // Fallback для всех остальных маршрутов - отдаем index.html (SPA)
 // НЕ обрабатываем запросы к /admin/* - они обрабатываются статическими файлами выше
-app.get('*', (req, res) => {
+app.get('*', (req, res, next) => {
     // Если это API запрос, вернуть 404
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({
             success: false,
             error: 'API endpoint not found'
         });
+    }
+    
+    // Пропускаем запросы к админке - они обрабатываются статическими файлами выше
+    if (req.path.startsWith('/admin/')) {
+        return next(); // Передаем запрос дальше к статическим файлам
     }
     
     // Специальная обработка для checkout.html - не кэшируем
