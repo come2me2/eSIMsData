@@ -86,8 +86,18 @@ const Auth = {
 };
 
 // Auto-protect pages (except login.html)
-if (!window.location.pathname.includes('login.html')) {
-    Auth.protectPage();
+// Выполняем после загрузки DOM, чтобы избежать проблем с путями
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!window.location.pathname.includes('login.html') && !window.location.pathname.endsWith('/login.html')) {
+            Auth.protectPage();
+        }
+    });
+} else {
+    // DOM уже загружен
+    if (!window.location.pathname.includes('login.html') && !window.location.pathname.endsWith('/login.html')) {
+        Auth.protectPage();
+    }
 }
 
 // Logout button handler
