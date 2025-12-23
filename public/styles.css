@@ -1077,7 +1077,7 @@ body {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.35);
-    z-index: 9999;
+    z-index: 10002; /* Выше кнопки Purchase (10001) */
     opacity: 0;
     transition: opacity 180ms ease;
     -webkit-tap-highlight-color: transparent;
@@ -1093,7 +1093,7 @@ body {
     border-top-left-radius: 18px;
     border-top-right-radius: 18px;
     box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
-    z-index: 10000;
+    z-index: 10003; /* Выше overlay (10002) и кнопки Purchase (10001) */
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
     transform: translateX(-50%) translateY(16px);
     opacity: 0;
