@@ -329,7 +329,7 @@ process.on('SIGINT', () => {
 
 // Fallback для всех остальных маршрутов - отдаем index.html (SPA)
 // НЕ обрабатываем запросы к /admin/* - они обрабатываются статическими файлами выше
-app.get('*', (req, res, next) => {
+app.get('*', (req, res) => {
     // Если это API запрос, вернуть 404
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({
@@ -339,8 +339,9 @@ app.get('*', (req, res, next) => {
     }
     
     // Пропускаем запросы к админке - они обрабатываются статическими файлами
+    // Если файл не найден статическими файлами, вернем 404
     if (req.path.startsWith('/admin/')) {
-        return next(); // Пропускаем обработку, чтобы статические файлы могли обработать запрос
+        return res.status(404).send('Admin file not found');
     }
     
     // Специальная обработка для checkout.html - не кэшируем
