@@ -155,6 +155,234 @@ let originalPrice = '';
 let isPromoApplied = false;
 let discountPercent = 0;
 
+// ===== Payment method (UI only for now) =====
+const PAYMENT_METHODS = {
+    stars: 'Telegram Stars',
+    stripe: 'Bank Cards',
+    cryptomus: 'Crypto Payments'
+};
+
+let selectedPaymentMethod = localStorage.getItem('checkout_payment_method') || '';
+if (selectedPaymentMethod && !PAYMENT_METHODS[selectedPaymentMethod]) {
+    // reset old values from previous versions (card/ton/etc)
+    selectedPaymentMethod = '';
+    localStorage.removeItem('checkout_payment_method');
+}
+
+function setupPaymentMethodUI() {
+    const btn = document.getElementById('paymentMethodBtn');
+    const subtitle = document.getElementById('paymentMethodSubtitle');
+    const icon = document.querySelector('#paymentMethodBtn .payment-method-icon');
+    const overlay = document.getElementById('paymentSheetOverlay');
+    const sheet = document.getElementById('paymentSheet');
+    const closeBtn = document.getElementById('paymentSheetClose');
+    const list = document.getElementById('paymentSheetList');
+
+    if (!btn || !subtitle || !overlay || !sheet || !closeBtn || !list) {
+        console.error('❌ Payment method UI elements not found:', {
+            btn: !!btn,
+            subtitle: !!subtitle,
+            overlay: !!overlay,
+            sheet: !!sheet,
+            closeBtn: !!closeBtn,
+            list: !!list
+        });
+        return;
+    }
+    
+    console.log('✅ Payment method UI initialized', {
+        btn: btn,
+        btnWidth: btn.offsetWidth,
+        btnComputedStyle: window.getComputedStyle(btn).width
+    });
+
+    const getIconPath = (method) => {
+        if (method === 'stars') {
+            return '/icons/Telegram Stars.svg';
+        }
+        if (method === 'stripe') {
+            return '/icons/Bank Cards eSIMsData.svg';
+        }
+        if (method === 'cryptomus') {
+            return '/icons/Crypto Payments eSIMsData.svg';
+        }
+        // default icon (до выбора метода)
+        return '/icons/Payment Method eSIMsData.svg';
+    };
+
+    const iconHtml = (method) => {
+        const iconPath = getIconPath(method);
+        return `<img src="${iconPath}" alt="${PAYMENT_METHODS[method] || 'Payment method'}" style="width:100%;height:100%;object-fit:contain;">`;
+    };
+
+    const updateSubtitle = () => {
+        subtitle.textContent = PAYMENT_METHODS[selectedPaymentMethod] || 'Not selected';
+        
+        // Добавляем/убираем класс для активного состояния
+        if (selectedPaymentMethod) {
+            btn.setAttribute('data-selected', 'true');
+        } else {
+            btn.removeAttribute('data-selected');
+        }
+        
+        if (icon) {
+            // keep container styling; swap contents
+            const iconPath = getIconPath(selectedPaymentMethod);
+            console.log('💳 Updating payment method icon:', {
+                method: selectedPaymentMethod || 'default',
+                iconPath
+            });
+            icon.innerHTML = iconHtml(selectedPaymentMethod);
+            
+            // Проверяем, что иконка загрузилась
+            const img = icon.querySelector('img');
+            if (img) {
+                img.onerror = function() {
+                    console.error('❌ Failed to load payment icon:', iconPath);
+                    // Fallback на дефолтную иконку
+                    this.src = '/icons/Payment Method eSIMsData.svg';
+                };
+                img.onload = function() {
+                    console.log('✅ Payment icon loaded:', iconPath);
+                };
+            }
+        }
+    };
+
+    const syncSelected = () => {
+        const items = list.querySelectorAll('.sheet-item');
+        items.forEach(item => {
+            const key = item.getAttribute('data-payment-method');
+            if (key === selectedPaymentMethod) item.classList.add('selected');
+            else item.classList.remove('selected');
+        });
+    };
+
+    const open = () => {
+        console.log('💳 Opening payment method sheet');
+        console.log('💳 Overlay:', overlay, 'hidden:', overlay?.hidden);
+        console.log('💳 Sheet:', sheet, 'hidden:', sheet?.hidden);
+        
+        if (!overlay || !sheet) {
+            console.error('❌ Overlay or sheet not found!');
+            return;
+        }
+        
+        overlay.hidden = false;
+        sheet.hidden = false;
+        document.body.style.overflow = 'hidden';
+        syncSelected();
+
+        // Start transition on next frame (ensures CSS applies before adding class)
+        requestAnimationFrame(() => {
+            overlay.classList.add('is-open');
+            sheet.classList.add('is-open');
+            console.log('✅ Sheet opened, classes added. Overlay hidden:', overlay.hidden, 'Sheet hidden:', sheet.hidden);
+        });
+
+        if (tg) {
+            try {
+                tg.HapticFeedback.impactOccurred('light');
+            } catch (e) {
+                console.warn('⚠️ HapticFeedback error:', e);
+            }
+        }
+    };
+
+    const close = () => {
+        // animate out, then hide
+        overlay.classList.remove('is-open');
+        sheet.classList.remove('is-open');
+
+        const finish = () => {
+            overlay.hidden = true;
+            sheet.hidden = true;
+            document.body.style.overflow = '';
+        };
+
+        // If reduced motion or transitions not supported, finish immediately
+        const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced) {
+            finish();
+            return;
+        }
+
+        let done = false;
+        const onEnd = () => {
+            if (done) return;
+            done = true;
+            sheet.removeEventListener('transitionend', onEnd);
+            finish();
+        };
+        sheet.addEventListener('transitionend', onEnd);
+
+        // Safety timeout (in case transitionend doesn't fire in WebView)
+        setTimeout(onEnd, 300);
+    };
+
+    // Обработчик открытия модального окна
+    btn.addEventListener('click', (e) => {
+        console.log('💳 Payment method button clicked', e);
+        e.preventDefault();
+        e.stopPropagation();
+        open();
+    });
+    
+    // Для touch устройств
+    btn.addEventListener('touchend', (e) => {
+        console.log('💳 Payment method button touched', e);
+        e.preventDefault();
+        e.stopPropagation();
+        open();
+    });
+    
+    // Дополнительный обработчик для надежности
+    btn.onclick = (e) => {
+        console.log('💳 Payment method button onclick', e);
+        e.preventDefault();
+        e.stopPropagation();
+        open();
+    };
+    
+    const handleClose = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        close();
+        return false;
+    };
+    
+    closeBtn.addEventListener('click', handleClose, true);
+    closeBtn.addEventListener('touchstart', handleClose, { passive: false, capture: true });
+    closeBtn.onclick = handleClose;
+    
+    overlay.addEventListener('click', handleClose, true);
+    overlay.addEventListener('touchstart', handleClose, { passive: false, capture: true });
+    overlay.onclick = handleClose;
+
+    // ESC to close (desktop)
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !sheet.hidden) close();
+    });
+
+    list.addEventListener('click', (e) => {
+        const item = e.target.closest('.sheet-item');
+        if (!item) return;
+        const key = item.getAttribute('data-payment-method');
+        if (!key) return;
+        selectedPaymentMethod = key;
+        localStorage.setItem('checkout_payment_method', selectedPaymentMethod);
+        updateSubtitle();
+        syncSelected();
+        if (tg) tg.HapticFeedback.impactOccurred('light');
+        close();
+    });
+
+    updateSubtitle();
+    syncSelected();
+}
+
 /**
  * Поиск bundle name по параметрам
  */
@@ -450,10 +678,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         firstPlan: standardPlans[0] || unlimitedPlans[0]
     });
     
-    setupOrderDetails();
-    setupPromoCode();
-    setupPurchaseButton();
-    setupStarsButton();
+    try {
+        console.log('🔵 Calling setupOrderDetails...');
+        setupOrderDetails();
+    } catch (e) {
+        console.error('❌ Error in setupOrderDetails:', e);
+    }
+    
+    try {
+        console.log('🔵 Calling setupPromoCode...');
+        setupPromoCode();
+    } catch (e) {
+        console.error('❌ Error in setupPromoCode:', e);
+    }
+    
+    try {
+        console.log('🔵 Calling setupPaymentMethodUI...');
+        setupPaymentMethodUI();
+    } catch (e) {
+        console.error('❌ Error in setupPaymentMethodUI:', e);
+    }
+    
+    try {
+        console.log('🔵 Calling setupPurchaseButton...');
+        setupPurchaseButton();
+    } catch (e) {
+        console.error('❌ Error in setupPurchaseButton:', e);
+    }
+    
+    try {
+        console.log('🔵 Calling setupStarsButton...');
+        setupStarsButton();
+    } catch (e) {
+        console.error('❌ Error in setupStarsButton:', e);
+    }
+    
+    try {
+        console.log('🔵 Calling setupNavigation...');
+        setupNavigation();
+    } catch (e) {
+        console.error('❌ Error in setupNavigation:', e);
+    }
     
     // Если планы загрузились, обновляем отображение
     if (plansLoaded && (standardPlans.length > 0 || unlimitedPlans.length > 0)) {
@@ -644,13 +909,23 @@ function setupPromoCode() {
     const promoError = document.getElementById('promoError');
     const promoSuccess = document.getElementById('promoSuccess');
     
+    console.log('🔵 Setting up promo code:', {
+        promoBtn: !!promoBtn,
+        promoInput: !!promoInput,
+        promoError: !!promoError,
+        promoSuccess: !!promoSuccess
+    });
+    
     // Valid promo codes with discounts
     const promoCodes = {
         'PROMO': 30  // 30% discount
     };
     
     if (promoBtn && promoInput && promoError && promoSuccess) {
-        promoBtn.addEventListener('click', () => {
+        promoBtn.addEventListener('click', (e) => {
+            console.log('🔵 Promo button clicked', e);
+            e.preventDefault();
+            e.stopPropagation();
             const promoCode = promoInput.value.trim().toUpperCase();
             
             if (!promoCode) {
@@ -898,4 +1173,36 @@ function setupStarsButton() {
             starsBtn.disabled = false;
         }
     });
+}
+
+// Setup bottom navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    console.log('🔵 Setting up navigation, found items:', navItems.length);
+    
+    navItems.forEach((item, index) => {
+        const label = item.querySelector('.nav-label')?.textContent;
+        console.log(`🔵 Setting up nav item ${index}: ${label}`);
+        
+        item.addEventListener('click', (e) => {
+            console.log('🔵 Nav item clicked:', label);
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            
+            if (label === 'Account') {
+                window.location.href = 'account.html';
+            } else if (label === 'Buy eSIM') {
+                window.location.href = 'index.html';
+            } else if (label === 'Help') {
+                window.location.href = 'help.html';
+            }
+        });
+    });
+    
+    console.log('✅ Navigation setup complete');
 }
