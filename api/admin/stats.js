@@ -3,16 +3,16 @@
  * Endpoint: GET /api/admin/stats
  * 
  * Возвращает статистику продаж для Dashboard
+ * Может интегрироваться с esim-go API для получения дополнительной статистики
  */
 
-const ordersHandler = require('../orders');
+const fs = require('fs').promises;
+const path = require('path');
+
+const ORDERS_FILE = path.join(__dirname, '..', '..', 'data', 'orders.json');
 
 // Загрузить все заказы
 async function getAllOrders() {
-    const fs = require('fs').promises;
-    const path = require('path');
-    const ORDERS_FILE = path.join(__dirname, '..', '..', 'data', 'orders.json');
-    
     try {
         const data = await fs.readFile(ORDERS_FILE, 'utf8');
         const orders = JSON.parse(data);
@@ -21,7 +21,10 @@ async function getAllOrders() {
         const allOrders = [];
         for (const userId in orders) {
             if (Array.isArray(orders[userId])) {
-                allOrders.push(...orders[userId]);
+                allOrders.push(...orders[userId].map(order => ({
+                    ...order,
+                    telegram_user_id: userId
+                })));
             }
         }
         
@@ -127,7 +130,7 @@ module.exports = async function handler(req, res) {
     }
     
     try {
-        // Проверка аутентификации (через middleware)
+        // Проверка аутентификации
         const auth = require('./auth');
         const authHeader = req.headers.authorization;
         
@@ -154,6 +157,9 @@ module.exports = async function handler(req, res) {
         // Вычисляем статистику
         const stats = calculateStats(orders);
         
+        // TODO: Интеграция с esim-go API для дополнительной статистики
+        // Можно добавить запрос к esim-go для получения статистики по их API
+        
         return res.status(200).json({
             success: true,
             data: stats
@@ -167,4 +173,3 @@ module.exports = async function handler(req, res) {
         });
     }
 };
-

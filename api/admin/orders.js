@@ -1,8 +1,8 @@
 /**
  * Admin Panel Orders API
- * Endpoint: GET /api/admin/orders
- * Endpoint: GET /api/admin/orders/:id
- * Endpoint: PUT /api/admin/orders/:id/status
+ * Endpoint: GET /api/admin/orders - список всех заказов
+ * Endpoint: GET /api/admin/orders/:id - детали заказа
+ * Endpoint: PUT /api/admin/orders/:id/status - изменение статуса заказа
  */
 
 const fs = require('fs').promises;
@@ -91,8 +91,12 @@ module.exports = async function handler(req, res) {
     }
     
     try {
+        const urlParts = req.path.split('/').filter(Boolean);
+        const orderId = urlParts[urlParts.length - 1];
+        const isStatusUpdate = urlParts[urlParts.length - 2] === 'status';
+        
         // GET /api/admin/orders - список всех заказов
-        if (req.method === 'GET') {
+        if (req.method === 'GET' && !orderId) {
             const { limit, offset, sort = 'createdAt', order = 'desc', status, userId } = req.query;
             
             let orders = await getAllOrders();
@@ -137,9 +141,31 @@ module.exports = async function handler(req, res) {
             });
         }
         
+        // GET /api/admin/orders/:id - детали заказа
+        if (req.method === 'GET' && orderId) {
+            const allOrders = await getAllOrders();
+            const order = allOrders.find(o => 
+                o.orderReference === orderId || 
+                o.id === orderId ||
+                o.telegram_user_id + '_' + o.orderReference === orderId ||
+                (o.telegram_user_id && o.orderReference && `${o.telegram_user_id}_${o.orderReference}` === orderId)
+            );
+            
+            if (!order) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Order not found'
+                });
+            }
+            
+            return res.status(200).json({
+                success: true,
+                order
+            });
+        }
+        
         // PUT /api/admin/orders/:id/status - изменение статуса
-        if (req.method === 'PUT') {
-            const orderId = req.path.split('/').pop();
+        if (req.method === 'PUT' && isStatusUpdate && orderId) {
             const { status } = req.body || {};
             
             if (!status) {
@@ -153,7 +179,8 @@ module.exports = async function handler(req, res) {
             const orderIndex = allOrders.findIndex(o => 
                 o.orderReference === orderId || 
                 o.id === orderId ||
-                o.telegram_user_id + '_' + o.orderReference === orderId
+                o.telegram_user_id + '_' + o.orderReference === orderId ||
+                (o.telegram_user_id && o.orderReference && `${o.telegram_user_id}_${o.orderReference}` === orderId)
             );
             
             if (orderIndex === -1) {
@@ -189,4 +216,3 @@ module.exports = async function handler(req, res) {
         });
     }
 };
-
