@@ -30,8 +30,15 @@ const Dashboard = {
         const revenueChange = document.getElementById('revenueChange');
         if (revenueChange && stats.revenueChange !== undefined) {
             const sign = stats.revenueChange >= 0 ? '+' : '';
-            revenueChange.textContent = `${sign}${stats.revenueChange.toFixed(1)}% за месяц`;
-            revenueChange.className = stats.revenueChange >= 0 ? 'text-green-600 text-sm mt-1' : 'text-red-600 text-sm mt-1';
+            const isPositive = stats.revenueChange >= 0;
+            revenueChange.innerHTML = `
+                <span class="inline-flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isPositive ? 'M13 7l5 5m0 0l-5 5m5-5H6' : 'M13 17l5-5m0 0l-5-5m5 5H6'}"></path>
+                    </svg>
+                    ${sign}${Math.abs(stats.revenueChange).toFixed(1)}% за месяц
+                </span>
+            `;
         }
 
         // Total Orders
@@ -43,7 +50,15 @@ const Dashboard = {
         const ordersChange = document.getElementById('ordersChange');
         if (ordersChange && stats.ordersChange !== undefined) {
             const sign = stats.ordersChange >= 0 ? '+' : '';
-            ordersChange.textContent = `${sign}${stats.ordersChange} за месяц`;
+            const isPositive = stats.ordersChange >= 0;
+            ordersChange.innerHTML = `
+                <span class="inline-flex items-center ${isPositive ? 'text-blue-600' : 'text-red-600'}">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isPositive ? 'M13 7l5 5m0 0l-5 5m5-5H6' : 'M13 17l5-5m0 0l-5-5m5 5H6'}"></path>
+                    </svg>
+                    ${sign}${Math.abs(stats.ordersChange)} за месяц
+                </span>
+            `;
         }
 
         // Active Users
@@ -55,7 +70,15 @@ const Dashboard = {
         const usersChange = document.getElementById('usersChange');
         if (usersChange && stats.usersChange !== undefined) {
             const sign = stats.usersChange >= 0 ? '+' : '';
-            usersChange.textContent = `${sign}${stats.usersChange} за месяц`;
+            const isPositive = stats.usersChange >= 0;
+            usersChange.innerHTML = `
+                <span class="inline-flex items-center ${isPositive ? 'text-purple-600' : 'text-red-600'}">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isPositive ? 'M13 7l5 5m0 0l-5 5m5-5H6' : 'M13 17l5-5m0 0l-5-5m5 5H6'}"></path>
+                    </svg>
+                    ${sign}${Math.abs(stats.usersChange)} за месяц
+                </span>
+            `;
         }
 
         // Conversion Rate
@@ -67,7 +90,15 @@ const Dashboard = {
         const conversionChange = document.getElementById('conversionChange');
         if (conversionChange && stats.conversionChange !== undefined) {
             const sign = stats.conversionChange >= 0 ? '+' : '';
-            conversionChange.textContent = `${sign}${stats.conversionChange.toFixed(1)}% за месяц`;
+            const isPositive = stats.conversionChange >= 0;
+            conversionChange.innerHTML = `
+                <span class="inline-flex items-center ${isPositive ? 'text-orange-600' : 'text-red-600'}">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isPositive ? 'M13 7l5 5m0 0l-5 5m5-5H6' : 'M13 17l5-5m0 0l-5-5m5 5H6'}"></path>
+                    </svg>
+                    ${sign}${Math.abs(stats.conversionChange).toFixed(1)}% за месяц
+                </span>
+            `;
         }
     },
 
@@ -93,7 +124,7 @@ const Dashboard = {
         if (!tbody) return;
 
         if (orders.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Нет заказов</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Нет заказов</td></tr>';
             return;
         }
 
@@ -108,13 +139,13 @@ const Dashboard = {
             });
 
             return `
-                <tr class="table-row">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#${order.id || order.orderReference || 'N/A'}</td>
+                <tr class="table-row hover:bg-gray-50 transition-colors duration-150">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#${order.id || order.orderReference || 'N/A'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${order.telegram_username ? `@${order.telegram_username}` : order.telegram_user_id || 'N/A'}
+                        ${order.telegram_username ? `<span class="font-medium">@${order.telegram_username}</span>` : order.telegram_user_id || 'N/A'}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${order.country_name || order.country_code || 'N/A'}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$${order.price || '0.00'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">$${order.price || '0.00'}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="status-badge ${statusClass}">${this.getStatusText(order.status)}</span>
                     </td>
@@ -162,4 +193,3 @@ document.addEventListener('DOMContentLoaded', () => {
         Dashboard.loadRecentOrders();
     }, 5 * 60 * 1000);
 });
-

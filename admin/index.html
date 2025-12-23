@@ -5,52 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - eSIMsData Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="css/admin.css">
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-50">
     <!-- Sidebar Navigation -->
-    <aside class="fixed left-0 top-0 h-full w-64 bg-gray-800 text-white">
-        <div class="p-6">
-            <h1 class="text-2xl font-bold">eSIMsData</h1>
-            <p class="text-gray-400 text-sm mt-1">Admin Dashboard</p>
+    <aside class="fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white shadow-xl z-50">
+        <div class="p-6 border-b border-gray-700">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold">eSIMsData</h1>
+                    <p class="text-gray-400 text-xs">Admin Panel</p>
+                </div>
+            </div>
         </div>
         
-        <nav class="mt-8">
-            <a href="index.html" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 hover:text-white active-nav">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <nav class="mt-6 px-3">
+            <a href="index.html" class="flex items-center px-4 py-3 mb-1 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors duration-200 active-nav group">
+                <svg class="w-5 h-5 mr-3 group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                 </svg>
-                Dashboard
+                <span class="font-medium">Dashboard</span>
             </a>
-            <a href="orders.html" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 hover:text-white">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <a href="orders.html" class="flex items-center px-4 py-3 mb-1 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors duration-200 group">
+                <svg class="w-5 h-5 mr-3 group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                 </svg>
-                Orders
+                <span class="font-medium">Orders</span>
             </a>
-            <a href="users.html" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 hover:text-white">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <a href="users.html" class="flex items-center px-4 py-3 mb-1 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors duration-200 group">
+                <svg class="w-5 h-5 mr-3 group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                 </svg>
-                Users
+                <span class="font-medium">Users</span>
             </a>
-            <a href="payments.html" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 hover:text-white">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <a href="payments.html" class="flex items-center px-4 py-3 mb-1 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors duration-200 group">
+                <svg class="w-5 h-5 mr-3 group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
                 </svg>
-                Payments
+                <span class="font-medium">Payments</span>
             </a>
-            <a href="settings.html" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-700 hover:text-white">
-                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <a href="settings.html" class="flex items-center px-4 py-3 mb-1 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-colors duration-200 group">
+                <svg class="w-5 h-5 mr-3 group-hover:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
-                Settings
+                <span class="font-medium">Settings</span>
             </a>
         </nav>
         
-        <div class="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-700">
-            <button id="logoutBtn" class="w-full flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white">
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
+            <button id="logoutBtn" class="w-full flex items-center justify-center px-4 py-2.5 bg-red-600 hover:bg-red-700 rounded-lg text-white font-medium transition-colors duration-200 shadow-lg hover:shadow-xl">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                 </svg>
@@ -63,22 +94,29 @@
     <main class="ml-64 p-8">
         <!-- Header -->
         <div class="mb-8">
-            <h2 class="text-3xl font-bold text-gray-800">Dashboard</h2>
+            <h2 class="text-3xl font-bold text-gray-900">Dashboard</h2>
             <p class="text-gray-600 mt-2">Обзор статистики и метрик продаж</p>
         </div>
 
         <!-- Statistics Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Total Revenue -->
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 border border-gray-100">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-600 text-sm">Общая выручка</p>
-                        <p class="text-2xl font-bold text-gray-800 mt-2" id="totalRevenue">$0</p>
-                        <p class="text-green-600 text-sm mt-1" id="revenueChange">+0% за месяц</p>
+                    <div class="flex-1">
+                        <p class="text-gray-600 text-sm font-medium mb-1">Общая выручка</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-2" id="totalRevenue">$0</p>
+                        <p class="text-green-600 text-sm mt-2 font-medium" id="revenueChange">
+                            <span class="inline-flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                                </svg>
+                                +0% за месяц
+                            </span>
+                        </p>
                     </div>
-                    <div class="bg-green-100 rounded-full p-3">
-                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="bg-gradient-to-br from-green-400 to-green-600 rounded-xl p-4 shadow-lg">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
@@ -86,15 +124,22 @@
             </div>
 
             <!-- Total Orders -->
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 border border-gray-100">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-600 text-sm">Всего заказов</p>
-                        <p class="text-2xl font-bold text-gray-800 mt-2" id="totalOrders">0</p>
-                        <p class="text-blue-600 text-sm mt-1" id="ordersChange">+0 за месяц</p>
+                    <div class="flex-1">
+                        <p class="text-gray-600 text-sm font-medium mb-1">Всего заказов</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-2" id="totalOrders">0</p>
+                        <p class="text-blue-600 text-sm mt-2 font-medium" id="ordersChange">
+                            <span class="inline-flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                                </svg>
+                                +0 за месяц
+                            </span>
+                        </p>
                     </div>
-                    <div class="bg-blue-100 rounded-full p-3">
-                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl p-4 shadow-lg">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                         </svg>
                     </div>
@@ -102,15 +147,22 @@
             </div>
 
             <!-- Active Users -->
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 border border-gray-100">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-600 text-sm">Активных пользователей</p>
-                        <p class="text-2xl font-bold text-gray-800 mt-2" id="activeUsers">0</p>
-                        <p class="text-purple-600 text-sm mt-1" id="usersChange">+0 за месяц</p>
+                    <div class="flex-1">
+                        <p class="text-gray-600 text-sm font-medium mb-1">Активных пользователей</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-2" id="activeUsers">0</p>
+                        <p class="text-purple-600 text-sm mt-2 font-medium" id="usersChange">
+                            <span class="inline-flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                                </svg>
+                                +0 за месяц
+                            </span>
+                        </p>
                     </div>
-                    <div class="bg-purple-100 rounded-full p-3">
-                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl p-4 shadow-lg">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                         </svg>
                     </div>
@@ -118,15 +170,22 @@
             </div>
 
             <!-- Conversion Rate -->
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 border border-gray-100">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-600 text-sm">Конверсия</p>
-                        <p class="text-2xl font-bold text-gray-800 mt-2" id="conversionRate">0%</p>
-                        <p class="text-orange-600 text-sm mt-1" id="conversionChange">+0% за месяц</p>
+                    <div class="flex-1">
+                        <p class="text-gray-600 text-sm font-medium mb-1">Конверсия</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-2" id="conversionRate">0%</p>
+                        <p class="text-orange-600 text-sm mt-2 font-medium" id="conversionChange">
+                            <span class="inline-flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                                </svg>
+                                +0% за месяц
+                            </span>
+                        </p>
                     </div>
-                    <div class="bg-orange-100 rounded-full p-3">
-                        <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl p-4 shadow-lg">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                         </svg>
                     </div>
@@ -137,45 +196,72 @@
         <!-- Charts and Recent Orders -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <!-- Sales Chart -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Продажи за последние 30 дней</h3>
-                <div class="h-64 flex items-center justify-center text-gray-400">
-                    <p>График будет здесь</p>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Продажи за последние 30 дней</h3>
+                    <button class="text-sm text-primary-600 hover:text-primary-700 font-medium">Подробнее →</button>
+                </div>
+                <div class="h-64 flex items-center justify-center text-gray-400 bg-gray-50 rounded-lg">
+                    <div class="text-center">
+                        <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        <p class="text-sm">График будет здесь</p>
+                    </div>
                 </div>
             </div>
 
             <!-- Payment Methods -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Методы оплаты</h3>
-                <div id="paymentMethodsChart" class="h-64 flex items-center justify-center text-gray-400">
-                    <p>График будет здесь</p>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Методы оплаты</h3>
+                    <button class="text-sm text-primary-600 hover:text-primary-700 font-medium">Подробнее →</button>
+                </div>
+                <div id="paymentMethodsChart" class="h-64 flex items-center justify-center text-gray-400 bg-gray-50 rounded-lg">
+                    <div class="text-center">
+                        <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+                        </svg>
+                        <p class="text-sm">График будет здесь</p>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Recent Orders -->
-        <div class="bg-white rounded-lg shadow">
-            <div class="p-6 border-b border-gray-200">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-800">Последние заказы</h3>
-                    <a href="orders.html" class="text-blue-600 hover:text-blue-800 text-sm">Посмотреть все →</a>
+                    <h3 class="text-lg font-semibold text-gray-900">Последние заказы</h3>
+                    <a href="orders.html" class="text-primary-600 hover:text-primary-700 text-sm font-medium inline-flex items-center">
+                        Посмотреть все
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a>
                 </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Пользователь</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Страна</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Сумма</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Статус</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Пользователь</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Страна</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Сумма</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Статус</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Дата</th>
                         </tr>
                     </thead>
                     <tbody id="recentOrdersTable" class="bg-white divide-y divide-gray-200">
                         <tr>
-                            <td colspan="6" class="px-6 py-4 text-center text-gray-500">Загрузка...</td>
+                            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                <div class="flex flex-col items-center">
+                                    <div class="spinner"></div>
+                                    <p class="mt-2">Загрузка...</p>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -187,4 +273,3 @@
     <script src="js/dashboard.js"></script>
 </body>
 </html>
-
