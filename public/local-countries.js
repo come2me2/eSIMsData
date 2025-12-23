@@ -470,6 +470,20 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(hideBackButton, 100);
     setTimeout(hideBackButton, 200);
     setTimeout(hideBackButton, 300);
+    
+    // Проверяем и показываем нижнее меню
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) {
+        console.log('🔵 Bottom nav found, ensuring visibility');
+        bottomNav.style.display = 'flex';
+        bottomNav.style.visibility = 'visible';
+        bottomNav.style.opacity = '1';
+        bottomNav.style.position = 'fixed';
+        bottomNav.style.bottom = '0';
+        bottomNav.style.zIndex = '10000';
+    } else {
+        console.error('❌ Bottom nav not found in DOM');
+    }
 });
 
 // Setup bottom navigation
