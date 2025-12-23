@@ -216,14 +216,6 @@ async function warmupCache() {
     }
 }
 
-// Fallback для всех остальных маршрутов - отдаем index.html (SPA)
-    // Иначе отдать index.html для SPA
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 // Обработка ошибок
 app.use((err, req, res, next) => {
     console.error('Unhandled error:', err);
