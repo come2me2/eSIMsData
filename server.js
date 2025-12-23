@@ -233,18 +233,25 @@ app.get('*', (req, res) => {
         return res.status(404).send('File not found');
     }
     
-    // Специальная обработка для checkout.html - не кэшируем
-    if (req.path === '/checkout.html' || req.path === '/checkout') {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-        return res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
-    }
-    
-    // Иначе отдать index.html для SPA
+    // Для всех HTML файлов устанавливаем заголовки no-cache
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
+    
+    // Специальная обработка для checkout.html
+    if (req.path === '/checkout.html' || req.path === '/checkout') {
+        return res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+    }
+    
+    // Если запрашивается конкретный HTML файл, отдаем его
+    if (req.path.endsWith('.html')) {
+        const filePath = path.join(__dirname, 'public', req.path);
+        if (fs.existsSync(filePath)) {
+            return res.sendFile(filePath);
+        }
+    }
+    
+    // Иначе отдать index.html для SPA
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
