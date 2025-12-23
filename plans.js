@@ -204,7 +204,7 @@ function ensureBottomNavVisible() {
         bottomNav.style.opacity = '1';
         bottomNav.style.position = 'fixed';
         bottomNav.style.bottom = '0';
-        bottomNav.style.zIndex = '1002'; // Выше кнопки Next (1001)
+        bottomNav.style.zIndex = '10000'; // Нижнее меню должно быть видно
     }
 }
 
@@ -269,6 +269,139 @@ function getFlagPath(countryCode) {
 
 // Setup country info
 function setupCountryInfo() {
+    const flagElement = document.getElementById('countryFlag');
+    const flagPath = getFlagPath(countryData.code);
+    
+    console.log('Country data:', countryData);
+    console.log('Flag path:', flagPath);
+    
+    if (flagPath && flagElement) {
+        // Use CDN flag image
+        const img = document.createElement('img');
+        img.src = flagPath;
+        img.alt = `${countryData.name} flag`;
+        img.className = 'country-flag-img';
+        img.onerror = function() {
+            console.error('Failed to load flag:', flagPath);
+            flagElement.textContent = '🏳️';
+        };
+        flagElement.innerHTML = '';
+        flagElement.appendChild(img);
+    } else {
+        // Fallback to emoji
+        if (flagElement) {
+            flagElement.textContent = '🏳️';
+        }
+    }
+    
+    const nameElement = document.getElementById('countryName');
+    if (nameElement) {
+        nameElement.textContent = countryData.name;
+    }
+}
+
+// Setup segmented control
+function setupSegmentedControl() {
+    const segmentButtons = document.querySelectorAll('.plans-segmented .segment-btn');
+    
+    segmentButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active class from all buttons
+            segmentButtons.forEach(b => b.classList.remove('active'));
+            // Add active class to clicked button
+            btn.classList.add('active');
+            
+            currentPlanType = btn.dataset.planType;
+            selectedPlanId = currentPlanType === 'unlimited' ? 'unlimited2' : 'plan2'; // Set default selection
+            renderPlans();
+            updateInfoBox();
+        });
+    });
+}
+
+// Render plans list
+function renderPlans() {
+    const plansList = document.getElementById('plansList');
+    plansList.innerHTML = '';
+    
+    const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
+    
+    plans.forEach(plan => {
+        const planItem = document.createElement('div');
+        planItem.className = `plan-item ${selectedPlanId === plan.id ? 'selected' : ''}`;
+        planItem.dataset.planId = plan.id;
+        
+        planItem.innerHTML = `
+            <div class="plan-info">
+                <div class="plan-data">${plan.data}</div>
+                <div class="plan-duration">${plan.duration}</div>
+            </div>
+            <div class="plan-right">
+                <div class="plan-price">${plan.price}</div>
+                <div class="radio-button ${selectedPlanId === plan.id ? 'selected' : ''}">
+                    ${selectedPlanId === plan.id ? 
+                        '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>' : 
+                        ''
+                    }
+                </div>
+            </div>
+        `;
+        
+        planItem.addEventListener('click', () => {
+            selectPlan(plan.id);
+        });
+        
+        plansList.appendChild(planItem);
+    });
+}
+
+// Select plan
+function selectPlan(planId) {
+    selectedPlanId = planId;
+    renderPlans();
+    
+    if (tg) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+}
+
+// Update info box visibility
+function updateInfoBox() {
+    const infoBox = document.getElementById('infoBox');
+    if (infoBox) {
+        infoBox.style.display = currentPlanType === 'unlimited' ? 'flex' : 'none';
+    }
+}
+
+// Setup next button
+function setupNextButton() {
+    document.getElementById('nextBtn').addEventListener('click', () => {
+        if (!selectedPlanId) {
+            if (tg) {
+                tg.showAlert('Please select a plan');
+            } else {
+                alert('Please select a plan');
+            }
+            return;
+        }
+        
+        if (tg) {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+        
+        // Navigate to checkout screen
+        const params = new URLSearchParams({
+            type: 'country',
+            name: countryData.name,
+            code: countryData.code,
+            plan: selectedPlanId,
+            planType: currentPlanType
+        });
+        window.location.href = `checkout.html?${params.toString()}`;
+    });
+}
+
+
     const flagElement = document.getElementById('countryFlag');
     const flagPath = getFlagPath(countryData.code);
     

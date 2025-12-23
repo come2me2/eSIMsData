@@ -223,7 +223,7 @@ function ensureBottomNavVisible() {
         bottomNav.style.opacity = '1';
         bottomNav.style.position = 'fixed';
         bottomNav.style.bottom = '0';
-        bottomNav.style.zIndex = '1000';
+        bottomNav.style.zIndex = '10000'; // Нижнее меню должно быть видно
     }
 }
 
@@ -388,6 +388,251 @@ function setupRegionInfo() {
 // Setup segmented control
 function setupSegmentedControl() {
     const segmentButtons = document.querySelectorAll('.plans-segmented .segment-btn');
+    
+    segmentButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active class from all buttons
+            segmentButtons.forEach(b => b.classList.remove('active'));
+            // Add active class to clicked button
+            btn.classList.add('active');
+            
+            currentPlanType = btn.dataset.planType;
+            
+            // Устанавливаем выбранный план по умолчанию из реальных загруженных планов
+            if (currentPlanType === 'unlimited') {
+                // Используем первый план из unlimitedPlans, если он есть
+                selectedPlanId = unlimitedPlans.length > 0 ? unlimitedPlans[0].id : null;
+            } else {
+                // Для standard используем первый план из standardPlans
+                selectedPlanId = standardPlans.length > 0 ? standardPlans[0].id : null;
+            }
+            
+            console.log('🔄 Plan type changed to:', currentPlanType, 'selectedPlanId:', selectedPlanId);
+            
+            renderPlans();
+            updateInfoBox();
+        });
+    });
+}
+
+// Render plans list
+function renderPlans() {
+    const plansList = document.getElementById('plansList');
+    if (!plansList) {
+        console.error('❌ plansList element not found');
+        return;
+    }
+    
+    plansList.innerHTML = '';
+    
+    const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
+    
+    console.log('🔵 Rendering plans:', {
+        type: currentPlanType,
+        count: plans.length,
+        selectedPlanId
+    });
+    
+    if (plans.length === 0) {
+        plansList.innerHTML = '<div class="no-plans">No plans available</div>';
+        console.warn('⚠️ No plans to render');
+        return;
+    }
+    
+    plans.forEach(plan => {
+        const planItem = document.createElement('div');
+        planItem.className = `plan-item ${selectedPlanId === plan.id ? 'selected' : ''}`;
+        planItem.dataset.planId = plan.id;
+        
+        planItem.innerHTML = `
+            <div class="plan-info">
+                <div class="plan-data">${plan.data}</div>
+                <div class="plan-duration">${plan.duration}</div>
+            </div>
+            <div class="plan-right">
+                <div class="plan-price">${formatPrice(plan.priceValue || plan.price || '9.99')}</div>
+                <div class="radio-button ${selectedPlanId === plan.id ? 'selected' : ''}">
+                    ${selectedPlanId === plan.id ? 
+                        '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>' : 
+                        ''
+                    }
+                </div>
+            </div>
+        `;
+        
+        planItem.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🔵 Plan item clicked:', {
+                planId: plan.id,
+                bundle_name: plan.bundle_name,
+                currentPlanType: currentPlanType,
+                region: regionData.name
+            });
+            selectPlan(plan.id || plan.bundle_name);
+            // НЕ перенаправляем на region-unlimited.html - остаемся на той же странице
+        });
+        
+        plansList.appendChild(planItem);
+    });
+}
+
+// Format price with dollar sign
+function formatPrice(price) {
+    if (!price) return '$ 9.99';
+    
+    // Если цена уже содержит символ $, возвращаем как есть
+    if (typeof price === 'string' && price.includes('$')) {
+        return price;
+    }
+    
+    // Если цена - число или строка с числом, добавляем символ $
+    const priceNum = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : price;
+    if (!isNaN(priceNum)) {
+        return `$ ${priceNum.toFixed(2)}`;
+    }
+    
+    // Fallback
+    return `$ ${price}`;
+}
+
+// Select plan
+function selectPlan(planId) {
+    console.log('🔵 Plan selected:', planId);
+    selectedPlanId = planId;
+    renderPlans();
+    
+    if (tg) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+}
+
+// Update info box visibility
+function updateInfoBox() {
+    const infoBox = document.getElementById('infoBox');
+    if (infoBox) {
+        infoBox.style.display = currentPlanType === 'unlimited' ? 'flex' : 'none';
+    }
+}
+
+// Setup countries list toggle
+function setupCountriesList() {
+    const banner = document.getElementById('regionInfoBanner');
+    const chevron = document.getElementById('regionInfoChevron');
+    const container = document.getElementById('countriesListContainer');
+    const countriesList = document.getElementById('countriesList');
+    
+    if (!banner || !chevron || !container || !countriesList) return;
+    
+    const regionInfo = regionDataFull[regionData.name] || regionDataFull['Africa'];
+    let isExpanded = false;
+    
+    // Render countries list
+    regionInfo.countries.forEach(countryName => {
+        const countryItem = document.createElement('div');
+        countryItem.className = 'country-item-small';
+        countryItem.textContent = countryName;
+        countriesList.appendChild(countryItem);
+    });
+    
+    banner.addEventListener('click', () => {
+        isExpanded = !isExpanded;
+        
+        if (isExpanded) {
+            container.style.display = 'block';
+            chevron.style.transform = 'rotate(180deg)';
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            // Scroll to the banner to show the top of the countries list
+            setTimeout(() => {
+                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        } else {
+            container.style.display = 'none';
+            chevron.style.transform = 'rotate(0deg)';
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+        }
+    });
+}
+
+// Setup next button
+function setupNextButton() {
+    const nextBtn = document.getElementById('nextBtn');
+    if (!nextBtn) {
+        console.error('❌ Next button not found');
+        return;
+    }
+    
+    // Удаляем старые обработчики, если они есть
+    const newNextBtn = nextBtn.cloneNode(true);
+    nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+    
+    newNextBtn.addEventListener('click', () => {
+        console.log('🔵 Next button clicked:', {
+            selectedPlanId,
+            currentPlanType,
+            region: regionData.name
+        });
+        
+        if (!selectedPlanId) {
+            console.warn('⚠️ No plan selected');
+            if (tg) {
+                tg.showAlert('Please select a plan');
+            } else {
+                alert('Please select a plan');
+            }
+            return;
+        }
+        
+        // Проверяем, что выбранный план существует в загруженных планах
+        const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
+        const selectedPlan = plans.find(p => p.id === selectedPlanId || p.bundle_name === selectedPlanId);
+        
+        if (!selectedPlan) {
+            console.error('❌ Selected plan not found in loaded plans:', {
+                selectedPlanId,
+                currentPlanType,
+                availablePlans: plans.map(p => ({ id: p.id, bundle_name: p.bundle_name })).slice(0, 5)
+            });
+            if (tg) {
+                tg.showAlert('Selected plan not found. Please select again.');
+            } else {
+                alert('Selected plan not found. Please select again.');
+            }
+            return;
+        }
+        
+        console.log('✅ Selected plan found:', {
+            id: selectedPlan.id,
+            bundle_name: selectedPlan.bundle_name,
+            price: selectedPlan.price || selectedPlan.priceValue
+        });
+        
+        if (tg) {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+        
+        // Navigate to checkout screen for both standard and unlimited plans
+        // Используем bundle_name если есть, иначе id
+        const planIdForCheckout = selectedPlan.bundle_name || selectedPlan.id || selectedPlanId;
+        
+        const checkoutParams = new URLSearchParams({
+            type: 'region',
+            name: regionData.name,
+            plan: planIdForCheckout,
+            planType: currentPlanType
+        });
+        
+        const checkoutUrl = `checkout.html?${checkoutParams.toString()}`;
+        console.log('📍 Navigating to checkout:', checkoutUrl);
+        window.location.href = checkoutUrl;
+    });
+}
+
+
     
     segmentButtons.forEach(btn => {
         btn.addEventListener('click', () => {

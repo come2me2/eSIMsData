@@ -166,7 +166,7 @@ function ensureBottomNavVisible() {
         bottomNav.style.opacity = '1';
         bottomNav.style.position = 'fixed';
         bottomNav.style.bottom = '0';
-        bottomNav.style.zIndex = '1002'; // Выше кнопки Next (1001)
+        bottomNav.style.zIndex = '10000'; // Нижнее меню должно быть видно
     }
 }
 
@@ -239,6 +239,276 @@ function setupSegmentedControl() {
             } else {
                 selectedPlanId = null;
             }
+            
+            renderPlans();
+            updateInfoBox();
+        });
+    });
+}
+
+// Render plans list
+function renderPlans() {
+    const plansList = document.getElementById('plansList');
+    if (!plansList) return;
+    
+    plansList.innerHTML = '';
+    
+    const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
+    
+    if (plans.length === 0) {
+        plansList.innerHTML = '<div class="no-plans">Loading plans...</div>';
+        return;
+    }
+    
+    plans.forEach(plan => {
+        // Определяем ID плана (может быть id или bundle_name)
+        const planId = plan.id || plan.bundle_name;
+        const isSelected = selectedPlanId === planId || selectedPlanId === plan.id || selectedPlanId === plan.bundle_name;
+        
+        const planItem = document.createElement('div');
+        planItem.className = `plan-item ${isSelected ? 'selected' : ''}`;
+        planItem.dataset.planId = planId;
+        
+        // Определяем цену (приоритет: priceValue > price > fallback)
+        const price = plan.priceValue || plan.price || '9.99';
+        
+        planItem.innerHTML = `
+            <div class="plan-info">
+                <div class="plan-data">${plan.data}</div>
+                <div class="plan-duration">${plan.duration}</div>
+            </div>
+            <div class="plan-right">
+                <div class="plan-price">${formatPrice(price)}</div>
+                <div class="radio-button ${isSelected ? 'selected' : ''}">
+                    ${isSelected ? 
+                        '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>' : 
+                        ''
+                    }
+                </div>
+            </div>
+        `;
+        
+        planItem.addEventListener('click', () => {
+            selectPlan(planId);
+        });
+        
+        plansList.appendChild(planItem);
+    });
+}
+
+// Format price with dollar sign
+function formatPrice(price) {
+    if (!price) return '$ 9.99';
+    
+    // Если цена уже содержит символ $, возвращаем как есть
+    if (typeof price === 'string' && price.includes('$')) {
+        return price;
+    }
+    
+    // Если цена - число или строка с числом, добавляем символ $
+    const priceNum = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : price;
+    if (!isNaN(priceNum)) {
+        return `$ ${priceNum.toFixed(2)}`;
+    }
+    
+    // Fallback
+    return `$ ${price}`;
+}
+
+// Select plan
+function selectPlan(planId) {
+    selectedPlanId = planId;
+    renderPlans();
+    updateInfoBox();
+    
+    if (tg) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+}
+
+// Update info box visibility
+function updateInfoBox() {
+    const infoBox = document.getElementById('infoBox');
+    if (infoBox) {
+        infoBox.style.display = currentPlanType === 'unlimited' ? 'flex' : 'none';
+    }
+}
+
+// Setup countries list toggle
+function setupCountriesList() {
+    const banner = document.getElementById('globalInfoBanner');
+    const chevron = document.getElementById('globalInfoChevron');
+    const container = document.getElementById('countriesListContainer');
+    const countriesList = document.getElementById('countriesList');
+    let isExpanded = false;
+    
+    if (!banner || !chevron || !container || !countriesList) return;
+    
+    // Render countries list
+    globalCountries.forEach(countryName => {
+        const countryItem = document.createElement('div');
+        countryItem.className = 'country-item-small';
+        countryItem.textContent = countryName;
+        countriesList.appendChild(countryItem);
+    });
+    
+    banner.addEventListener('click', () => {
+        isExpanded = !isExpanded;
+        
+        if (isExpanded) {
+            container.style.display = 'block';
+            chevron.style.transform = 'rotate(180deg)';
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            // Scroll to the banner to show the top of the countries list
+            setTimeout(() => {
+                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        } else {
+            container.style.display = 'none';
+            chevron.style.transform = 'rotate(0deg)';
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+        }
+    });
+}
+
+// Setup next button
+function setupNextButton() {
+    document.getElementById('nextBtn').addEventListener('click', () => {
+        if (!selectedPlanId) {
+            if (tg) {
+                tg.showAlert('Please select a plan');
+            } else {
+                alert('Please select a plan');
+            }
+            return;
+        }
+        
+        if (tg) {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+        
+        // Navigate to checkout screen
+        const params = new URLSearchParams({
+            type: 'global',
+            name: 'Global',
+            plan: selectedPlanId,
+            planType: currentPlanType
+        });
+        window.location.href = `checkout.html?${params.toString()}`;
+    });
+}
+
+// Format price with dollar sign
+function formatPrice(price) {
+    if (!price) return '$ 9.99';
+    
+    // Если цена уже содержит символ $, возвращаем как есть
+    if (typeof price === 'string' && price.includes('$')) {
+        return price;
+    }
+    
+    // Если цена - число или строка с числом, добавляем символ $
+    const priceNum = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : price;
+    if (!isNaN(priceNum)) {
+        return `$ ${priceNum.toFixed(2)}`;
+    }
+    
+    // Fallback
+    return `$ ${price}`;
+}
+
+// Select plan
+function selectPlan(planId) {
+    selectedPlanId = planId;
+    renderPlans();
+    updateInfoBox();
+    
+    if (tg) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+}
+
+// Update info box visibility
+function updateInfoBox() {
+    const infoBox = document.getElementById('infoBox');
+    if (infoBox) {
+        infoBox.style.display = currentPlanType === 'unlimited' ? 'flex' : 'none';
+    }
+}
+
+// Setup countries list toggle
+function setupCountriesList() {
+    const banner = document.getElementById('globalInfoBanner');
+    const chevron = document.getElementById('globalInfoChevron');
+    const container = document.getElementById('countriesListContainer');
+    const countriesList = document.getElementById('countriesList');
+    let isExpanded = false;
+    
+    if (!banner || !chevron || !container || !countriesList) return;
+    
+    // Render countries list
+    globalCountries.forEach(countryName => {
+        const countryItem = document.createElement('div');
+        countryItem.className = 'country-item-small';
+        countryItem.textContent = countryName;
+        countriesList.appendChild(countryItem);
+    });
+    
+    banner.addEventListener('click', () => {
+        isExpanded = !isExpanded;
+        
+        if (isExpanded) {
+            container.style.display = 'block';
+            chevron.style.transform = 'rotate(180deg)';
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            // Scroll to the banner to show the top of the countries list
+            setTimeout(() => {
+                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        } else {
+            container.style.display = 'none';
+            chevron.style.transform = 'rotate(0deg)';
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+        }
+    });
+}
+
+// Setup next button
+function setupNextButton() {
+    document.getElementById('nextBtn').addEventListener('click', () => {
+        if (!selectedPlanId) {
+            if (tg) {
+                tg.showAlert('Please select a plan');
+            } else {
+                alert('Please select a plan');
+            }
+            return;
+        }
+        
+        if (tg) {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+        
+        // Navigate to checkout screen
+        const params = new URLSearchParams({
+            type: 'global',
+            name: 'Global',
+            plan: selectedPlanId,
+            planType: currentPlanType
+        });
+        window.location.href = `checkout.html?${params.toString()}`;
+    });
+}
+
+
             
             renderPlans();
             updateInfoBox();

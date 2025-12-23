@@ -589,7 +589,7 @@ function ensureBottomNavVisible() {
         bottomNav.style.opacity = '1';
         bottomNav.style.position = 'fixed';
         bottomNav.style.bottom = '0';
-        bottomNav.style.zIndex = '1002'; // Выше кнопки Next (1001) и других элементов
+        bottomNav.style.zIndex = '10000'; // Нижнее меню должно быть видно
     }
 }
 
@@ -816,6 +816,72 @@ function updateBackButton() {
                        pathname === '/index.html';
     
     if (!isMainPage) {
+        // На других страницах (не index.html) показываем кнопку Back и идём назад по истории
+        tg.BackButton.show();
+        setTelegramBackHandler(() => window.history.back());
+        return;
+    }
+    
+    // На главной странице проверяем текущий сегмент
+    // На вкладке Local - скрываем BackButton (показываем Close)
+    // На вкладках Region и Global - показываем BackButton (показываем Back)
+    if (currentSegment === 'local') {
+        // На Local скрываем BackButton, чтобы Telegram показывал "Закрыть"
+        tg.BackButton.hide();
+        setTelegramBackHandler(() => {});
+    } else {
+        // На Region/Global показываем BackButton.
+        tg.BackButton.show();
+        // По нажатию — возвращаемся на Local внутри главной страницы.
+        setTelegramBackHandler(() => {
+            if (tg) tg.HapticFeedback.impactOccurred('light');
+            setSegment('local');
+        });
+    }
+}
+
+// Telegram BackButton - на главной странице скрываем кнопку "назад"
+updateBackButton();
+
+// Слушаем изменения истории браузера (возврат назад)
+window.addEventListener('popstate', () => {
+    // Обновляем кнопку BackButton при возврате на страницу
+    setTimeout(updateBackButton, 50);
+});
+
+// Обработчик для случаев, когда страница восстанавливается из кеша (bfcache)
+window.addEventListener('pageshow', (event) => {
+    // Обновляем BackButton при каждом показе страницы
+    // event.persisted = true означает, что страница была восстановлена из кеша
+    console.log('📄 Страница показана', { persisted: event.persisted, pathname: window.location.pathname });
+    setTimeout(updateBackButton, 50);
+});
+
+// Также обновляем при загрузке страницы (на случай, если что-то пропустили)
+window.addEventListener('load', () => {
+    setTimeout(updateBackButton, 50);
+});
+
+// Обновляем при изменении видимости страницы (когда пользователь переключается между вкладками)
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        console.log('👁️ Страница стала видимой, обновляем BackButton');
+        setTimeout(updateBackButton, 50);
+        // Убеждаемся, что меню видно при возврате на страницу
+        ensureBottomNavVisible();
+    }
+});
+
+// Убрали периодический setInterval — он создавал гонки/неустойчивость в Telegram WebView.
+
+// Также обновляем при изменении сегмента через setupSegmentedControl
+const originalSetupSegmentedControl = setupSegmentedControl;
+setupSegmentedControl = function() {
+    originalSetupSegmentedControl();
+    updateBackButton();
+};
+
+
         // На других страницах (не index.html) показываем кнопку Back и идём назад по истории
         tg.BackButton.show();
         setTelegramBackHandler(() => window.history.back());

@@ -979,7 +979,689 @@ function ensureBottomNavVisible() {
         bottomNav.style.opacity = '1';
         bottomNav.style.position = 'fixed';
         bottomNav.style.bottom = '0';
-        bottomNav.style.zIndex = '1000';
+        bottomNav.style.zIndex = '10000'; // Нижнее меню должно быть видно
+    }
+}
+
+// Setup bottom navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const label = item.querySelector('.nav-label').textContent;
+            handleNavigationClick(label);
+        });
+    });
+}
+
+// Handle navigation click
+function handleNavigationClick(section) {
+    if (tg) {
+        tg.HapticFeedback.impactOccurred('light');
+    }
+    
+    const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+    
+    if (section === 'Account') {
+        navigate('account.html');
+    } else if (section === 'Buy eSIM') {
+        navigate('index.html');
+    } else if (section === 'Help') {
+        navigate('help.html');
+    }
+}
+
+// Setup order details
+function setupOrderDetails() {
+    const headerElement = document.getElementById('checkoutHeader');
+    const planDetailsElement = document.getElementById('checkoutPlanDetails');
+    const totalPriceElement = document.getElementById('checkoutTotalPrice');
+    
+    // Setup location info in header
+    if (orderData.type === 'country') {
+        const flagPath = getFlagPath(orderData.code);
+        const flagElement = flagPath 
+            ? `<img src="${flagPath}" alt="${orderData.name} flag" class="checkout-flag">`
+            : '<span class="checkout-flag">🏳️</span>';
+        
+        headerElement.innerHTML = `
+            <span class="checkout-country-name">${orderData.name}</span>
+            ${flagElement}
+        `;
+    } else if (orderData.type === 'region') {
+        const iconFileName = regionIconMap[orderData.name] || 'Afrrica.png';
+        const iconPath = `Region/${iconFileName}`;
+        
+        headerElement.innerHTML = `
+            <span class="checkout-country-name">${orderData.name}</span>
+            <img src="${iconPath}" alt="${orderData.name} icon" class="checkout-region-icon">
+        `;
+    } else if (orderData.type === 'global') {
+        headerElement.innerHTML = `
+            <span class="checkout-country-name">Global</span>
+            <div class="checkout-global-icon">🌍</div>
+        `;
+    }
+    
+    // Setup plan details
+    const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
+    
+    // Если планы еще не загружены, используем fallback
+    if (plans.length === 0) {
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">Loading...</span>
+            <span class="checkout-plan-duration">Loading...</span>
+        `;
+        originalPrice = '$ 9.99';
+        return; // Выходим, updateOrderDetailsWithRealPlans обновит позже
+    }
+    
+    // Улучшенная логика поиска плана:
+    // 1. Сначала ищем по точному совпадению ID или bundle_name
+    // 2. Если не найдено и это unlimited план, пытаемся найти по индексу (unlimited1 = index 0, unlimited2 = index 1, etc.)
+    let selectedPlan = plans.find(p => p.id === orderData.planId || p.bundle_name === orderData.planId);
+    
+    // Если план не найден и это unlimited план с ID вида unlimitedN, пытаемся найти по индексу
+    if (!selectedPlan && orderData.planType === 'unlimited' && orderData.planId) {
+        const idMatch = orderData.planId.match(/unlimited(\d+)/);
+        if (idMatch) {
+            const index = parseInt(idMatch[1]) - 1; // unlimited1 = index 0, unlimited2 = index 1, etc.
+            if (index >= 0 && index < plans.length) {
+                selectedPlan = plans[index];
+            }
+        }
+    }
+    
+    // Если все еще не найден, используем первый план как fallback
+    if (!selectedPlan) {
+        selectedPlan = plans[0];
+    }
+    
+    if (selectedPlan) {
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">${selectedPlan.data}</span>
+            <span class="checkout-plan-duration">${selectedPlan.duration}</span>
+        `;
+        
+        // Store original price (используем реальную цену из API или fallback)
+        // Проверяем priceValue (финальная цена) или price (себестоимость)
+        let priceToUse = selectedPlan.priceValue || selectedPlan.price || '$ 9.99';
+        
+        // Убеждаемся, что цена в правильном формате
+        if (typeof priceToUse === 'number') {
+            originalPrice = `$ ${priceToUse.toFixed(2)}`;
+        } else if (typeof priceToUse === 'string') {
+            // Если уже в формате "$ 9.99", используем как есть
+            if (priceToUse.startsWith('$')) {
+                originalPrice = priceToUse;
+            } else {
+                // Если просто число, добавляем "$ "
+                originalPrice = `$ ${priceToUse}`;
+            }
+        } else {
+            originalPrice = '$ 9.99';
+        }
+        
+        console.log('Setup order details with plan:', {
+            planId: orderData.planId,
+            selectedPlan: selectedPlan,
+            price: originalPrice
+        });
+    } else {
+        // Fallback если план не найден
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">Loading...</span>
+            <span class="checkout-plan-duration">Loading...</span>
+        `;
+        originalPrice = '$ 9.99';
+    }
+    
+    // Update total price
+    updateTotalPrice();
+}
+
+/**
+ * Обновление деталей заказа с реальными планами из API
+ */
+function updateOrderDetailsWithRealPlans() {
+    const planDetailsElement = document.getElementById('checkoutPlanDetails');
+    const totalPriceElement = document.getElementById('checkoutTotalPrice');
+    
+    if (!planDetailsElement || !totalPriceElement) {
+        return;
+    }
+    
+    // Находим выбранный план
+    const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
+    
+    // Улучшенная логика поиска плана:
+    // 1. Сначала ищем по точному совпадению ID или bundle_name
+    // 2. Если не найдено и это unlimited план, пытаемся найти по индексу (unlimited1 = index 0, unlimited2 = index 1, etc.)
+    let selectedPlan = plans.find(p => p.id === orderData.planId || p.bundle_name === orderData.planId);
+    
+    // Если план не найден и это unlimited план с ID вида unlimitedN, пытаемся найти по индексу
+    if (!selectedPlan && orderData.planType === 'unlimited' && orderData.planId) {
+        const idMatch = orderData.planId.match(/unlimited(\d+)/);
+        if (idMatch) {
+            const index = parseInt(idMatch[1]) - 1; // unlimited1 = index 0, unlimited2 = index 1, etc.
+            if (index >= 0 && index < plans.length) {
+                selectedPlan = plans[index];
+            }
+        }
+    }
+    
+    // Если все еще не найден, используем первый план как fallback
+    if (!selectedPlan) {
+        selectedPlan = plans[0];
+    }
+    
+    if (selectedPlan) {
+        // Обновляем детали плана
+        planDetailsElement.innerHTML = `
+            <span class="checkout-plan-amount">${selectedPlan.data}</span>
+            <span class="checkout-plan-duration">${selectedPlan.duration}</span>
+        `;
+        
+        // Обновляем цену
+        originalPrice = selectedPlan.price || '$ 9.99';
+        updateTotalPrice();
+        
+        console.log('Order details updated with real plan:', {
+            plan: selectedPlan.data,
+            duration: selectedPlan.duration,
+            price: selectedPlan.price
+        });
+    }
+}
+
+// Update total price display with discount if applicable
+function updateTotalPrice() {
+    const totalPriceElement = document.getElementById('checkoutTotalPrice');
+    
+    if (isPromoApplied && discountPercent > 0) {
+        // Extract numeric value from price string (e.g., "$ 9.99" -> 9.99)
+        const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
+        if (priceMatch) {
+            const originalPriceValue = parseFloat(priceMatch[1]);
+            const discountedPrice = originalPriceValue * (1 - discountPercent / 100);
+            const newPrice = `$ ${discountedPrice.toFixed(2)}`;
+            
+            totalPriceElement.innerHTML = `
+                <span class="checkout-total-price-old">${originalPrice}</span>
+                <span class="checkout-total-price-new">${newPrice}</span>
+            `;
+        }
+    } else {
+        totalPriceElement.textContent = originalPrice;
+    }
+}
+
+// Setup promo code button
+function setupPromoCode() {
+    const promoBtn = document.getElementById('promoBtn');
+    const promoInput = document.getElementById('promoInput');
+    const promoError = document.getElementById('promoError');
+    const promoSuccess = document.getElementById('promoSuccess');
+    
+    // Valid promo codes with discounts
+    const promoCodes = {
+        'PROMO': 30  // 30% discount
+    };
+    
+    if (promoBtn && promoInput && promoError && promoSuccess) {
+        promoBtn.addEventListener('click', () => {
+            const promoCode = promoInput.value.trim().toUpperCase();
+            
+            if (!promoCode) {
+                promoError.style.display = 'none';
+                promoSuccess.style.display = 'none';
+                return;
+            }
+            
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            
+            // Check if promo code is valid
+            if (promoCodes.hasOwnProperty(promoCode)) {
+                // Valid promo code
+                isPromoApplied = true;
+                discountPercent = promoCodes[promoCode];
+                
+                promoError.style.display = 'none';
+                promoSuccess.style.display = 'block';
+                promoInput.style.borderColor = 'transparent';
+                
+                // Update price with discount
+                updateTotalPrice();
+                
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+            } else {
+                // Invalid promo code
+                isPromoApplied = false;
+                discountPercent = 0;
+                
+                promoError.style.display = 'block';
+                promoSuccess.style.display = 'none';
+                promoInput.style.borderColor = '#FF3B30';
+                
+                // Reset price to original
+                updateTotalPrice();
+                
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+            }
+        });
+        
+        // Hide messages when user starts typing
+        promoInput.addEventListener('input', () => {
+            if (promoError.style.display === 'block' || promoSuccess.style.display === 'block') {
+                promoError.style.display = 'none';
+                promoSuccess.style.display = 'none';
+                promoInput.style.borderColor = 'transparent';
+                
+                // Reset discount if user changes input
+                if (isPromoApplied) {
+                    isPromoApplied = false;
+                    discountPercent = 0;
+                    updateTotalPrice();
+                }
+            }
+        });
+    }
+}
+
+// Setup purchase button
+function setupPurchaseButton() {
+    const purchaseBtn = document.getElementById('purchaseBtn');
+    
+    if (!purchaseBtn) {
+        console.error('❌ Purchase button not found in DOM');
+        return;
+    }
+    
+    // Убеждаемся, что кнопка активна
+    purchaseBtn.disabled = false;
+    purchaseBtn.style.opacity = '1';
+    purchaseBtn.style.cursor = 'pointer';
+    
+    purchaseBtn.addEventListener('click', async () => {
+        const auth = window.telegramAuth;
+        
+        // Проверка авторизации
+        if (!auth || !auth.isAuthenticated()) {
+            alert('Пожалуйста, авторизуйтесь через Telegram для оформления заказа');
+            if (tg) {
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+            return;
+        }
+        
+        // Проверяем выбранный метод оплаты
+        if (selectedPaymentMethod === 'stars') {
+            // Оплата через Telegram Stars
+            await initiateStarsPayment(auth);
+            return;
+        }
+        
+        // Для других методов оплаты (Bank Cards, Crypto Payments) - показываем сообщение
+        if (selectedPaymentMethod && selectedPaymentMethod !== 'stars') {
+            if (tg) {
+                tg.showAlert(`${PAYMENT_METHODS[selectedPaymentMethod]} payment will be available soon.`);
+            } else {
+                alert(`${PAYMENT_METHODS[selectedPaymentMethod]} payment will be available soon.`);
+            }
+            return;
+        }
+        
+        // Если метод оплаты не выбран, просим выбрать метод
+        if (!selectedPaymentMethod) {
+            if (tg) {
+                tg.HapticFeedback.notificationOccurred('error');
+                tg.showAlert('Please select a payment method first.');
+            } else {
+                alert('Please select a payment method first.');
+            }
+            return;
+        }
+        
+        // Если метод оплаты не выбран, используем стандартный процесс (legacy)
+        if (tg) {
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+        
+        // Показываем индикатор загрузки
+        const purchaseBtn = document.getElementById('purchaseBtn');
+        const originalText = purchaseBtn.textContent;
+        purchaseBtn.textContent = 'Validating...';
+        purchaseBtn.disabled = true;
+        
+        try {
+            // 🔐 ВАЖНО: Серверная валидация данных Telegram (signature/hash)
+            const validation = await auth.validateOnServer('/api/validate-telegram');
+            
+            if (!validation.valid) {
+                throw new Error(validation.error || 'Validation failed');
+            }
+            
+            console.log('✅ Telegram data validated:', validation.method);
+            
+            // Создание заказа с данными пользователя (после валидации)
+            const orderWithUser = {
+                ...orderData,
+                telegram_user_id: auth.getUserId(),
+                telegram_username: auth.getUsername(),
+                user_name: auth.getUserName(),
+                validation_method: validation.method,
+                created_at: new Date().toISOString()
+            };
+            
+            console.log('Purchase order with validated user data:', orderWithUser);
+            
+            // Восстанавливаем кнопку
+            purchaseBtn.textContent = originalText;
+            purchaseBtn.disabled = false;
+            
+            // Подтверждение покупки
+            if (tg && tg.showConfirm) {
+                tg.showConfirm('Confirm purchase?', async (confirmed) => {
+                    if (confirmed) {
+                        await processPurchase(orderWithUser, auth, tg);
+                    }
+                });
+            } else {
+                // Если showConfirm недоступен, сразу обрабатываем покупку
+                await processPurchase(orderWithUser, auth, tg);
+            }
+            
+        } catch (error) {
+            console.error('❌ Validation error:', error);
+            
+            // Восстанавливаем кнопку
+            purchaseBtn.textContent = originalText;
+            purchaseBtn.disabled = false;
+            
+            if (tg) {
+                tg.HapticFeedback.notificationOccurred('error');
+                tg.showAlert('Ошибка проверки данных: ' + error.message);
+            } else {
+                alert('Ошибка проверки данных: ' + error.message);
+            }
+        }
+    });
+}
+
+
+        }
+        
+        // Создаем заказ
+        purchaseBtn.textContent = testMode ? 'Validating order...' : 'Creating order...';
+        const orderResponse = await fetch('/api/esimgo/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bundle_name: bundleName,
+                telegram_user_id: orderWithUser.telegram_user_id,
+                telegram_username: orderWithUser.telegram_username,
+                user_name: orderWithUser.user_name,
+                country_code: orderWithUser.code,
+                country_name: orderWithUser.name,
+                plan_id: orderWithUser.planId,
+                plan_type: orderWithUser.planType,
+                test_mode: testMode // Передаем режим тестирования
+            })
+        });
+        
+        const orderResult = await orderResponse.json();
+        
+        if (!orderResult.success) {
+            throw new Error(orderResult.error || 'Failed to create order');
+        }
+        
+        // Проверяем режим тестирования
+        if (orderResult.test_mode) {
+            console.log('✅ Order validated (TEST MODE):', orderResult.data);
+            
+            // В тестовом режиме показываем информацию о валидации
+            if (tg) {
+                tg.showAlert(
+                    `✅ Validation successful!\n\n` +
+                    `Price: ${orderResult.data.currency} ${orderResult.data.total}\n` +
+                    `Bundle: ${bundleName}\n\n` +
+                    `This was a test. No real order was created.\n` +
+                    `Remove ?test=true from URL to create real orders.`
+                );
+            } else {
+                alert(
+                    `✅ Validation successful!\n\n` +
+                    `Price: ${orderResult.data.currency} ${orderResult.data.total}\n` +
+                    `Bundle: ${bundleName}\n\n` +
+                    `This was a test. No real order was created.`
+                );
+            }
+            
+            purchaseBtn.textContent = originalText;
+            purchaseBtn.disabled = false;
+            return; // Не продолжаем с получением QR кода в тестовом режиме
+        }
+        
+        console.log('Order created:', orderResult.data);
+        
+        // Если есть assignments (QR код), показываем их
+        if (orderResult.data.assignments) {
+            showOrderSuccess(orderResult.data, tg);
+        } else if (orderResult.data.orderReference) {
+            // Если assignments не получены сразу, получаем их отдельно
+            purchaseBtn.textContent = 'Getting QR code...';
+            await getAndShowAssignments(orderResult.data.orderReference, tg);
+        } else {
+            throw new Error('Order created but no eSIM data received');
+        }
+        
+        if (tg) {
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+        
+    } catch (error) {
+        console.error('Purchase failed:', error);
+        
+        purchaseBtn.textContent = originalText;
+        purchaseBtn.disabled = false;
+        
+        if (tg) {
+            tg.HapticFeedback.notificationOccurred('error');
+            tg.showAlert('Purchase failed: ' + error.message);
+        } else {
+            alert('Purchase failed: ' + error.message);
+        }
+    }
+}
+
+/**
+ * Получить и показать assignments (QR код)
+ */
+async function getAndShowAssignments(orderReference, tg) {
+    try {
+        const response = await fetch(`/api/esimgo/assignments?reference=${orderReference}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to get assignments');
+        }
+        
+        showOrderSuccess({ assignments: data.data, orderReference }, tg);
+    } catch (error) {
+        console.error('Failed to get assignments:', error);
+        throw error;
+    }
+}
+
+/**
+ * Показать успешный заказ с QR кодом
+ */
+function showOrderSuccess(orderData, tg) {
+    // TODO: Создать страницу или модальное окно для показа QR кода
+    // Пока просто перенаправляем на страницу успеха
+    const assignments = orderData.assignments;
+    
+    if (assignments && assignments.iccid) {
+        // Сохраняем в localStorage для отображения в my-esims
+        const orderInfo = {
+            iccid: assignments.iccid,
+            matchingId: assignments.matchingId,
+            smdpAddress: assignments.smdpAddress,
+            orderReference: orderData.orderReference,
+            createdAt: new Date().toISOString()
+        };
+        
+        // Получаем существующие заказы
+        const existingOrders = JSON.parse(localStorage.getItem('esim_orders') || '[]');
+        existingOrders.push(orderInfo);
+        localStorage.setItem('esim_orders', JSON.stringify(existingOrders));
+        
+        // Перенаправляем на страницу успеха или my-esims
+        if (tg) {
+            tg.showAlert('Order successful! Check "My eSIMs" for QR code.');
+            setTimeout(() => {
+                window.location.href = 'my-esims.html';
+            }, 2000);
+        } else {
+            alert('Order successful! Check "My eSIMs" for QR code.');
+            window.location.href = 'my-esims.html';
+        }
+    }
+}
+
+// Region icon file mapping
+const regionIconMap = {
+    'Africa': 'Afrrica.png',
+    'Asia': 'Asia.png',
+    'Europe': 'Europe.png',
+    'Latin America': 'Latin America.png',
+    'North America': 'North America.png',
+    'Balkanas': 'Balkanas.png',
+    'Central Eurasia': 'Central Eurasia.png',
+    'Oceania': 'Oceania.png'
+};
+
+// Version for cache busting - increment when flags are updated
+const FLAG_VERSION = 'v7'; // Updated: force refresh for missing flags (AX, BM, etc.)
+
+// Function to get flag image URL from local flags folder
+function getFlagPath(countryCode) {
+    if (!countryCode) {
+        return null;
+    }
+    // Файлы в верхнем регистре: AF.svg, TH.svg и т.д.
+    let code = countryCode.toUpperCase();
+    
+    // Специальная обработка для файлов с пробелами или специальными символами
+    const specialFlagFiles = {
+        'CYP': 'CYP;CY .svg',  // Northern Cyprus файл с пробелом
+        'US-HI': 'US-HI .svg'  // Hawaii файл с пробелом
+    };
+    
+    // Если есть специальный файл, используем его
+    // Кодируем пробелы и специальные символы в URL
+    if (specialFlagFiles[code]) {
+        const fileName = specialFlagFiles[code];
+        const encodedFileName = encodeURIComponent(fileName);
+        return `/flags/${encodedFileName}?${FLAG_VERSION}`;
+    }
+    
+    return `/flags/${code}.svg?${FLAG_VERSION}`;
+}
+
+// Initialize app
+document.addEventListener('DOMContentLoaded', async () => {
+    // Telegram Auth - проверка авторизации перед оформлением заказа
+    const auth = window.telegramAuth;
+    if (auth && auth.isAuthenticated()) {
+        const userId = auth.getUserId();
+        console.log('Checkout - User authenticated:', userId);
+        window.currentUserId = userId;
+    } else {
+        console.warn('Checkout - User not authenticated');
+        // Можно показать предупреждение или перенаправить
+    }
+    
+    // Загружаем реальные планы для checkout
+    console.log('🔵 DOMContentLoaded - orderData:', orderData);
+    const plansLoaded = await loadPlansForCheckout();
+    
+    console.log('🔵 Plans loaded status:', plansLoaded, {
+        standardCount: standardPlans.length,
+        unlimitedCount: unlimitedPlans.length,
+        firstPlan: standardPlans[0] || unlimitedPlans[0]
+    });
+    
+    setupOrderDetails();
+    setupPromoCode();
+    setupPaymentMethodUI();
+    setupPurchaseButton();
+    setupNavigation();
+    setupBackButton();
+    
+    // Убеждаемся, что нижнее меню всегда видно
+    ensureBottomNavVisible();
+    setTimeout(ensureBottomNavVisible, 100);
+    
+    // Если планы загрузились, обновляем отображение
+    if (plansLoaded && (standardPlans.length > 0 || unlimitedPlans.length > 0)) {
+        updateOrderDetailsWithRealPlans();
+    }
+});
+
+// Setup back button to return to plans page
+function setupBackButton() {
+    if (!tg || !tg.BackButton) {
+        return;
+    }
+    
+    tg.BackButton.show();
+    tg.BackButton.onClick(() => {
+        if (tg && tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+        
+        // Возвращаемся на соответствующую страницу со списком тарифов
+        if (orderData.type === 'country') {
+            // Local: возвращаемся на plans.html с параметрами страны
+            const params = new URLSearchParams({
+                country: orderData.name,
+                code: orderData.code
+            });
+            window.location.href = `plans.html?${params.toString()}`;
+        } else if (orderData.type === 'region') {
+            // Region: возвращаемся на region-plans.html с параметром региона
+            const params = new URLSearchParams({
+                region: orderData.name
+            });
+            window.location.href = `region-plans.html?${params.toString()}`;
+        } else if (orderData.type === 'global') {
+            // Global: возвращаемся на global-plans.html
+            window.location.href = 'global-plans.html';
+        } else {
+            // Fallback: возвращаемся на главную
+            window.location.href = 'index.html?segment=local';
+        }
+    });
+}
+
+// Ensure bottom navigation is always visible
+function ensureBottomNavVisible() {
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) {
+        bottomNav.style.display = 'flex';
+        bottomNav.style.visibility = 'visible';
+        bottomNav.style.opacity = '1';
+        bottomNav.style.position = 'fixed';
+        bottomNav.style.bottom = '0';
+        bottomNav.style.zIndex = '10000'; // Нижнее меню должно быть видно
     }
 }
 
