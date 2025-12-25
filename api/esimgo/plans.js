@@ -122,6 +122,70 @@ function applyMarkup(price, countryCode = null) {
     }
 }
 
+// Функция для применения наценки к уже сгруппированным планам (для кэшированных данных)
+function applyMarkupToPlans(plansData, countryCode = null) {
+    try {
+        const settings = loadMarkupSettings();
+        const markup = settings.markup || {};
+        
+        if (!markup.enabled) {
+            return plansData;
+        }
+        
+        const baseMarkup = markup.base || markup.defaultMultiplier || 1.0;
+        let countryMarkup = 1.0;
+        if (countryCode && markup.countryMarkups && markup.countryMarkups[countryCode]) {
+            const countryPercent = markup.countryMarkups[countryCode];
+            countryMarkup = 1 + (countryPercent / 100);
+        }
+        
+        const totalMarkup = baseMarkup * countryMarkup;
+        
+        // Применяем наценку к стандартным планам
+        if (plansData.standard && Array.isArray(plansData.standard)) {
+            plansData.standard = plansData.standard.map(plan => {
+                if (plan.priceValue && typeof plan.priceValue === 'number') {
+                    const newPriceValue = Math.round(plan.priceValue * totalMarkup * 100) / 100;
+                    const currency = plan.currency || 'USD';
+                    const newPriceFormatted = currency === 'USD' 
+                        ? `$ ${newPriceValue.toFixed(2)}`
+                        : `${currency} ${newPriceValue.toFixed(2)}`;
+                    return {
+                        ...plan,
+                        priceValue: newPriceValue,
+                        price: newPriceFormatted
+                    };
+                }
+                return plan;
+            });
+        }
+        
+        // Применяем наценку к безлимитным планам
+        if (plansData.unlimited && Array.isArray(plansData.unlimited)) {
+            plansData.unlimited = plansData.unlimited.map(plan => {
+                if (plan.priceValue && typeof plan.priceValue === 'number') {
+                    const newPriceValue = Math.round(plan.priceValue * totalMarkup * 100) / 100;
+                    const currency = plan.currency || 'USD';
+                    const newPriceFormatted = currency === 'USD' 
+                        ? `$ ${newPriceValue.toFixed(2)}`
+                        : `${currency} ${newPriceValue.toFixed(2)}`;
+                    return {
+                        ...plan,
+                        priceValue: newPriceValue,
+                        price: newPriceFormatted
+                    };
+                }
+                return plan;
+            });
+        }
+        
+        return plansData;
+    } catch (error) {
+        console.error('Error applying markup to plans:', error);
+        return plansData;
+    }
+}
+
 /**
  * Группировка bundles в планы
  * @param {Array} bundles - массив bundles
@@ -504,9 +568,11 @@ module.exports = async function handler(req, res) {
             const cachedData = cache.get(cacheKey, cache.getTTL('plans'));
             if (cachedData && cachedData.data) {
                 console.log('✅ Using cached plans data for:', cacheKey);
+                // Применяем наценку к кэшированным данным
+                const dataWithMarkup = applyMarkupToPlans(cachedData.data, countryCode);
                 return res.status(200).json({
                     success: true,
-                    data: cachedData.data,
+                    data: dataWithMarkup,
                     meta: {
                         ...cachedData.meta,
                         source: 'cache'
