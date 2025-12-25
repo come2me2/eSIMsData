@@ -225,9 +225,11 @@ async function warmupCache() {
 
 // Fallback для всех остальных маршрутов - отдаем index.html (SPA)
 // НЕ обрабатываем запросы к /admin/* - они обрабатываются статическими файлами выше
+// ВАЖНО: Этот маршрут должен быть ПОСЛЕ всех API маршрутов
 app.get('*', (req, res) => {
-    // Если это API запрос, вернуть 404
+    // Если это API запрос, вернуть 404 (но это не должно происходить, так как API routes выше)
     if (req.path.startsWith('/api/')) {
+        console.warn(`⚠️ API endpoint not found: ${req.method} ${req.path}`);
         return res.status(404).json({
             success: false,
             error: 'API endpoint not found'
