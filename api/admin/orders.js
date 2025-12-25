@@ -111,6 +111,9 @@ module.exports = async function handler(req, res) {
     }
     
     try {
+        console.log(`[Admin Orders API] Request: ${req.method} ${req.path}`);
+        console.log(`[Admin Orders API] Query params:`, req.query);
+        
         const urlParts = req.path.split('/').filter(Boolean);
         const orderId = urlParts[urlParts.length - 1];
         const isStatusUpdate = urlParts[urlParts.length - 2] === 'status';
@@ -120,6 +123,7 @@ module.exports = async function handler(req, res) {
             try {
                 const { limit, offset, sort = 'createdAt', order = 'desc', status, userId, paymentType, search, dateFrom, dateTo } = req.query;
                 
+                console.log(`[Admin Orders API] Loading orders from: ${ORDERS_FILE}`);
                 let orders = await getAllOrders();
                 
                 console.log(`[Admin Orders API] Loaded ${orders.length} orders from file`);
