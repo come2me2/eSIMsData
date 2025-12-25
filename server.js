@@ -133,6 +133,12 @@ Object.entries(apiRoutes).forEach(([route, handler]) => {
         // Поддержка всех методов для каждого endpoint
         app.all(route, async (req, res) => {
             try {
+                // Для admin API передаем полный путь без префикса route
+                if (route.startsWith('/api/admin/')) {
+                    // Убираем префикс route из пути
+                    const relativePath = req.originalUrl.replace(route, '') || '/';
+                    req.path = relativePath;
+                }
                 await handler(req, res);
             } catch (error) {
                 console.error(`Error in ${route}:`, error);
