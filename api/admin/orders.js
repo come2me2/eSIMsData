@@ -235,21 +235,45 @@ module.exports = async function handler(req, res) {
         
         // GET /api/admin/orders/:id - детали заказа
         if (req.method === 'GET' && orderId) {
+            console.log(`[Admin Orders API] Looking for order with ID: ${orderId}`);
             const allOrders = await getAllOrders();
-            const order = allOrders.find(o => 
-                o.orderReference === orderId || 
-                o.id === orderId ||
-                o.telegram_user_id + '_' + o.orderReference === orderId ||
-                (o.telegram_user_id && o.orderReference && `${o.telegram_user_id}_${o.orderReference}` === orderId)
-            );
+            console.log(`[Admin Orders API] Total orders in database: ${allOrders.length}`);
+            
+            // Пробуем разные варианты поиска
+            let order = allOrders.find(o => {
+                // Вариант 1: полный ID (userId_orderReference)
+                if (o.telegram_user_id && o.orderReference) {
+                    const fullId = `${o.telegram_user_id}_${o.orderReference}`;
+                    if (fullId === orderId) {
+                        console.log(`[Admin Orders API] Found by fullId: ${fullId}`);
+                        return true;
+                    }
+                }
+                // Вариант 2: только orderReference
+                if (o.orderReference === orderId) {
+                    console.log(`[Admin Orders API] Found by orderReference: ${o.orderReference}`);
+                    return true;
+                }
+                // Вариант 3: только id
+                if (o.id === orderId) {
+                    console.log(`[Admin Orders API] Found by id: ${o.id}`);
+                    return true;
+                }
+                return false;
+            });
             
             if (!order) {
+                console.log(`[Admin Orders API] Order not found. Searched ID: ${orderId}`);
+                console.log(`[Admin Orders API] Available order IDs:`, allOrders.slice(0, 5).map(o => 
+                    o.telegram_user_id && o.orderReference ? `${o.telegram_user_id}_${o.orderReference}` : o.orderReference || o.id
+                ));
                 return res.status(404).json({
                     success: false,
                     error: 'Order not found'
                 });
             }
             
+            console.log(`[Admin Orders API] Order found: ${order.orderReference || order.id}`);
             return res.status(200).json({
                 success: true,
                 order
