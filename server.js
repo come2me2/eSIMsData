@@ -138,21 +138,26 @@ Object.entries(apiRoutes).forEach(([route, handler]) => {
                 try {
                     // Для admin API передаем полный путь без префикса route
                     if (route.startsWith('/api/admin/')) {
-                        // Убираем префикс route из пути
-                        const relativePath = req.originalUrl.replace(route, '') || '/';
+                        // Убираем префикс route из пути, включая query параметры
+                        const urlWithoutQuery = req.originalUrl.split('?')[0];
+                        let relativePath = urlWithoutQuery.replace(route, '');
+                        // Если путь пустой или только "/", делаем его пустой строкой
+                        if (!relativePath || relativePath === '/') {
+                            relativePath = '';
+                        }
                         req.path = relativePath;
-                        console.log(`[Route Handler] ${method.toUpperCase()} ${route} -> relative path: ${relativePath}`);
+                        console.log(`[Route Handler] ${method.toUpperCase()} ${route} -> original: ${req.originalUrl} -> relative path: "${relativePath}"`);
                     }
-                    await handler(req, res);
-                } catch (error) {
-                    console.error(`Error in ${route}:`, error);
-                    if (!res.headersSent) {
-                        res.status(500).json({
-                            success: false,
-                            error: error.message || 'Internal server error'
-                        });
-                    }
+                await handler(req, res);
+            } catch (error) {
+                console.error(`Error in ${route}:`, error);
+                if (!res.headersSent) {
+                    res.status(500).json({
+                        success: false,
+                        error: error.message || 'Internal server error'
+                    });
                 }
+            }
             });
         });
     }
