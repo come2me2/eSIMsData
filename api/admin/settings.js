@@ -26,13 +26,26 @@ async function loadSettings() {
             return {
                 markup: {
                     enabled: true,
-                    defaultPercent: 20, // 20% наценка по умолчанию
-                    countryMarkups: {} // { "US": 15, "GB": 25 }
+                    base: 1.29, // Базовая наценка 1.29 = +29%
+                    defaultMultiplier: 1.29, // Для обратной совместимости
+                    countryMarkups: {} // { "US": 15, "GB": 25 } - в процентах
                 },
                 paymentMethods: {
-                    telegramStars: { enabled: true },
-                    crypto: { enabled: true },
-                    bankCard: { enabled: true }
+                    telegramStars: { 
+                        enabled: true,
+                        markup: 1.05, // Дополнительная наценка 1.05 = +5%
+                        markupMultiplier: 1.05
+                    },
+                    crypto: { 
+                        enabled: true,
+                        markup: 1.0, // Дополнительная наценка 1.0 = +0%
+                        markupMultiplier: 1.0
+                    },
+                    bankCard: { 
+                        enabled: true,
+                        markup: 1.1, // Дополнительная наценка 1.1 = +10%
+                        markupMultiplier: 1.1
+                    }
                 },
                 promocodes: [] // [{ code: "PROMO10", discount: 10, type: "percent", validUntil: "2024-12-31" }]
             };

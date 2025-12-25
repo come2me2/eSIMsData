@@ -28,15 +28,25 @@ const Settings = {
         // Markup
         if (settings.markup) {
             document.getElementById('markupEnabled').checked = settings.markup.enabled || false;
-            document.getElementById('defaultMarkup').value = settings.markup.defaultPercent || 20;
+            // Базовая наценка как множитель (например, 1.29 вместо 29%)
+            const baseMarkup = settings.markup.base || settings.markup.defaultMultiplier || 1.29;
+            document.getElementById('baseMarkup').value = baseMarkup;
             this.renderCountryMarkups(settings.markup.countryMarkups || {});
         }
         
-        // Payment methods
+        // Payment methods with markups
         if (settings.paymentMethods) {
+            // Telegram Stars
             document.getElementById('paymentTelegramStars').checked = settings.paymentMethods.telegramStars?.enabled || false;
+            document.getElementById('markupTelegramStars').value = settings.paymentMethods.telegramStars?.markup || settings.paymentMethods.telegramStars?.markupMultiplier || 1.05;
+            
+            // Crypto
             document.getElementById('paymentCrypto').checked = settings.paymentMethods.crypto?.enabled || false;
+            document.getElementById('markupCrypto').value = settings.paymentMethods.crypto?.markup || settings.paymentMethods.crypto?.markupMultiplier || 1.0;
+            
+            // Bank Card
             document.getElementById('paymentBankCard').checked = settings.paymentMethods.bankCard?.enabled || false;
+            document.getElementById('markupBankCard').value = settings.paymentMethods.bankCard?.markup || settings.paymentMethods.bankCard?.markupMultiplier || 1.1;
         }
         
         // Promocodes
@@ -144,9 +154,14 @@ const Settings = {
     async saveMarkup() {
         try {
             const enabled = document.getElementById('markupEnabled').checked;
-            const defaultPercent = parseFloat(document.getElementById('defaultMarkup').value);
+            const baseMarkup = parseFloat(document.getElementById('baseMarkup').value);
             
-            // Собираем наценки по странам
+            if (isNaN(baseMarkup) || baseMarkup < 1) {
+                this.showError('Базовая наценка должна быть не менее 1.0');
+                return;
+            }
+            
+            // Собираем наценки по странам (оставляем как проценты для обратной совместимости)
             const countryMarkups = {};
             const countryInputs = document.querySelectorAll('#countryMarkupsList input[data-country]');
             countryInputs.forEach(input => {
@@ -161,7 +176,8 @@ const Settings = {
                 method: 'PUT',
                 body: JSON.stringify({
                     enabled,
-                    defaultPercent,
+                    base: baseMarkup, // Сохраняем как множитель
+                    defaultMultiplier: baseMarkup, // Для обратной совместимости
                     countryMarkups
                 })
             });
@@ -185,10 +201,41 @@ const Settings = {
     // Save payment methods
     async savePaymentMethods() {
         try {
+            // Получаем наценки для каждого способа оплаты
+            const markupTelegramStars = parseFloat(document.getElementById('markupTelegramStars').value);
+            const markupCrypto = parseFloat(document.getElementById('markupCrypto').value);
+            const markupBankCard = parseFloat(document.getElementById('markupBankCard').value);
+            
+            // Валидация
+            if (isNaN(markupTelegramStars) || markupTelegramStars < 1) {
+                this.showError('Наценка для Telegram Stars должна быть не менее 1.0');
+                return;
+            }
+            if (isNaN(markupCrypto) || markupCrypto < 1) {
+                this.showError('Наценка для Криптовалют должна быть не менее 1.0');
+                return;
+            }
+            if (isNaN(markupBankCard) || markupBankCard < 1) {
+                this.showError('Наценка для Банковских карт должна быть не менее 1.0');
+                return;
+            }
+            
             const paymentMethods = {
-                telegramStars: { enabled: document.getElementById('paymentTelegramStars').checked },
-                crypto: { enabled: document.getElementById('paymentCrypto').checked },
-                bankCard: { enabled: document.getElementById('paymentBankCard').checked }
+                telegramStars: { 
+                    enabled: document.getElementById('paymentTelegramStars').checked,
+                    markup: markupTelegramStars,
+                    markupMultiplier: markupTelegramStars // Для обратной совместимости
+                },
+                crypto: { 
+                    enabled: document.getElementById('paymentCrypto').checked,
+                    markup: markupCrypto,
+                    markupMultiplier: markupCrypto
+                },
+                bankCard: { 
+                    enabled: document.getElementById('paymentBankCard').checked,
+                    markup: markupBankCard,
+                    markupMultiplier: markupBankCard
+                }
             };
             
             const response = await Auth.authenticatedFetch('/api/admin/settings/paymentMethods', {
@@ -201,7 +248,7 @@ const Settings = {
             const data = await response.json();
             
             if (data.success) {
-                this.showSuccess('Способы оплаты сохранены');
+                this.showSuccess('Способы оплаты и наценки сохранены');
                 this.loadSettings();
             } else {
                 this.showError(data.error || 'Ошибка сохранения способов оплаты');
