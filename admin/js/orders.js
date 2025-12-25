@@ -117,9 +117,23 @@ const Orders = {
     // Show order details modal
     async showOrderDetails(orderId, userId) {
         try {
-            const fullOrderId = userId && orderId ? `${userId}_${orderId}` : orderId;
+            // Формируем fullOrderId: userId_orderReference
+            // Если userId есть и не равен 'N/A', используем формат userId_orderId
+            const fullOrderId = (userId && userId !== 'N/A' && orderId && orderId !== 'N/A') 
+                ? `${userId}_${orderId}` 
+                : orderId;
+            
+            console.log(`[Orders] Loading order details: orderId=${orderId}, userId=${userId}, fullOrderId=${fullOrderId}`);
+            
             const response = await Auth.authenticatedFetch(`/api/admin/orders/${fullOrderId}`);
             if (!response) return;
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('[Orders] Server error:', response.status, errorData);
+                this.showError(errorData.error || 'Заказ не найден');
+                return;
+            }
             
             const data = await response.json();
             
@@ -127,11 +141,12 @@ const Orders = {
                 this.renderOrderDetails(data.order);
                 document.getElementById('orderModal').classList.remove('hidden');
             } else {
+                console.error('[Orders] Order not found in response:', data);
                 this.showError('Заказ не найден');
             }
         } catch (error) {
             console.error('Error loading order details:', error);
-            this.showError('Ошибка загрузки деталей заказа');
+            this.showError('Ошибка загрузки деталей заказа: ' + error.message);
         }
     },
     
