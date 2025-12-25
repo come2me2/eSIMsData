@@ -128,7 +128,10 @@ function applyMarkupToPlans(plansData, countryCode = null) {
         const settings = loadMarkupSettings();
         const markup = settings.markup || {};
         
+        console.log(`[Markup] Applying markup to plans, enabled: ${markup.enabled}, base: ${markup.base || markup.defaultMultiplier}, countryCode: ${countryCode}`);
+        
         if (!markup.enabled) {
+            console.log('[Markup] Markup is disabled, returning original prices');
             return plansData;
         }
         
@@ -140,16 +143,23 @@ function applyMarkupToPlans(plansData, countryCode = null) {
         }
         
         const totalMarkup = baseMarkup * countryMarkup;
+        console.log(`[Markup] Total markup multiplier: ${totalMarkup} (base: ${baseMarkup}, country: ${countryMarkup})`);
         
         // Применяем наценку к стандартным планам
         if (plansData.standard && Array.isArray(plansData.standard)) {
+            let appliedCount = 0;
             plansData.standard = plansData.standard.map(plan => {
                 if (plan.priceValue && typeof plan.priceValue === 'number') {
+                    const oldPrice = plan.priceValue;
                     const newPriceValue = Math.round(plan.priceValue * totalMarkup * 100) / 100;
                     const currency = plan.currency || 'USD';
                     const newPriceFormatted = currency === 'USD' 
                         ? `$ ${newPriceValue.toFixed(2)}`
                         : `${currency} ${newPriceValue.toFixed(2)}`;
+                    appliedCount++;
+                    if (appliedCount <= 3) {
+                        console.log(`[Markup] Applied to standard plan: ${oldPrice} -> ${newPriceValue} (${plan.bundle_name || plan.id})`);
+                    }
                     return {
                         ...plan,
                         priceValue: newPriceValue,
@@ -158,17 +168,24 @@ function applyMarkupToPlans(plansData, countryCode = null) {
                 }
                 return plan;
             });
+            console.log(`[Markup] Applied markup to ${appliedCount} standard plans`);
         }
         
         // Применяем наценку к безлимитным планам
         if (plansData.unlimited && Array.isArray(plansData.unlimited)) {
+            let appliedCount = 0;
             plansData.unlimited = plansData.unlimited.map(plan => {
                 if (plan.priceValue && typeof plan.priceValue === 'number') {
+                    const oldPrice = plan.priceValue;
                     const newPriceValue = Math.round(plan.priceValue * totalMarkup * 100) / 100;
                     const currency = plan.currency || 'USD';
                     const newPriceFormatted = currency === 'USD' 
                         ? `$ ${newPriceValue.toFixed(2)}`
                         : `${currency} ${newPriceValue.toFixed(2)}`;
+                    appliedCount++;
+                    if (appliedCount <= 3) {
+                        console.log(`[Markup] Applied to unlimited plan: ${oldPrice} -> ${newPriceValue} (${plan.bundle_name || plan.id})`);
+                    }
                     return {
                         ...plan,
                         priceValue: newPriceValue,
@@ -177,6 +194,7 @@ function applyMarkupToPlans(plansData, countryCode = null) {
                 }
                 return plan;
             });
+            console.log(`[Markup] Applied markup to ${appliedCount} unlimited plans`);
         }
         
         return plansData;
@@ -298,7 +316,11 @@ function groupBundlesIntoPlans(bundles, isLocal = false) {
         // Применяем базовую наценку к цене
         // Получаем код страны из bundle (может быть в разных полях)
         const countryCode = bundle.countryCode || bundle.country || bundle.country_code || null;
+        const oldPrice = priceValue;
         priceValue = applyMarkup(priceValue, countryCode);
+        if (oldPrice !== priceValue && bundles.indexOf(bundle) < 3) {
+            console.log(`[Markup] Applied to bundle: ${oldPrice} -> ${priceValue} (${bundle.name}, country: ${countryCode})`);
+        }
         
         const priceFormatted = currency === 'USD' 
             ? `$ ${priceValue.toFixed(2)}`
