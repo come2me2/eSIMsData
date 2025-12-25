@@ -584,8 +584,11 @@ module.exports = async function handler(req, res) {
             const cachedData = cache.get(cacheKey, cache.getTTL('plans'));
             if (cachedData && cachedData.data) {
                 console.log('✅ Using cached plans data for:', cacheKey);
-                // Применяем наценку к кэшированным данным
-                const dataWithMarkup = applyMarkupToPlans(cachedData.data, countryCode);
+                // КРИТИЧЕСКИ ВАЖНО: Создаем глубокую копию кэшированных данных перед применением наценки
+                // Это предотвращает мутацию данных в кэше
+                const cachedDataCopy = JSON.parse(JSON.stringify(cachedData.data));
+                // Применяем наценку к копии кэшированных данных
+                const dataWithMarkup = applyMarkupToPlans(cachedDataCopy, countryCode);
                 return res.status(200).json({
                     success: true,
                     data: dataWithMarkup,

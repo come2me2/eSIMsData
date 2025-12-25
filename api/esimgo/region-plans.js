@@ -838,8 +838,11 @@ module.exports = async function handler(req, res) {
             );
             if (hasData) {
                 console.log('✅ Using cached region plans data for:', region);
-                // Применяем наценку к кэшированным данным
-                const dataWithMarkup = applyMarkupToPlans(cachedData.data, null);
+                // КРИТИЧЕСКИ ВАЖНО: Создаем глубокую копию кэшированных данных перед применением наценки
+                // Это предотвращает мутацию данных в кэше
+                const cachedDataCopy = JSON.parse(JSON.stringify(cachedData.data));
+                // Применяем наценку к копии кэшированных данных
+                const dataWithMarkup = applyMarkupToPlans(cachedDataCopy, null);
                 return res.status(200).json({
                     success: true,
                     data: dataWithMarkup,
