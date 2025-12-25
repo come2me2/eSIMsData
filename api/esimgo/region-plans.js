@@ -12,6 +12,92 @@ const esimgoClient = require('../_lib/esimgo/client');
 const { getAPIRegions, isLatinAmerica } = require('../_lib/esimgo/region-mapping');
 const cache = require('../_lib/cache');
 
+// Кэш настроек наценок
+let markupSettingsCache = null;
+let markupSettingsCacheTime = 0;
+const MARKUP_CACHE_TTL = 60000; // 1 минута
+
+// Загрузить настройки наценок (с кэшированием)
+function loadMarkupSettings() {
+    const now = Date.now();
+    if (markupSettingsCache && (now - markupSettingsCacheTime) < MARKUP_CACHE_TTL) {
+        return markupSettingsCache;
+    }
+    
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const SETTINGS_FILE = path.join(__dirname, '..', '..', 'data', 'admin-settings.json');
+        
+        let settings;
+        try {
+            const data = fs.readFileSync(SETTINGS_FILE, 'utf8');
+            settings = JSON.parse(data);
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                settings = {
+                    markup: {
+                        enabled: true,
+                        base: 1.29,
+                        defaultMultiplier: 1.29,
+                        countryMarkups: {}
+                    }
+                };
+            } else {
+                console.error('Error loading settings for markup:', error);
+                settings = {
+                    markup: {
+                        enabled: false,
+                        base: 1.0,
+                        defaultMultiplier: 1.0,
+                        countryMarkups: {}
+                    }
+                };
+            }
+        }
+        
+        markupSettingsCache = settings;
+        markupSettingsCacheTime = now;
+        return settings;
+    } catch (error) {
+        console.error('Error loading markup settings:', error);
+        return {
+            markup: {
+                enabled: false,
+                base: 1.0,
+                defaultMultiplier: 1.0,
+                countryMarkups: {}
+            }
+        };
+    }
+}
+
+// Функция для применения наценки к цене (синхронная)
+function applyMarkup(price, countryCode = null) {
+    try {
+        const settings = loadMarkupSettings();
+        const markup = settings.markup || {};
+        
+        if (!markup.enabled) {
+            return price;
+        }
+        
+        const baseMarkup = markup.base || markup.defaultMultiplier || 1.0;
+        
+        let countryMarkup = 1.0;
+        if (countryCode && markup.countryMarkups && markup.countryMarkups[countryCode]) {
+            const countryPercent = markup.countryMarkups[countryCode];
+            countryMarkup = 1 + (countryPercent / 100);
+        }
+        
+        const finalPrice = price * baseMarkup * countryMarkup;
+        return Math.round(finalPrice * 100) / 100;
+    } catch (error) {
+        console.error('Error applying markup:', error);
+        return price;
+    }
+}
+
 /**
  * Дедупликация тарифов для Latin America
  * Выбирает тариф с минимальной ценой для каждой комбинации страны/данных/длительности
@@ -75,6 +161,8 @@ function deduplicateLatinAmerica(bundles) {
         
         // Для каждой страны создаем ключ и проверяем минимальную цену
         countryCodes.forEach(countryCode => {
+            // Применяем наценку для каждой страны отдельно
+            const countryPriceValue = applyMarkup(priceValue, countryCode);
             const dataAmount = bundle.dataAmount || 0;
             const duration = bundle.duration || 0;
             const key = `${countryCode}_${dataAmount}_${duration}`;
@@ -83,7 +171,7 @@ function deduplicateLatinAmerica(bundles) {
                 plansMap.set(key, {
                     ...bundle,
                     countryCode: countryCode,
-                    priceValue: priceValue,
+                    priceValue: countryPriceValue,
                     apiRegion: bundle.apiRegion // Сохраняем информацию о регионе API
                 });
             } else {
@@ -92,11 +180,11 @@ function deduplicateLatinAmerica(bundles) {
                 
                 // Выбираем bundle с минимальной ценой
                 // Если цены равны, предпочитаем USD
-                if (priceValue < existingPrice) {
+                if (countryPriceValue < existingPrice) {
                     plansMap.set(key, {
                         ...bundle,
                         countryCode: countryCode,
-                        priceValue: priceValue,
+                        priceValue: countryPriceValue,
                         apiRegion: bundle.apiRegion
                     });
                 } else if (priceValue === existingPrice) {
