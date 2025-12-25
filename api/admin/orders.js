@@ -14,7 +14,29 @@ const ORDERS_FILE = path.join(__dirname, '..', '..', 'data', 'orders.json');
 // Загрузить все заказы
 async function getAllOrders() {
     try {
+        // Проверяем существование файла
+        try {
+            await fs.access(ORDERS_FILE);
+        } catch (accessError) {
+            if (accessError.code === 'ENOENT') {
+                console.log('Orders file does not exist, creating empty structure');
+                // Создаем пустую структуру
+                const dataDir = path.dirname(ORDERS_FILE);
+                await fs.mkdir(dataDir, { recursive: true });
+                await fs.writeFile(ORDERS_FILE, '{}', 'utf8');
+                return [];
+            }
+            throw accessError;
+        }
+        
         const data = await fs.readFile(ORDERS_FILE, 'utf8');
+        
+        // Проверяем, что файл не пустой
+        if (!data || data.trim() === '') {
+            console.log('Orders file is empty');
+            return [];
+        }
+        
         const orders = JSON.parse(data);
         
         // Преобразуем объект в массив всех заказов с userId
@@ -32,10 +54,8 @@ async function getAllOrders() {
         
         return allOrders;
     } catch (error) {
-        if (error.code === 'ENOENT') {
-            return [];
-        }
         console.error('Error loading orders:', error);
+        // Возвращаем пустой массив вместо ошибки, чтобы не ломать API
         return [];
     }
 }
@@ -97,9 +117,12 @@ module.exports = async function handler(req, res) {
         
         // GET /api/admin/orders - список всех заказов
         if (req.method === 'GET' && !orderId) {
-            const { limit, offset, sort = 'createdAt', order = 'desc', status, userId, paymentType, search, dateFrom, dateTo } = req.query;
-            
-            let orders = await getAllOrders();
+            try {
+                const { limit, offset, sort = 'createdAt', order = 'desc', status, userId, paymentType, search, dateFrom, dateTo } = req.query;
+                
+                let orders = await getAllOrders();
+                
+                console.log(`[Admin Orders API] Loaded ${orders.length} orders from file`);
             
             // Фильтрация по статусу
             if (status) {
@@ -168,13 +191,24 @@ module.exports = async function handler(req, res) {
                 orders = orders.slice(offsetNum, offsetNum + limitNum);
             }
             
-            return res.status(200).json({
-                success: true,
-                orders,
-                total,
-                limit: limitNum,
-                offset: offsetNum
-            });
+                console.log(`[Admin Orders API] Returning ${orders.length} orders (filtered from ${total} total)`);
+                
+                return res.status(200).json({
+                    success: true,
+                    orders,
+                    total,
+                    limit: limitNum,
+                    offset: offsetNum
+                });
+            } catch (error) {
+                console.error('[Admin Orders API] Error in GET /api/admin/orders:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message || 'Failed to load orders',
+                    orders: [],
+                    total: 0
+                });
+            }
         }
         
         // GET /api/admin/orders/:id - детали заказа

@@ -35,17 +35,30 @@ const Orders = {
             }
             
             const response = await Auth.authenticatedFetch(url);
-            if (!response) return;
+            if (!response) {
+                console.error('No response from server - authentication may have failed');
+                return;
+            }
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Server error:', response.status, errorText);
+                this.showError(`Ошибка сервера: ${response.status}`);
+                return;
+            }
             
             const data = await response.json();
             
             if (data.success) {
                 this.renderOrders(data.orders || []);
                 this.renderPagination(data.total || 0, page);
+            } else {
+                console.error('API returned error:', data);
+                this.showError(data.error || 'Ошибка загрузки заказов');
             }
         } catch (error) {
             console.error('Error loading orders:', error);
-            this.showError('Ошибка загрузки заказов');
+            this.showError('Ошибка загрузки заказов: ' + error.message);
         }
     },
     
