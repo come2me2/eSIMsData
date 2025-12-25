@@ -123,19 +123,22 @@ module.exports = async function handler(req, res) {
         const urlParts = cleanPath.split('/').filter(Boolean);
         console.log(`[Admin Orders API] URL parts:`, urlParts);
         
+        // Определяем orderId - только если есть хотя бы один элемент пути
+        // Пустой путь или путь "/" означает список всех заказов
         const orderId = urlParts.length > 0 ? urlParts[urlParts.length - 1] : null;
         const isStatusUpdate = urlParts.length > 1 && urlParts[urlParts.length - 2] === 'status';
         const isResend = urlParts.length > 1 && urlParts[urlParts.length - 1] === 'resend';
         
-        console.log(`[Admin Orders API] orderId: ${orderId}, isStatusUpdate: ${isStatusUpdate}, isResend: ${isResend}`);
+        console.log(`[Admin Orders API] orderId: ${orderId}, isStatusUpdate: ${isStatusUpdate}, isResend: ${isResend}, urlParts.length: ${urlParts.length}`);
         
-        // GET /api/admin/orders - список всех заказов
-        if (req.method === 'GET' && (!orderId || orderId === '')) {
+        // GET /api/admin/orders - список всех заказов (путь пустой или только "/")
+        // Проверяем, что путь действительно пустой (нет orderId)
+        if (req.method === 'GET' && (!orderId || orderId === '' || urlParts.length === 0)) {
             try {
                 const { limit, offset, sort = 'createdAt', order = 'desc', status, userId, paymentType, search, dateFrom, dateTo } = req.query;
                 
                 console.log(`[Admin Orders API] Loading orders from: ${ORDERS_FILE}`);
-                let orders = await getAllOrders();
+            let orders = await getAllOrders();
                 
                 console.log(`[Admin Orders API] Loaded ${orders.length} orders from file`);
             
@@ -207,13 +210,13 @@ module.exports = async function handler(req, res) {
             }
             
                 console.log(`[Admin Orders API] Returning ${orders.length} orders (filtered from ${total} total)`);
-                
-                return res.status(200).json({
-                    success: true,
-                    orders,
-                    total,
-                    limit: limitNum,
-                    offset: offsetNum
+            
+            return res.status(200).json({
+                success: true,
+                orders,
+                total,
+                limit: limitNum,
+                offset: offsetNum
                 });
             } catch (error) {
                 console.error('[Admin Orders API] Error in GET /api/admin/orders:', error);
@@ -392,9 +395,9 @@ module.exports = async function handler(req, res) {
                         error: textData.description || 'Failed to send message to Telegram'
                     });
                 }
-                
-                return res.status(200).json({
-                    success: true,
+            
+            return res.status(200).json({
+                success: true,
                     message: 'eSIM data sent to user'
                 });
                 
