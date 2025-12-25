@@ -29,6 +29,99 @@ try {
 // Загружаем модуль кэширования
 const cache = require('../_lib/cache');
 
+// Кэш настроек наценок
+let markupSettingsCache = null;
+let markupSettingsCacheTime = 0;
+const MARKUP_CACHE_TTL = 60000; // 1 минута
+
+// Загрузить настройки наценок (с кэшированием)
+function loadMarkupSettings() {
+    const now = Date.now();
+    if (markupSettingsCache && (now - markupSettingsCacheTime) < MARKUP_CACHE_TTL) {
+        return markupSettingsCache;
+    }
+    
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const SETTINGS_FILE = path.join(__dirname, '..', '..', 'data', 'admin-settings.json');
+        
+        let settings;
+        try {
+            const data = fs.readFileSync(SETTINGS_FILE, 'utf8');
+            settings = JSON.parse(data);
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                // Настройки по умолчанию
+                settings = {
+                    markup: {
+                        enabled: true,
+                        base: 1.29,
+                        defaultMultiplier: 1.29,
+                        countryMarkups: {}
+                    }
+                };
+            } else {
+                console.error('Error loading settings for markup:', error);
+                settings = {
+                    markup: {
+                        enabled: false,
+                        base: 1.0,
+                        defaultMultiplier: 1.0,
+                        countryMarkups: {}
+                    }
+                };
+            }
+        }
+        
+        markupSettingsCache = settings;
+        markupSettingsCacheTime = now;
+        return settings;
+    } catch (error) {
+        console.error('Error loading markup settings:', error);
+        return {
+            markup: {
+                enabled: false,
+                base: 1.0,
+                defaultMultiplier: 1.0,
+                countryMarkups: {}
+            }
+        };
+    }
+}
+
+// Функция для применения наценки к цене (синхронная)
+function applyMarkup(price, countryCode = null) {
+    try {
+        const settings = loadMarkupSettings();
+        const markup = settings.markup || {};
+        
+        // Если наценка отключена, возвращаем цену без изменений
+        if (!markup.enabled) {
+            return price;
+        }
+        
+        // Получаем базовую наценку
+        const baseMarkup = markup.base || markup.defaultMultiplier || 1.0;
+        
+        // Проверяем наценку по стране
+        let countryMarkup = 1.0;
+        if (countryCode && markup.countryMarkups && markup.countryMarkups[countryCode]) {
+            // Наценка по стране в процентах, конвертируем в множитель
+            const countryPercent = markup.countryMarkups[countryCode];
+            countryMarkup = 1 + (countryPercent / 100);
+        }
+        
+        // Применяем наценки: цена * базовая наценка * наценка по стране
+        const finalPrice = price * baseMarkup * countryMarkup;
+        
+        return Math.round(finalPrice * 100) / 100; // Округляем до 2 знаков после запятой
+    } catch (error) {
+        console.error('Error applying markup:', error);
+        return price; // Возвращаем цену без изменений при ошибке
+    }
+}
+
 /**
  * Группировка bundles в планы
  * @param {Array} bundles - массив bundles
@@ -137,6 +230,11 @@ function groupBundlesIntoPlans(bundles, isLocal = false) {
             });
             return;
         }
+        
+        // Применяем базовую наценку к цене
+        // Получаем код страны из bundle (может быть в разных полях)
+        const countryCode = bundle.countryCode || bundle.country || bundle.country_code || null;
+        priceValue = applyMarkup(priceValue, countryCode);
         
         const priceFormatted = currency === 'USD' 
             ? `$ ${priceValue.toFixed(2)}`

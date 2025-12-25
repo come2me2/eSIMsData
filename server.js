@@ -103,6 +103,8 @@ const apiRoutes = {
     '/api/telegram/stars/create-invoice': require('./api/telegram/stars/create-invoice'),
     '/api/telegram/stars/webhook': require('./api/telegram/stars/webhook'),
     '/api/orders': require('./api/orders'),
+    // Public Settings API (for markup)
+    '/api/settings/public': require('./api/settings/public'),
     // Admin Panel API
     '/api/admin/auth/login': require('./api/admin/auth'),
     '/api/admin/stats': require('./api/admin/stats'),

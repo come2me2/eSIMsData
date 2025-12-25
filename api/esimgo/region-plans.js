@@ -554,6 +554,11 @@ function groupBundlesIntoPlans(bundles, isUnlimited = false) {
             priceValue = priceValue / 100;
         }
         
+        // Применяем базовую наценку к цене
+        // Получаем код страны из bundle
+        const countryCode = bundle.countryCode || bundle.country || bundle.country_code || null;
+        priceValue = applyMarkup(priceValue, countryCode);
+        
         // Получаем валюту из bundle
         if (bundle.currency) {
             currency = bundle.currency;
