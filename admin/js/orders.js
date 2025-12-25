@@ -55,10 +55,14 @@ const Orders = {
             } else {
                 console.error('API returned error:', data);
                 this.showError(data.error || 'Ошибка загрузки заказов');
+                // Показываем пустую таблицу при ошибке
+                this.renderOrders([]);
             }
         } catch (error) {
             console.error('Error loading orders:', error);
             this.showError('Ошибка загрузки заказов: ' + error.message);
+            // Показываем пустую таблицу при ошибке
+            this.renderOrders([]);
         }
     },
     

@@ -111,10 +111,16 @@ module.exports = async function handler(req, res) {
     }
     
     try {
-        console.log(`[Admin Orders API] Request: ${req.method} ${req.path}`);
+        // Используем req.url или req.originalUrl для получения полного пути
+        const requestPath = req.originalUrl || req.url || req.path;
+        console.log(`[Admin Orders API] Request: ${req.method} ${requestPath}`);
         console.log(`[Admin Orders API] Query params:`, req.query);
         
-        const urlParts = req.path.split('/').filter(Boolean);
+        // Парсим путь - убираем query параметры
+        const pathWithoutQuery = requestPath.split('?')[0];
+        const urlParts = pathWithoutQuery.split('/').filter(Boolean);
+        console.log(`[Admin Orders API] URL parts:`, urlParts);
+        
         const orderId = urlParts[urlParts.length - 1];
         const isStatusUpdate = urlParts[urlParts.length - 2] === 'status';
         
