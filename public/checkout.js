@@ -375,6 +375,7 @@ function setupPaymentMethodUI() {
         localStorage.setItem('checkout_payment_method', selectedPaymentMethod);
         updateSubtitle();
         syncSelected();
+        updateTotalPrice(); // Обновляем цену при изменении способа оплаты
         if (tg) tg.HapticFeedback.impactOccurred('light');
         close();
     });
@@ -663,6 +664,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Можно показать предупреждение или перенаправить
     }
     
+    // Загружаем настройки наценок
+    await loadPublicSettings();
+    
     // Загружаем реальные планы из API
     console.log('🔵 DOMContentLoaded - orderData:', orderData);
     const countryCode = orderData?.code || null;
@@ -784,10 +788,16 @@ function setupOrderDetails() {
         // Store original price (используем реальную цену из API или fallback)
         originalPrice = selectedPlan.price || '$ 9.99';
         
+        // Извлекаем числовое значение цены (БЕЗ наценки способа оплаты)
+        // Цена из API уже содержит базовую наценку, но не содержит наценку способа оплаты
+        const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
+        originalPriceValue = priceMatch ? parseFloat(priceMatch[1]) : 0;
+        
         console.log('Setup order details with plan:', {
             planId: orderData.planId,
             selectedPlan: selectedPlan,
-            price: originalPrice
+            price: originalPrice,
+            priceValue: originalPriceValue
         });
     } else {
         // Fallback если план не найден
@@ -826,6 +836,11 @@ function updateOrderDetailsWithRealPlans() {
         
         // Обновляем цену
         originalPrice = selectedPlan.price || '$ 9.99';
+        
+        // Извлекаем числовое значение цены
+        const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
+        originalPriceValue = priceMatch ? parseFloat(priceMatch[1]) : 0;
+        
         updateTotalPrice();
         
         console.log('Order details updated with real plan:', {
@@ -881,22 +896,58 @@ function updateStarsPriceDisplay() {
 }
 
 // Update total price display with discount if applicable
+async function loadPublicSettings() {
+    if (publicSettings) return publicSettings;
+    
+    try {
+        const response = await fetch('/api/settings/public');
+        const data = await response.json();
+        if (data.success && data.settings) {
+            publicSettings = data.settings;
+            console.log('✅ Public settings loaded:', publicSettings);
+        }
+    } catch (error) {
+        console.error('Error loading public settings:', error);
+    }
+    return publicSettings;
+}
+
 function updateTotalPrice() {
     const totalPriceElement = document.getElementById('checkoutTotalPrice');
     
-    if (isPromoApplied && discountPercent > 0) {
-        // Extract numeric value from price string (e.g., "$ 9.99" -> 9.99)
+    // Используем базовую цену (БЕЗ наценки способа оплаты)
+    let basePrice = originalPriceValue || 0;
+    
+    // Если базовой цены нет, пытаемся извлечь из строки
+    if (basePrice === 0) {
         const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
         if (priceMatch) {
-            const originalPriceValue = parseFloat(priceMatch[1]);
-            const discountedPrice = originalPriceValue * (1 - discountPercent / 100);
-            totalPriceElement.textContent = `$ ${discountedPrice.toFixed(2)}`;
-        } else {
-            totalPriceElement.textContent = originalPrice;
+            basePrice = parseFloat(priceMatch[1]);
         }
-    } else {
-        totalPriceElement.textContent = originalPrice;
     }
+    
+    // Применяем наценку способа оплаты, если выбрана
+    if (publicSettings && selectedPaymentMethod && basePrice > 0) {
+        const paymentMethodKey = selectedPaymentMethod === 'stars' ? 'telegramStars' :
+                                 selectedPaymentMethod === 'cryptomus' ? 'crypto' :
+                                 selectedPaymentMethod === 'stripe' ? 'bankCard' : null;
+        
+        if (paymentMethodKey && publicSettings.paymentMethods[paymentMethodKey]) {
+            const paymentMethod = publicSettings.paymentMethods[paymentMethodKey];
+            if (paymentMethod.enabled && paymentMethod.markupMultiplier) {
+                basePrice = basePrice * paymentMethod.markupMultiplier;
+                console.log(`[Checkout] Applied payment method markup: ${paymentMethodKey} = ${paymentMethod.markupMultiplier}, price: ${basePrice}`);
+            }
+        }
+    }
+    
+    // Применяем промокод, если активен
+    if (isPromoApplied && discountPercent > 0) {
+        basePrice = basePrice * (1 - discountPercent / 100);
+    }
+    
+    // Обновляем отображение
+    totalPriceElement.textContent = `$ ${basePrice.toFixed(2)}`;
 
     // Обновляем отображение Stars после пересчёта цены
     updateStarsPriceDisplay();
