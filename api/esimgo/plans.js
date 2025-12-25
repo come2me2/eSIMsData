@@ -1445,20 +1445,22 @@ module.exports = async function handler(req, res) {
             source: 'api'
         };
         
-        // Применяем наценку к данным ПЕРЕД возвратом
-        // В кэш сохраняем данные БЕЗ наценки, чтобы наценка применялась только один раз
-        const dataWithMarkup = applyMarkupToPlans(responseData, countryCode);
-        
         // Сохраняем в кэш только если есть данные (БЕЗ наценки)
+        // ВАЖНО: Сохраняем глубокую копию данных БЕЗ наценки, чтобы наценка не применялась повторно
         if (bundles.length > 0 || plans.standard.length > 0 || plans.unlimited.length > 0) {
+            // Создаем глубокую копию данных для кэша (БЕЗ наценки)
+            const dataForCache = JSON.parse(JSON.stringify(responseData));
             cache.set(cacheKey, {
-                data: responseData, // Сохраняем БЕЗ наценки
+                data: dataForCache, // Сохраняем БЕЗ наценки
                 meta: responseMeta
             });
             console.log('💾 Cached plans data for:', cacheKey, '(without markup)');
         } else {
             console.warn('⚠️ Not caching empty plans data for:', cacheKey);
         }
+        
+        // Применяем наценку к данным ПЕРЕД возвратом (после сохранения в кэш)
+        const dataWithMarkup = applyMarkupToPlans(responseData, countryCode);
         
         // Для Global логируем финальный ответ перед отправкой
         if (isGlobal) {

@@ -1191,16 +1191,17 @@ module.exports = async function handler(req, res) {
             countriesCount: countries.length
         };
         
-        // Применяем наценку к данным ПЕРЕД возвратом
-        // В кэш сохраняем данные БЕЗ наценки, чтобы наценка применялась только один раз
-        const dataWithMarkup = applyMarkupToPlans(responseData, null);
-        
         // Сохраняем в кэш перед отправкой ответа (БЕЗ наценки)
+        // ВАЖНО: Сохраняем глубокую копию данных БЕЗ наценки, чтобы наценка не применялась повторно
+        const dataForCache = JSON.parse(JSON.stringify(responseData));
         cache.set(cacheKey, {
-            data: responseData, // Сохраняем БЕЗ наценки
+            data: dataForCache, // Сохраняем БЕЗ наценки
             meta: responseMeta
         });
         console.log('💾 Cached region plans data for:', region, '(without markup)');
+        
+        // Применяем наценку к данным ПЕРЕД возвратом (после сохранения в кэш)
+        const dataWithMarkup = applyMarkupToPlans(responseData, null);
         
         // Возвращаем данные С наценкой
         return res.status(200).json({
