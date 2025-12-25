@@ -64,7 +64,7 @@ async function saveAllOrders(ordersArray) {
 module.exports = async function handler(req, res) {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
     if (req.method === 'OPTIONS') {
@@ -97,7 +97,7 @@ module.exports = async function handler(req, res) {
         
         // GET /api/admin/orders - список всех заказов
         if (req.method === 'GET' && !orderId) {
-            const { limit, offset, sort = 'createdAt', order = 'desc', status, userId } = req.query;
+            const { limit, offset, sort = 'createdAt', order = 'desc', status, userId, paymentType, search, dateFrom, dateTo } = req.query;
             
             let orders = await getAllOrders();
             
@@ -109,6 +109,42 @@ module.exports = async function handler(req, res) {
             // Фильтрация по пользователю
             if (userId) {
                 orders = orders.filter(o => o.telegram_user_id === userId);
+            }
+            
+            // Фильтрация по способу оплаты
+            if (paymentType) {
+                orders = orders.filter(o => {
+                    const orderPaymentType = o.payment_method || o.paymentType;
+                    return orderPaymentType === paymentType;
+                });
+            }
+            
+            // Поиск по ID заказа или Telegram ID
+            if (search) {
+                const searchLower = search.toLowerCase();
+                orders = orders.filter(o => {
+                    const orderId = (o.orderReference || o.id || '').toString().toLowerCase();
+                    const userId = (o.telegram_user_id || '').toString().toLowerCase();
+                    const username = (o.telegram_username || '').toLowerCase();
+                    return orderId.includes(searchLower) || userId.includes(searchLower) || username.includes(searchLower);
+                });
+            }
+            
+            // Фильтрация по дате
+            if (dateFrom) {
+                const fromDate = new Date(dateFrom);
+                orders = orders.filter(o => {
+                    const orderDate = new Date(o.createdAt || o.date || 0);
+                    return orderDate >= fromDate;
+                });
+            }
+            if (dateTo) {
+                const toDate = new Date(dateTo);
+                toDate.setHours(23, 59, 59, 999); // Конец дня
+                orders = orders.filter(o => {
+                    const orderDate = new Date(o.createdAt || o.date || 0);
+                    return orderDate <= toDate;
+                });
             }
             
             // Сортировка
@@ -201,6 +237,118 @@ module.exports = async function handler(req, res) {
                 success: true,
                 order: allOrders[orderIndex]
             });
+        }
+        
+        // POST /api/admin/orders/:id/resend - повторная отправка eSIM в Telegram
+        if (req.method === 'POST' && urlParts[urlParts.length - 1] === 'resend' && urlParts[urlParts.length - 2] !== 'resend') {
+            const orderIdParam = urlParts[urlParts.length - 2];
+            
+            const allOrders = await getAllOrders();
+            const order = allOrders.find(o => 
+                o.orderReference === orderIdParam || 
+                o.id === orderIdParam ||
+                o.telegram_user_id + '_' + o.orderReference === orderIdParam ||
+                (o.telegram_user_id && o.orderReference && `${o.telegram_user_id}_${o.orderReference}` === orderIdParam)
+            );
+            
+            if (!order) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Order not found'
+                });
+            }
+            
+            if (!order.telegram_user_id) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Telegram user ID not found in order'
+                });
+            }
+            
+            // Получаем eSIM данные
+            const iccid = order.iccid || order.assignments?.iccid || order.esimData?.iccid;
+            const matchingId = order.matchingId || order.assignments?.matchingId || order.esimData?.matchingId;
+            const rspUrl = order.rspUrl || order.smdpAddress || order.assignments?.smdpAddress || order.esimData?.smdpAddress;
+            const qrCode = order.qrCode || order.assignments?.qrCode || order.esimData?.qrCode || order.qr_code;
+            
+            if (!iccid && !matchingId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'eSIM data not found in order'
+                });
+            }
+            
+            // Отправляем сообщение в Telegram
+            try {
+                const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
+                if (!botToken) {
+                    return res.status(500).json({
+                        success: false,
+                        error: 'TELEGRAM_BOT_TOKEN not configured'
+                    });
+                }
+                
+                // Формируем сообщение с данными eSIM
+                let message = `📱 Ваши данные eSIM:\n\n`;
+                if (iccid) message += `ICCID: \`${iccid}\`\n`;
+                if (matchingId) message += `Matching ID: \`${matchingId}\`\n`;
+                if (rspUrl) message += `RSP URL: \`${rspUrl}\`\n`;
+                
+                if (qrCode) {
+                    message += `\nQR код:`;
+                }
+                
+                // Отправляем текстовое сообщение
+                const textResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: order.telegram_user_id,
+                        text: message,
+                        parse_mode: 'Markdown'
+                    })
+                });
+                
+                const textData = await textResponse.json();
+                
+                // Если есть QR код, отправляем фото
+                if (qrCode && textData.ok) {
+                    const photoResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: order.telegram_user_id,
+                            photo: qrCode,
+                            caption: 'QR код для активации eSIM'
+                        })
+                    });
+                    
+                    const photoData = await photoResponse.json();
+                    
+                    if (!photoData.ok) {
+                        console.warn('Failed to send QR code photo:', photoData);
+                    }
+                }
+                
+                if (!textData.ok) {
+                    return res.status(500).json({
+                        success: false,
+                        error: textData.description || 'Failed to send message to Telegram'
+                    });
+                }
+                
+                return res.status(200).json({
+                    success: true,
+                    message: 'eSIM data sent to user'
+                });
+                
+            } catch (error) {
+                console.error('Error sending eSIM to Telegram:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message || 'Failed to send eSIM data'
+                });
+            }
         }
         
         return res.status(405).json({

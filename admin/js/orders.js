@@ -6,14 +6,32 @@ const Orders = {
     currentPage: 1,
     pageSize: 20,
     currentStatus: '',
+    currentPaymentType: '',
+    currentSearch: '',
+    currentDateFrom: '',
+    currentDateTo: '',
     
     // Load orders
-    async loadOrders(page = 1, status = '') {
+    async loadOrders(page = 1) {
         try {
             const offset = (page - 1) * this.pageSize;
             let url = `/api/admin/orders?limit=${this.pageSize}&offset=${offset}&sort=createdAt&order=desc`;
-            if (status) {
-                url += `&status=${status}`;
+            
+            // Применяем все фильтры
+            if (this.currentStatus) {
+                url += `&status=${this.currentStatus}`;
+            }
+            if (this.currentPaymentType) {
+                url += `&paymentType=${this.currentPaymentType}`;
+            }
+            if (this.currentSearch) {
+                url += `&search=${encodeURIComponent(this.currentSearch)}`;
+            }
+            if (this.currentDateFrom) {
+                url += `&dateFrom=${this.currentDateFrom}`;
+            }
+            if (this.currentDateTo) {
+                url += `&dateTo=${this.currentDateTo}`;
             }
             
             const response = await Auth.authenticatedFetch(url);
@@ -37,7 +55,7 @@ const Orders = {
         if (!tbody) return;
         
         if (orders.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">Нет заказов</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-8 text-center text-gray-500">Нет заказов</td></tr>';
             return;
         }
         
@@ -54,13 +72,17 @@ const Orders = {
             const orderId = order.orderReference || order.id || 'N/A';
             const userId = order.telegram_user_id || 'N/A';
             const username = order.telegram_username ? `@${order.telegram_username}` : userId;
+            const paymentType = this.getPaymentTypeText(order.payment_method || order.paymentType);
+            const planName = order.plan_name || order.bundle_name || order.plan_id || 'N/A';
             
             return `
                 <tr class="table-row hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#${orderId}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${username}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${order.country_name || order.country_code || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${planName}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">$${order.price || '0.00'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${paymentType}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="status-badge ${statusClass}">${this.getStatusText(order.status)}</span>
                     </td>
@@ -143,6 +165,10 @@ const Orders = {
                                 <span class="ml-2 font-semibold text-lg">$${order.price || '0.00'}</span>
                             </div>
                             <div>
+                                <span class="text-sm text-gray-600">Способ оплаты:</span>
+                                <span class="ml-2 font-medium">${this.getPaymentTypeText(order.payment_method || order.paymentType)}</span>
+                            </div>
+                            <div>
                                 <span class="text-sm text-gray-600">Дата создания:</span>
                                 <span class="ml-2 font-medium">${date}</span>
                             </div>
@@ -156,12 +182,10 @@ const Orders = {
                             <div class="flex items-center justify-between mb-3">
                                 <span class="status-badge ${this.getStatusClass(order.status)}">${this.getStatusText(order.status)}</span>
                                 <select id="statusSelect" class="form-input w-auto">
-                                    <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Ожидает</option>
-                                    <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>Обработка</option>
-                                    <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Завершен</option>
-                                    <option value="active" ${order.status === 'active' ? 'selected' : ''}>Активен</option>
-                                    <option value="failed" ${order.status === 'failed' ? 'selected' : ''}>Ошибка</option>
-                                    <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Отменен</option>
+                                    <option value="on_hold" ${order.status === 'on_hold' ? 'selected' : ''}>On Hold</option>
+                                    <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                    <option value="canceled" ${order.status === 'canceled' ? 'selected' : ''}>Canceled</option>
+                                    <option value="failed" ${order.status === 'failed' ? 'selected' : ''}>Failed</option>
                                 </select>
                             </div>
                             <button onclick="Orders.updateStatus('${order.orderReference || order.id}', '${order.telegram_user_id}')" class="btn btn-primary w-full">
@@ -225,6 +249,19 @@ const Orders = {
                             ` : '<div class="text-sm text-gray-500">QR код не доступен</div>'}
                         </div>
                     </div>
+                    
+                    <!-- Actions -->
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-2">Действия</h4>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <button onclick="Orders.resendESIM('${order.orderReference || order.id}', '${order.telegram_user_id}')" class="btn btn-primary w-full mb-2">
+                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                                Отправить eSIM в Telegram
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -251,7 +288,7 @@ const Orders = {
             
             if (data.success) {
                 this.showSuccess('Статус заказа обновлен');
-                this.loadOrders(this.currentPage, this.currentStatus);
+                this.loadOrders(this.currentPage);
                 document.getElementById('orderModal').classList.add('hidden');
             } else {
                 this.showError(data.error || 'Ошибка обновления статуса');
@@ -287,19 +324,19 @@ const Orders = {
         html += '<div class="flex gap-2">';
         
         if (currentPage > 1) {
-            html += `<button onclick="Orders.loadOrders(${currentPage - 1}, '${this.currentStatus}')" class="px-3 py-1 border rounded hover:bg-gray-50">Назад</button>`;
+            html += `<button onclick="Orders.loadOrders(${currentPage - 1})" class="px-3 py-1 border rounded hover:bg-gray-50">Назад</button>`;
         }
         
         for (let i = 1; i <= totalPages; i++) {
             if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
-                html += `<button onclick="Orders.loadOrders(${i}, '${this.currentStatus}')" class="px-3 py-1 border rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'}">${i}</button>`;
+                html += `<button onclick="Orders.loadOrders(${i})" class="px-3 py-1 border rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'hover:bg-gray-50'}">${i}</button>`;
             } else if (i === currentPage - 3 || i === currentPage + 3) {
                 html += '<span class="px-3 py-1">...</span>';
             }
         }
         
         if (currentPage < totalPages) {
-            html += `<button onclick="Orders.loadOrders(${currentPage + 1}, '${this.currentStatus}')" class="px-3 py-1 border rounded hover:bg-gray-50">Вперед</button>`;
+            html += `<button onclick="Orders.loadOrders(${currentPage + 1})" class="px-3 py-1 border rounded hover:bg-gray-50">Вперед</button>`;
         }
         
         html += '</div>';
@@ -309,10 +346,13 @@ const Orders = {
     // Get status CSS class
     getStatusClass(status) {
         const statusMap = {
+            'on_hold': 'status-pending',
             'completed': 'status-completed',
-            'pending': 'status-pending',
+            'canceled': 'status-failed',
             'failed': 'status-failed',
-            'processing': 'status-processing',
+            // Старые статусы для обратной совместимости
+            'pending': 'status-pending',
+            'processing': 'status-pending',
             'active': 'status-completed',
             'cancelled': 'status-failed'
         };
@@ -322,14 +362,53 @@ const Orders = {
     // Get status text
     getStatusText(status) {
         const statusMap = {
-            'completed': 'Завершен',
-            'pending': 'Ожидает',
-            'failed': 'Ошибка',
-            'processing': 'Обработка',
-            'active': 'Активен',
-            'cancelled': 'Отменен'
+            'on_hold': 'On Hold',
+            'completed': 'Completed',
+            'canceled': 'Canceled',
+            'failed': 'Failed',
+            // Старые статусы для обратной совместимости
+            'pending': 'On Hold',
+            'processing': 'On Hold',
+            'active': 'Completed',
+            'cancelled': 'Canceled'
         };
         return statusMap[status] || status;
+    },
+    
+    // Get payment type text
+    getPaymentTypeText(paymentType) {
+        if (!paymentType) return 'Не указан';
+        const paymentMap = {
+            'telegram_stars': 'Telegram Stars',
+            'crypto': 'Криптовалюты',
+            'bank_card': 'Банковская карта'
+        };
+        return paymentMap[paymentType] || paymentType;
+    },
+    
+    // Resend eSIM to Telegram
+    async resendESIM(orderId, userId) {
+        if (!confirm('Отправить данные eSIM пользователю в Telegram?')) return;
+        
+        try {
+            const fullOrderId = userId && orderId ? `${userId}_${orderId}` : orderId;
+            const response = await Auth.authenticatedFetch(`/api/admin/orders/${fullOrderId}/resend`, {
+                method: 'POST'
+            });
+            
+            if (!response) return;
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showSuccess('eSIM отправлен пользователю в Telegram');
+            } else {
+                this.showError(data.error || 'Ошибка отправки eSIM');
+            }
+        } catch (error) {
+            console.error('Error resending eSIM:', error);
+            this.showError('Ошибка отправки eSIM');
+        }
     },
     
     // Show error message
@@ -372,13 +451,76 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         Orders.loadOrders();
         
+        // Search input
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    Orders.currentSearch = e.target.value;
+                    Orders.currentPage = 1;
+                    Orders.loadOrders(1);
+                }, 500);
+            });
+        }
+        
         // Status filter
         const statusFilter = document.getElementById('statusFilter');
         if (statusFilter) {
             statusFilter.addEventListener('change', (e) => {
                 Orders.currentStatus = e.target.value;
                 Orders.currentPage = 1;
-                Orders.loadOrders(1, e.target.value);
+                Orders.loadOrders(1);
+            });
+        }
+        
+        // Payment type filter
+        const paymentFilter = document.getElementById('paymentFilter');
+        if (paymentFilter) {
+            paymentFilter.addEventListener('change', (e) => {
+                Orders.currentPaymentType = e.target.value;
+                Orders.currentPage = 1;
+                Orders.loadOrders(1);
+            });
+        }
+        
+        // Date filters
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
+        if (dateFrom) {
+            dateFrom.addEventListener('change', (e) => {
+                Orders.currentDateFrom = e.target.value;
+                Orders.currentPage = 1;
+                Orders.loadOrders(1);
+            });
+        }
+        if (dateTo) {
+            dateTo.addEventListener('change', (e) => {
+                Orders.currentDateTo = e.target.value;
+                Orders.currentPage = 1;
+                Orders.loadOrders(1);
+            });
+        }
+        
+        // Clear filters
+        const clearFilters = document.getElementById('clearFilters');
+        if (clearFilters) {
+            clearFilters.addEventListener('click', () => {
+                Orders.currentStatus = '';
+                Orders.currentPaymentType = '';
+                Orders.currentSearch = '';
+                Orders.currentDateFrom = '';
+                Orders.currentDateTo = '';
+                Orders.currentPage = 1;
+                
+                if (statusFilter) statusFilter.value = '';
+                if (paymentFilter) paymentFilter.value = '';
+                if (searchInput) searchInput.value = '';
+                if (dateFrom) dateFrom.value = '';
+                if (dateTo) dateTo.value = '';
+                
+                Orders.loadOrders(1);
             });
         }
         
@@ -386,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const refreshBtn = document.getElementById('refreshBtn');
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => {
-                Orders.loadOrders(Orders.currentPage, Orders.currentStatus);
+                Orders.loadOrders(Orders.currentPage);
             });
         }
         
