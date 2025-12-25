@@ -125,9 +125,12 @@ module.exports = async function handler(req, res) {
         
         const orderId = urlParts.length > 0 ? urlParts[urlParts.length - 1] : null;
         const isStatusUpdate = urlParts.length > 1 && urlParts[urlParts.length - 2] === 'status';
+        const isResend = urlParts.length > 1 && urlParts[urlParts.length - 1] === 'resend';
+        
+        console.log(`[Admin Orders API] orderId: ${orderId}, isStatusUpdate: ${isStatusUpdate}, isResend: ${isResend}`);
         
         // GET /api/admin/orders - список всех заказов
-        if (req.method === 'GET' && !orderId) {
+        if (req.method === 'GET' && (!orderId || orderId === '')) {
             try {
                 const { limit, offset, sort = 'createdAt', order = 'desc', status, userId, paymentType, search, dateFrom, dateTo } = req.query;
                 
@@ -286,8 +289,15 @@ module.exports = async function handler(req, res) {
         }
         
         // POST /api/admin/orders/:id/resend - повторная отправка eSIM в Telegram
-        if (req.method === 'POST' && urlParts[urlParts.length - 1] === 'resend' && urlParts[urlParts.length - 2] !== 'resend') {
-            const orderIdParam = urlParts[urlParts.length - 2];
+        if (req.method === 'POST' && isResend) {
+            const orderIdParam = urlParts.length > 1 ? urlParts[urlParts.length - 2] : null;
+            
+            if (!orderIdParam) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Order ID is required'
+                });
+            }
             
             const allOrders = await getAllOrders();
             const order = allOrders.find(o => 
