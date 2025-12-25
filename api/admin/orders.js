@@ -111,27 +111,31 @@ module.exports = async function handler(req, res) {
     }
     
     try {
-        // Используем req.path, который уже обработан в server.js (относительный путь)
-        const requestPath = req.path || '';
-        console.log(`[Admin Orders API] Request: ${req.method} ${requestPath}`);
-        console.log(`[Admin Orders API] Original URL: ${req.originalUrl}`);
+        // Используем req.originalUrl для определения относительного пути
+        // req.path может быть перезаписан Express, поэтому используем originalUrl
+        const originalUrl = req.originalUrl || req.url || '';
+        const urlWithoutQuery = originalUrl.split('?')[0];
+        
+        // Убираем префикс /api/admin/orders из пути
+        const relativePath = urlWithoutQuery.replace('/api/admin/orders', '') || '';
+        console.log(`[Admin Orders API] Request: ${req.method} ${originalUrl}`);
+        console.log(`[Admin Orders API] Relative path: "${relativePath}"`);
         console.log(`[Admin Orders API] Query params:`, req.query);
         
-        // Парсим путь - убираем query параметры и ведущий слеш
-        const pathWithoutQuery = requestPath.split('?')[0];
-        const cleanPath = pathWithoutQuery.startsWith('/') ? pathWithoutQuery.substring(1) : pathWithoutQuery;
+        // Парсим относительный путь - убираем ведущий слеш
+        const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
         const urlParts = cleanPath.split('/').filter(Boolean);
         console.log(`[Admin Orders API] URL parts:`, urlParts);
         
         // Определяем orderId - только если есть хотя бы один элемент пути
-        // Пустой путь или путь "/" означает список всех заказов
+        // Пустой путь означает список всех заказов
         const orderId = urlParts.length > 0 ? urlParts[urlParts.length - 1] : null;
         const isStatusUpdate = urlParts.length > 1 && urlParts[urlParts.length - 2] === 'status';
         const isResend = urlParts.length > 1 && urlParts[urlParts.length - 1] === 'resend';
         
         console.log(`[Admin Orders API] orderId: ${orderId}, isStatusUpdate: ${isStatusUpdate}, isResend: ${isResend}, urlParts.length: ${urlParts.length}`);
         
-        // GET /api/admin/orders - список всех заказов (путь пустой или только "/")
+        // GET /api/admin/orders - список всех заказов (путь пустой)
         // Проверяем, что путь действительно пустой (нет orderId)
         if (req.method === 'GET' && (!orderId || orderId === '' || urlParts.length === 0)) {
             try {
