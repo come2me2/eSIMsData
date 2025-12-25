@@ -152,8 +152,10 @@ async function loadPlansFromAPI(countryCode, regionName, orderType) {
 
 // Store original price and discount state
 let originalPrice = '';
+let originalPriceValue = 0; // Числовое значение базовой цены (БЕЗ наценки способа оплаты)
 let isPromoApplied = false;
 let discountPercent = 0;
+let publicSettings = null; // Настройки наценок
 
 // ===== Payment method (UI only for now) =====
 const PAYMENT_METHODS = {
