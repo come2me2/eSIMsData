@@ -98,6 +98,70 @@ function applyMarkup(price, countryCode = null) {
     }
 }
 
+// Функция для применения наценки к уже сгруппированным планам (для кэшированных данных)
+function applyMarkupToPlans(plansData, countryCode = null) {
+    try {
+        const settings = loadMarkupSettings();
+        const markup = settings.markup || {};
+        
+        if (!markup.enabled) {
+            return plansData;
+        }
+        
+        const baseMarkup = markup.base || markup.defaultMultiplier || 1.0;
+        let countryMarkup = 1.0;
+        if (countryCode && markup.countryMarkups && markup.countryMarkups[countryCode]) {
+            const countryPercent = markup.countryMarkups[countryCode];
+            countryMarkup = 1 + (countryPercent / 100);
+        }
+        
+        const totalMarkup = baseMarkup * countryMarkup;
+        
+        // Применяем наценку к стандартным планам
+        if (plansData.standard && Array.isArray(plansData.standard)) {
+            plansData.standard = plansData.standard.map(plan => {
+                if (plan.priceValue && typeof plan.priceValue === 'number') {
+                    const newPriceValue = Math.round(plan.priceValue * totalMarkup * 100) / 100;
+                    const currency = plan.currency || 'USD';
+                    const newPriceFormatted = currency === 'USD' 
+                        ? `$ ${newPriceValue.toFixed(2)}`
+                        : `${currency} ${newPriceValue.toFixed(2)}`;
+                    return {
+                        ...plan,
+                        priceValue: newPriceValue,
+                        price: newPriceFormatted
+                    };
+                }
+                return plan;
+            });
+        }
+        
+        // Применяем наценку к безлимитным планам
+        if (plansData.unlimited && Array.isArray(plansData.unlimited)) {
+            plansData.unlimited = plansData.unlimited.map(plan => {
+                if (plan.priceValue && typeof plan.priceValue === 'number') {
+                    const newPriceValue = Math.round(plan.priceValue * totalMarkup * 100) / 100;
+                    const currency = plan.currency || 'USD';
+                    const newPriceFormatted = currency === 'USD' 
+                        ? `$ ${newPriceValue.toFixed(2)}`
+                        : `${currency} ${newPriceValue.toFixed(2)}`;
+                    return {
+                        ...plan,
+                        priceValue: newPriceValue,
+                        price: newPriceFormatted
+                    };
+                }
+                return plan;
+            });
+        }
+        
+        return plansData;
+    } catch (error) {
+        console.error('Error applying markup to plans:', error);
+        return plansData;
+    }
+}
+
 /**
  * Дедупликация тарифов для Latin America
  * Выбирает тариф с минимальной ценой для каждой комбинации страны/данных/длительности
@@ -161,8 +225,8 @@ function deduplicateLatinAmerica(bundles) {
         
         // Для каждой страны создаем ключ и проверяем минимальную цену
         countryCodes.forEach(countryCode => {
-            // Применяем наценку для каждой страны отдельно
-            const countryPriceValue = applyMarkup(priceValue, countryCode);
+            // НЕ применяем наценку здесь - она будет применена при возврате данных
+            const countryPriceValue = priceValue;
             const dataAmount = bundle.dataAmount || 0;
             const duration = bundle.duration || 0;
             const key = `${countryCode}_${dataAmount}_${duration}`;
@@ -642,10 +706,8 @@ function groupBundlesIntoPlans(bundles, isUnlimited = false) {
             priceValue = priceValue / 100;
         }
         
-        // Применяем базовую наценку к цене
-        // Получаем код страны из bundle
-        const countryCode = bundle.countryCode || bundle.country || bundle.country_code || null;
-        priceValue = applyMarkup(priceValue, countryCode);
+        // НЕ применяем наценку здесь - она будет применена при возврате данных
+        // Это предотвращает двойное применение наценки (при создании и при возврате из кэша)
         
         // Получаем валюту из bundle
         if (bundle.currency) {
@@ -776,9 +838,11 @@ module.exports = async function handler(req, res) {
             );
             if (hasData) {
                 console.log('✅ Using cached region plans data for:', region);
+                // Применяем наценку к кэшированным данным
+                const dataWithMarkup = applyMarkupToPlans(cachedData.data, null);
                 return res.status(200).json({
                     success: true,
-                    data: cachedData.data,
+                    data: dataWithMarkup,
                     meta: {
                         ...cachedData.meta,
                         cached: true
@@ -1127,16 +1191,21 @@ module.exports = async function handler(req, res) {
             countriesCount: countries.length
         };
         
-        // Сохраняем в кэш перед отправкой ответа
+        // Применяем наценку к данным ПЕРЕД возвратом
+        // В кэш сохраняем данные БЕЗ наценки, чтобы наценка применялась только один раз
+        const dataWithMarkup = applyMarkupToPlans(responseData, null);
+        
+        // Сохраняем в кэш перед отправкой ответа (БЕЗ наценки)
         cache.set(cacheKey, {
-            data: responseData,
+            data: responseData, // Сохраняем БЕЗ наценки
             meta: responseMeta
         });
-        console.log('💾 Cached region plans data for:', region);
+        console.log('💾 Cached region plans data for:', region, '(without markup)');
         
+        // Возвращаем данные С наценкой
         return res.status(200).json({
             success: true,
-            data: responseData,
+            data: dataWithMarkup,
             meta: responseMeta
         });
         

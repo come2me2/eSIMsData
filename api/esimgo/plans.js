@@ -313,14 +313,8 @@ function groupBundlesIntoPlans(bundles, isLocal = false) {
             return;
         }
         
-        // Применяем базовую наценку к цене
-        // Получаем код страны из bundle (может быть в разных полях)
-        const countryCode = bundle.countryCode || bundle.country || bundle.country_code || null;
-        const oldPrice = priceValue;
-        priceValue = applyMarkup(priceValue, countryCode);
-        if (oldPrice !== priceValue && bundles.indexOf(bundle) < 3) {
-            console.log(`[Markup] Applied to bundle: ${oldPrice} -> ${priceValue} (${bundle.name}, country: ${countryCode})`);
-        }
+        // НЕ применяем наценку здесь - она будет применена при возврате данных
+        // Это предотвращает двойное применение наценки (при создании и при возврате из кэша)
         
         const priceFormatted = currency === 'USD' 
             ? `$ ${priceValue.toFixed(2)}`
@@ -1451,13 +1445,17 @@ module.exports = async function handler(req, res) {
             source: 'api'
         };
         
-        // Сохраняем в кэш только если есть данные
+        // Применяем наценку к данным ПЕРЕД возвратом
+        // В кэш сохраняем данные БЕЗ наценки, чтобы наценка применялась только один раз
+        const dataWithMarkup = applyMarkupToPlans(responseData, countryCode);
+        
+        // Сохраняем в кэш только если есть данные (БЕЗ наценки)
         if (bundles.length > 0 || plans.standard.length > 0 || plans.unlimited.length > 0) {
             cache.set(cacheKey, {
-                data: responseData,
+                data: responseData, // Сохраняем БЕЗ наценки
                 meta: responseMeta
             });
-            console.log('💾 Cached plans data for:', cacheKey);
+            console.log('💾 Cached plans data for:', cacheKey, '(without markup)');
         } else {
             console.warn('⚠️ Not caching empty plans data for:', cacheKey);
         }
@@ -1474,9 +1472,10 @@ module.exports = async function handler(req, res) {
             });
         }
         
+        // Возвращаем данные С наценкой
         return res.status(200).json({
             success: true,
-            data: responseData,
+            data: dataWithMarkup,
             meta: responseMeta
         });
         
