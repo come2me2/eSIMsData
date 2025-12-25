@@ -131,24 +131,29 @@ Object.entries(apiRoutes).forEach(([route, handler]) => {
         });
     } else {
         // Поддержка всех методов для каждого endpoint
-        app.all(route, async (req, res) => {
-            try {
-                // Для admin API передаем полный путь без префикса route
-                if (route.startsWith('/api/admin/')) {
-                    // Убираем префикс route из пути
-                    const relativePath = req.originalUrl.replace(route, '') || '/';
-                    req.path = relativePath;
+        // Регистрируем для каждого HTTP метода отдельно для более надежной работы
+        const methods = ['get', 'post', 'put', 'delete', 'patch', 'options'];
+        methods.forEach(method => {
+            app[method](route, async (req, res) => {
+                try {
+                    // Для admin API передаем полный путь без префикса route
+                    if (route.startsWith('/api/admin/')) {
+                        // Убираем префикс route из пути
+                        const relativePath = req.originalUrl.replace(route, '') || '/';
+                        req.path = relativePath;
+                        console.log(`[Route Handler] ${method.toUpperCase()} ${route} -> relative path: ${relativePath}`);
+                    }
+                    await handler(req, res);
+                } catch (error) {
+                    console.error(`Error in ${route}:`, error);
+                    if (!res.headersSent) {
+                        res.status(500).json({
+                            success: false,
+                            error: error.message || 'Internal server error'
+                        });
+                    }
                 }
-                await handler(req, res);
-            } catch (error) {
-                console.error(`Error in ${route}:`, error);
-                if (!res.headersSent) {
-                    res.status(500).json({
-                        success: false,
-                        error: error.message || 'Internal server error'
-                    });
-                }
-            }
+            });
         });
     }
     console.log(`✓ Registered route: ${route}`);
