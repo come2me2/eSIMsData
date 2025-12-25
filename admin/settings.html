@@ -79,6 +79,13 @@
                         <label class="text-sm font-medium text-gray-700 block mb-2">Наценка по умолчанию (%)</label>
                         <input type="number" id="defaultMarkup" class="form-input w-32" min="0" max="100" step="0.1">
                     </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 block mb-2">Наценка по странам</label>
+                        <div id="countryMarkupsList" class="space-y-2 mb-3">
+                            <!-- Динамически добавляемые элементы -->
+                        </div>
+                        <button onclick="Settings.addCountryMarkup()" class="btn btn-secondary text-sm">+ Добавить страну</button>
+                    </div>
                     <button onclick="Settings.saveMarkup()" class="btn btn-primary">Сохранить наценку</button>
                 </div>
             </div>
@@ -179,4 +186,5 @@
     <script src="js/settings.js"></script>
 </body>
 </html>
+
 

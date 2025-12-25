@@ -109,11 +109,11 @@ const Orders = {
             minute: '2-digit'
         });
         
-        // eSIM данные
-        const iccid = order.iccid || order.assignments?.iccid || 'Не указан';
-        const matchingId = order.matchingId || order.assignments?.matchingId || 'Не указан';
-        const rspUrl = order.rspUrl || order.smdpAddress || order.assignments?.smdpAddress || 'Не указан';
-        const qrCode = order.qrCode || order.assignments?.qrCode || null;
+        // eSIM данные - проверяем все возможные источники
+        const iccid = order.iccid || order.assignments?.iccid || order.esimData?.iccid || 'Не указан';
+        const matchingId = order.matchingId || order.assignments?.matchingId || order.esimData?.matchingId || 'Не указан';
+        const rspUrl = order.rspUrl || order.smdpAddress || order.assignments?.smdpAddress || order.esimData?.smdpAddress || 'Не указан';
+        const qrCode = order.qrCode || order.assignments?.qrCode || order.esimData?.qrCode || order.qr_code || null;
         
         container.innerHTML = `
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -212,8 +212,14 @@ const Orders = {
                             ${qrCode ? `
                             <div>
                                 <span class="text-sm text-gray-600">QR код:</span>
-                                <div class="mt-2">
-                                    <img src="${qrCode}" alt="QR Code" class="w-48 h-48 mx-auto border rounded-lg">
+                                <div class="mt-2 flex flex-col items-center gap-2">
+                                    <img src="${qrCode}" alt="QR Code" class="w-48 h-48 border rounded-lg object-contain bg-white">
+                                    <button onclick="Orders.downloadQR('${qrCode}', '${order.orderReference || order.id || 'order'}')" class="btn btn-secondary text-sm">
+                                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                        </svg>
+                                        Скачать QR
+                                    </button>
                                 </div>
                             </div>
                             ` : '<div class="text-sm text-gray-500">QR код не доступен</div>'}
@@ -336,6 +342,22 @@ const Orders = {
     showSuccess(message) {
         // Simple alert for now, can be improved with toast notifications
         alert('Успешно: ' + message);
+    },
+    
+    // Download QR code
+    downloadQR(qrCodeUrl, orderId) {
+        try {
+            const link = document.createElement('a');
+            link.href = qrCodeUrl;
+            link.download = `qr-code-${orderId}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            this.showSuccess('QR код скачан');
+        } catch (error) {
+            console.error('Error downloading QR:', error);
+            this.showError('Ошибка скачивания QR кода');
+        }
     }
 };
 

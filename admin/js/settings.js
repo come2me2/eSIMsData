@@ -29,6 +29,7 @@ const Settings = {
         if (settings.markup) {
             document.getElementById('markupEnabled').checked = settings.markup.enabled || false;
             document.getElementById('defaultMarkup').value = settings.markup.defaultPercent || 20;
+            this.renderCountryMarkups(settings.markup.countryMarkups || {});
         }
         
         // Payment methods
@@ -80,17 +81,88 @@ const Settings = {
         }).join('');
     },
     
+    // Render country markups
+    renderCountryMarkups(countryMarkups) {
+        const container = document.getElementById('countryMarkupsList');
+        if (!container) return;
+        
+        container.innerHTML = Object.entries(countryMarkups).map(([country, percent]) => `
+            <div class="flex items-center gap-2 bg-gray-50 p-2 rounded">
+                <input type="text" value="${country}" class="form-input flex-1" placeholder="Код страны (US, GB, etc.)" readonly>
+                <input type="number" value="${percent}" class="form-input w-24" min="0" max="100" step="0.1" placeholder="%" data-country="${country}">
+                <button onclick="Settings.removeCountryMarkup('${country}')" class="text-red-600 hover:text-red-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        `).join('');
+    },
+    
+    // Add country markup
+    addCountryMarkup() {
+        const container = document.getElementById('countryMarkupsList');
+        if (!container) return;
+        
+        const countryCode = prompt('Введите код страны (например: US, GB, DE):');
+        if (!countryCode) return;
+        
+        const percent = prompt('Введите наценку в процентах:');
+        if (!percent || isNaN(percent)) return;
+        
+        const markup = parseFloat(percent);
+        if (isNaN(markup) || markup < 0 || markup > 100) {
+            this.showError('Неверное значение наценки');
+            return;
+        }
+        
+        // Добавляем новый элемент
+        const div = document.createElement('div');
+        div.className = 'flex items-center gap-2 bg-gray-50 p-2 rounded';
+        div.innerHTML = `
+            <input type="text" value="${countryCode.toUpperCase()}" class="form-input flex-1" placeholder="Код страны" readonly>
+            <input type="number" value="${markup}" class="form-input w-24" min="0" max="100" step="0.1" placeholder="%" data-country="${countryCode.toUpperCase()}">
+            <button onclick="this.parentElement.remove()" class="text-red-600 hover:text-red-800">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+        container.appendChild(div);
+    },
+    
+    // Remove country markup
+    removeCountryMarkup(country) {
+        const inputs = document.querySelectorAll(`#countryMarkupsList input[data-country="${country}"]`);
+        inputs.forEach(input => {
+            const div = input.closest('.flex');
+            if (div) div.remove();
+        });
+    },
+    
     // Save markup settings
     async saveMarkup() {
         try {
             const enabled = document.getElementById('markupEnabled').checked;
             const defaultPercent = parseFloat(document.getElementById('defaultMarkup').value);
             
+            // Собираем наценки по странам
+            const countryMarkups = {};
+            const countryInputs = document.querySelectorAll('#countryMarkupsList input[data-country]');
+            countryInputs.forEach(input => {
+                const country = input.getAttribute('data-country');
+                const percent = parseFloat(input.value);
+                if (country && !isNaN(percent)) {
+                    countryMarkups[country] = percent;
+                }
+            });
+            
             const response = await Auth.authenticatedFetch('/api/admin/settings/markup', {
                 method: 'PUT',
                 body: JSON.stringify({
                     enabled,
-                    defaultPercent
+                    defaultPercent,
+                    countryMarkups
                 })
             });
             
