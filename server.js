@@ -131,35 +131,50 @@ Object.entries(apiRoutes).forEach(([route, handler]) => {
         });
     } else {
         // Поддержка всех методов для каждого endpoint
-        // Регистрируем для каждого HTTP метода отдельно для более надежной работы
-        const methods = ['get', 'post', 'put', 'delete', 'patch', 'options'];
-        methods.forEach(method => {
-            app[method](route, async (req, res) => {
+        // Для admin API используем app.use для поддержки подпутей (например, /api/admin/orders/:id)
+        if (route.startsWith('/api/admin/')) {
+            // Используем app.use для обработки всех подпутей
+            app.use(route, async (req, res, next) => {
                 try {
-                    // Для admin API передаем полный путь без префикса route
-                    if (route.startsWith('/api/admin/')) {
-                        // Убираем префикс route из пути, включая query параметры
-                        const urlWithoutQuery = req.originalUrl.split('?')[0];
-                        let relativePath = urlWithoutQuery.replace(route, '');
-                        // Если путь пустой или только "/", делаем его пустой строкой
-                        if (!relativePath || relativePath === '/') {
-                            relativePath = '';
-                        }
-                        req.path = relativePath;
-                        console.log(`[Route Handler] ${method.toUpperCase()} ${route} -> original: ${req.originalUrl} -> relative path: "${relativePath}"`);
+                    // Убираем префикс route из пути
+                    const urlWithoutQuery = req.originalUrl.split('?')[0];
+                    let relativePath = urlWithoutQuery.replace(route, '');
+                    // Если путь пустой или только "/", делаем его пустой строкой
+                    if (!relativePath || relativePath === '/') {
+                        relativePath = '';
                     }
-                await handler(req, res);
-            } catch (error) {
-                console.error(`Error in ${route}:`, error);
-                if (!res.headersSent) {
-                    res.status(500).json({
-                        success: false,
-                        error: error.message || 'Internal server error'
-                    });
+                    req.path = relativePath;
+                    console.log(`[Route Handler] ${req.method} ${route} -> original: ${req.originalUrl} -> relative path: "${relativePath}"`);
+                    await handler(req, res);
+                } catch (error) {
+                    console.error(`Error in ${route}:`, error);
+                    if (!res.headersSent) {
+                        res.status(500).json({
+                            success: false,
+                            error: error.message || 'Internal server error'
+                        });
+                    }
                 }
-            }
             });
-        });
+        } else {
+            // Для остальных API используем явную регистрацию методов
+            const methods = ['get', 'post', 'put', 'delete', 'patch', 'options'];
+            methods.forEach(method => {
+                app[method](route, async (req, res) => {
+                    try {
+                        await handler(req, res);
+                    } catch (error) {
+                        console.error(`Error in ${route}:`, error);
+                        if (!res.headersSent) {
+                            res.status(500).json({
+                                success: false,
+                                error: error.message || 'Internal server error'
+                            });
+                        }
+                    }
+                });
+            });
+        }
     }
     console.log(`✓ Registered route: ${route}`);
 });
