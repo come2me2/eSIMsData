@@ -111,18 +111,20 @@ module.exports = async function handler(req, res) {
     }
     
     try {
-        // Используем req.url или req.originalUrl для получения полного пути
-        const requestPath = req.originalUrl || req.url || req.path;
+        // Используем req.path, который уже обработан в server.js (относительный путь)
+        const requestPath = req.path || '';
         console.log(`[Admin Orders API] Request: ${req.method} ${requestPath}`);
+        console.log(`[Admin Orders API] Original URL: ${req.originalUrl}`);
         console.log(`[Admin Orders API] Query params:`, req.query);
         
-        // Парсим путь - убираем query параметры
+        // Парсим путь - убираем query параметры и ведущий слеш
         const pathWithoutQuery = requestPath.split('?')[0];
-        const urlParts = pathWithoutQuery.split('/').filter(Boolean);
+        const cleanPath = pathWithoutQuery.startsWith('/') ? pathWithoutQuery.substring(1) : pathWithoutQuery;
+        const urlParts = cleanPath.split('/').filter(Boolean);
         console.log(`[Admin Orders API] URL parts:`, urlParts);
         
-        const orderId = urlParts[urlParts.length - 1];
-        const isStatusUpdate = urlParts[urlParts.length - 2] === 'status';
+        const orderId = urlParts.length > 0 ? urlParts[urlParts.length - 1] : null;
+        const isStatusUpdate = urlParts.length > 1 && urlParts[urlParts.length - 2] === 'status';
         
         // GET /api/admin/orders - список всех заказов
         if (req.method === 'GET' && !orderId) {
