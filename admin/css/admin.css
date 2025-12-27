@@ -297,8 +297,8 @@ aside#sidebar {
         font-size: 1.25rem !important;
     }
     
-    /* Adjust flex items to stack on mobile */
-    .flex.items-center.justify-between {
+    /* Adjust flex items to stack on mobile - BUT NOT for payment cards */
+    .flex.items-center.justify-between:not(#paymentCardTelegramStars .flex.items-center.justify-between):not(#paymentCardCrypto .flex.items-center.justify-between):not(#paymentCardBankCard .flex.items-center.justify-between) {
         flex-direction: column;
         align-items: flex-start !important;
         gap: 1rem;
@@ -306,6 +306,76 @@ aside#sidebar {
     
     .flex.items-center.justify-between > * {
         width: 100%;
+    }
+    
+    /* Payment cards specific styles */
+    #paymentCardTelegramStars .flex.items-center.justify-between,
+    #paymentCardCrypto .flex.items-center.justify-between,
+    #paymentCardBankCard .flex.items-center.justify-between {
+        flex-direction: row !important;
+        align-items: center !important;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    
+    /* Payment toggle switch - smaller and properly positioned */
+    #paymentCardTelegramStars .relative.inline-flex.items-center,
+    #paymentCardCrypto .relative.inline-flex.items-center,
+    #paymentCardBankCard .relative.inline-flex.items-center {
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+    
+    /* Payment toggle switch size - target the div inside label */
+    #paymentCardTelegramStars label.relative > div,
+    #paymentCardCrypto label.relative > div,
+    #paymentCardBankCard label.relative > div {
+        width: 2.5rem !important; /* 40px instead of 44px */
+        height: 1.375rem !important; /* 22px instead of 24px */
+    }
+    
+    /* Toggle switch circle - target the ::after pseudo-element */
+    #paymentCardTelegramStars label.relative > div::after,
+    #paymentCardCrypto label.relative > div::after,
+    #paymentCardBankCard label.relative > div::after {
+        height: 1rem !important; /* 16px */
+        width: 1rem !important; /* 16px */
+        top: 0.125rem !important; /* 2px */
+        left: 0.125rem !important; /* 2px */
+    }
+    
+    /* Payment card fields - remove large padding on mobile */
+    #paymentCardTelegramStars .pl-14,
+    #paymentCardCrypto .pl-14,
+    #paymentCardBankCard .pl-14 {
+        padding-left: 0 !important;
+        padding-top: 1rem;
+        margin-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    /* Payment input fields - full width on mobile */
+    #paymentCardTelegramStars .w-32,
+    #paymentCardCrypto .w-32,
+    #paymentCardBankCard .w-32 {
+        width: 100% !important;
+        max-width: 10rem;
+    }
+    
+    /* Payment input container - stack vertically */
+    #paymentCardTelegramStars .flex.items-center.gap-3,
+    #paymentCardCrypto .flex.items-center.gap-3,
+    #paymentCardBankCard .flex.items-center.gap-3 {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+    }
+    
+    /* Hide long text on very small screens */
+    #paymentCardTelegramStars .text-sm.text-gray-500,
+    #paymentCardCrypto .text-sm.text-gray-500,
+    #paymentCardBankCard .text-sm.text-gray-500 {
+        font-size: 0.75rem;
     }
 }
 
@@ -340,7 +410,7 @@ aside#sidebar {
     /* Payment method cards on mobile */
     .border.rounded-lg.p-6,
     .border.rounded-lg.p-4 {
-        padding: 1rem !important;
+        padding: 0.75rem !important;
     }
     
     /* Smaller icons on mobile */
@@ -350,12 +420,70 @@ aside#sidebar {
         width: 2rem !important;
         height: 2rem !important;
     }
+    
+    /* Payment cards header - more compact */
+    #paymentCardTelegramStars .flex.items-center.justify-between,
+    #paymentCardCrypto .flex.items-center.justify-between,
+    #paymentCardBankCard .flex.items-center.justify-between {
+        margin-bottom: 0.75rem !important;
+        gap: 0.5rem;
+    }
+    
+    /* Payment card title and icon - smaller gap */
+    #paymentCardTelegramStars .flex.items-center.gap-4,
+    #paymentCardCrypto .flex.items-center.gap-4,
+    #paymentCardBankCard .flex.items-center.gap-4 {
+        gap: 0.75rem !important;
+        flex: 1;
+        min-width: 0; /* Allow text to shrink */
+    }
+    
+    /* Payment title text - smaller */
+    #paymentCardTelegramStars .text-base,
+    #paymentCardCrypto .text-base,
+    #paymentCardBankCard .text-base {
+        font-size: 0.875rem !important;
+        line-height: 1.25rem;
+    }
+    
+    /* Toggle switch - even smaller on tiny screens */
+    #paymentCardTelegramStars label.relative > div,
+    #paymentCardCrypto label.relative > div,
+    #paymentCardBankCard label.relative > div {
+        width: 2.25rem !important; /* 36px */
+        height: 1.25rem !important; /* 20px */
+    }
+    
+    /* Toggle switch circle - smaller */
+    #paymentCardTelegramStars label.relative > div::after,
+    #paymentCardCrypto label.relative > div::after,
+    #paymentCardBankCard label.relative > div::after {
+        height: 0.875rem !important; /* 14px */
+        width: 0.875rem !important; /* 14px */
+        top: 0.125rem !important;
+        left: 0.125rem !important;
+    }
+    
+    /* Ensure toggle stays on the right */
+    #paymentCardTelegramStars .relative.inline-flex.items-center,
+    #paymentCardCrypto .relative.inline-flex.items-center,
+    #paymentCardBankCard .relative.inline-flex.items-center {
+        margin-left: 0.5rem;
+        flex-shrink: 0;
+    }
+    
+    /* Payment input max width */
+    #paymentCardTelegramStars .w-32,
+    #paymentCardCrypto .w-32,
+    #paymentCardBankCard .w-32 {
+        max-width: 8rem;
+    }
 }
 
 /* Additional responsive improvements */
 @media (max-width: 640px) {
-    /* Stack payment method toggles vertically */
-    .flex.items-center.justify-between > .flex.items-center {
+    /* Stack payment method toggles vertically - BUT NOT payment cards */
+    .flex.items-center.justify-between > .flex.items-center:not(#paymentCardTelegramStars > *):not(#paymentCardCrypto > *):not(#paymentCardBankCard > *) {
         flex-direction: column;
         align-items: flex-start !important;
     }
@@ -375,6 +503,14 @@ aside#sidebar {
     #pagination {
         flex-direction: column;
         gap: 1rem;
+    }
+    
+    /* Payment cards - ensure toggle stays aligned */
+    #paymentCardTelegramStars .flex.items-center.justify-between,
+    #paymentCardCrypto .flex.items-center.justify-between,
+    #paymentCardBankCard .flex.items-center.justify-between {
+        align-items: center !important;
+        justify-content: space-between !important;
     }
 }
 
