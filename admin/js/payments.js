@@ -261,14 +261,14 @@ function initToggleSwitches() {
                 // Добавляем класс для движения вправо
                 toggleDiv.classList.add('toggle-checked');
                 // Вычисляем правильное смещение в зависимости от размера экрана
-                const width = toggleDiv.offsetWidth || 44; // по умолчанию w-11 = 44px
+                const width = toggleDiv.offsetWidth || 44; // по умолчанию w-11 = 44px для десктопа
                 let translateX;
                 if (width <= 36) {
                     translateX = 18; // для маленьких экранов (36px width)
                 } else if (width <= 40) {
                     translateX = 20; // для средних экранов (40px width)
                 } else {
-                    translateX = 20; // для больших экранов (44px width)
+                    translateX = 20; // для больших экранов/десктопа (44px width = w-11)
                 }
                 toggleDiv.style.setProperty('--toggle-translate', `${translateX}px`);
                 toggleDiv.setAttribute('data-checked', 'true');
@@ -284,18 +284,30 @@ function initToggleSwitches() {
                     document.head.appendChild(styleElement);
                 }
                 // Используем уникальный класс для селектора
+                // Применяем для всех размеров экранов, включая десктоп
                 styleElement.textContent = `
                     .toggle-switch-${toggle.id}.toggle-checked::after,
                     input#${toggle.id}:checked ~ .toggle-switch-${toggle.id}::after,
                     #paymentCardTelegramStars input#${toggle.id}:checked ~ div.rounded-full::after,
                     #paymentCardCrypto input#${toggle.id}:checked ~ div.rounded-full::after,
-                    #paymentCardBankCard input#${toggle.id}:checked ~ div.rounded-full::after {
+                    #paymentCardBankCard input#${toggle.id}:checked ~ div.rounded-full::after,
+                    body label.relative input#${toggle.id}:checked ~ div.rounded-full::after,
+                    body input#${toggle.id}.peer:checked ~ div.rounded-full::after {
                         transform: translateX(${translateX}px) !important;
                         -webkit-transform: translateX(${translateX}px) !important;
                         -moz-transform: translateX(${translateX}px) !important;
                         -ms-transform: translateX(${translateX}px) !important;
                         -o-transform: translateX(${translateX}px) !important;
                         border-color: white !important;
+                    }
+                    
+                    /* Десктоп - явные правила */
+                    @media (min-width: 1025px) {
+                        .toggle-switch-${toggle.id}.toggle-checked::after,
+                        input#${toggle.id}:checked ~ .toggle-switch-${toggle.id}::after {
+                            transform: translateX(${translateX}px) !important;
+                            -webkit-transform: translateX(${translateX}px) !important;
+                        }
                     }
                 `;
             } else {

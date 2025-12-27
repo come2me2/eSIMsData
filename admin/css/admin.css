@@ -216,6 +216,37 @@ aside#sidebar {
     main {
         margin-left: 16rem !important; /* 256px = w-64 */
     }
+    
+    /* Toggle switches на десктопе - стандартный размер w-11 (44px) */
+    body label.relative input[type="checkbox"]:checked ~ div.rounded-full::after,
+    body input[type="checkbox"].peer:checked ~ div.rounded-full::after,
+    body #paymentCardTelegramStars label input[type="checkbox"]:checked ~ div.rounded-full::after,
+    body #paymentCardCrypto label input[type="checkbox"]:checked ~ div.rounded-full::after,
+    body #paymentCardBankCard label input[type="checkbox"]:checked ~ div.rounded-full::after,
+    body #markupEnabled:checked ~ div.rounded-full::after,
+    body #paymentCardTelegramStars div.rounded-full.toggle-checked::after,
+    body #paymentCardCrypto div.rounded-full.toggle-checked::after,
+    body #paymentCardBankCard div.rounded-full.toggle-checked::after,
+    body .toggle-switch-paymentTelegramStars.toggle-checked::after,
+    body .toggle-switch-paymentCrypto.toggle-checked::after,
+    body .toggle-switch-paymentBankCard.toggle-checked::after {
+        transform: translateX(20px) !important;
+        -webkit-transform: translateX(20px) !important;
+        -moz-transform: translateX(20px) !important;
+        -ms-transform: translateX(20px) !important;
+        -o-transform: translateX(20px) !important;
+        border-color: white !important;
+    }
+    
+    /* Зеленый цвет для десктопа */
+    body label.relative input[type="checkbox"]:checked ~ div.rounded-full,
+    body input[type="checkbox"].peer:checked ~ div.rounded-full,
+    body #paymentCardTelegramStars label input[type="checkbox"]:checked ~ div.rounded-full,
+    body #paymentCardCrypto label input[type="checkbox"]:checked ~ div.rounded-full,
+    body #paymentCardBankCard label input[type="checkbox"]:checked ~ div.rounded-full,
+    body #markupEnabled:checked ~ div.rounded-full {
+        background-color: #16a34a !important; /* green-600 */
+    }
 }
 
 /* Responsive - Tablets and Mobile */
@@ -818,11 +849,15 @@ body input[type="checkbox"].sr-only.peer:checked ~ div.rounded-full {
     background-color: #16a34a !important; /* green-600 */
 }
 
-/* Движение круга вправо при включении */
+/* Движение круга вправо при включении - универсально для всех экранов */
 body label.relative input[type="checkbox"]:checked ~ div.rounded-full::after,
 body input[type="checkbox"].peer:checked ~ div.rounded-full::after,
 body input[type="checkbox"].sr-only.peer:checked ~ div.rounded-full::after {
     transform: translateX(20px) !important;
+    -webkit-transform: translateX(20px) !important;
+    -moz-transform: translateX(20px) !important;
+    -ms-transform: translateX(20px) !important;
+    -o-transform: translateX(20px) !important;
     border-color: white !important;
 }
 
