@@ -47,3 +47,4 @@ npm run build:css
 ```
 
 Файл `admin/css/tailwind.css` должен быть закоммичен в репозиторий.
+

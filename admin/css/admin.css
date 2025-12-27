@@ -154,25 +154,38 @@ aside#sidebar {
 .mobile-menu-btn {
     display: none;
     position: fixed;
-    top: 1rem;
-    left: 1rem;
+    top: 0.75rem;
+    left: 0.75rem;
     z-index: 1100;
-    background-color: #1f2937;
-    color: white;
-    padding: 0.75rem;
+    background-color: rgba(31, 41, 55, 0.85); /* Полупрозрачный темный фон */
+    backdrop-filter: blur(8px); /* Эффект размытия фона */
+    -webkit-backdrop-filter: blur(8px);
+    color: rgba(255, 255, 255, 0.9); /* Чуть прозрачный белый */
+    padding: 0.625rem; /* Уменьшенный padding */
     border-radius: 0.5rem;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Легкая граница */
     cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Более легкая тень */
+    transition: all 0.2s ease;
+    opacity: 0.9; /* Чуть прозрачная по умолчанию */
 }
 
 .mobile-menu-btn:hover {
-    background-color: #374151;
+    background-color: rgba(31, 41, 55, 0.95);
+    opacity: 1;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
 .mobile-menu-btn:active {
-    background-color: #4b5563;
+    background-color: rgba(31, 41, 55, 1);
     transform: scale(0.95);
+    opacity: 1;
+}
+
+/* Иконка внутри кнопки - делаем меньше */
+.mobile-menu-btn svg {
+    width: 1.25rem; /* 20px вместо 24px */
+    height: 1.25rem;
 }
 
 /* Overlay for mobile menu */
@@ -514,6 +527,20 @@ aside#sidebar {
     aside {
         width: 80vw;
         max-width: 280px;
+    }
+    
+    /* Еще более деликатная кнопка меню на маленьких экранах */
+    .mobile-menu-btn {
+        top: 0.5rem;
+        left: 0.5rem;
+        padding: 0.5rem;
+        opacity: 0.85;
+        background-color: rgba(31, 41, 55, 0.75);
+    }
+    
+    .mobile-menu-btn svg {
+        width: 1.125rem; /* 18px */
+        height: 1.125rem;
     }
     
     /* Stack modal header items */
