@@ -393,14 +393,14 @@ aside#sidebar {
     #paymentCardCrypto .peer:checked ~ div.rounded-full,
     #paymentCardBankCard .peer:checked ~ div.rounded-full,
     .flex.items-center.justify-between input:checked ~ div.rounded-full {
-        background-color: #2563eb !important;
+        background-color: #16a34a !important; /* green-600 */
     }
     
     #paymentCardTelegramStars .peer:checked ~ div.rounded-full::after,
     #paymentCardCrypto .peer:checked ~ div.rounded-full::after,
     #paymentCardBankCard .peer:checked ~ div.rounded-full::after,
     .flex.items-center.justify-between input:checked ~ div.rounded-full::after {
-        transform: translateX(1.25rem) !important;
+        transform: translateX(1.25rem) !important; /* 20px for 40px width toggle */
         border-color: white !important;
     }
     
@@ -551,7 +551,7 @@ aside#sidebar {
     #paymentCardCrypto .peer:checked ~ div,
     #paymentCardBankCard .peer:checked ~ div,
     .flex.items-center.justify-between input:checked ~ div {
-        background-color: #2563eb !important;
+        background-color: #16a34a !important; /* green-600 */
     }
     
     #paymentCardTelegramStars .peer:checked ~ div::after,
@@ -649,7 +649,7 @@ aside#sidebar {
 /* Toggle switch when checked */
 .relative.inline-flex.items-center input:checked ~ div.rounded-full,
 .relative.inline-flex.items-center .peer:checked ~ div.rounded-full {
-    background-color: #2563eb !important; /* blue-600 */
+    background-color: #16a34a !important; /* green-600 */
 }
 
 /* Toggle switch circle */
@@ -670,7 +670,7 @@ aside#sidebar {
 /* Toggle switch circle when checked */
 .relative.inline-flex.items-center input:checked ~ div.rounded-full::after,
 .relative.inline-flex.items-center .peer:checked ~ div.rounded-full::after {
-    transform: translateX(20px);
+    transform: translateX(20px) !important; /* Move circle to the right */
     border-color: white;
 }
 
