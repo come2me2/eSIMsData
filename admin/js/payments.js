@@ -253,8 +253,27 @@ function initToggleSwitches() {
         if (toggleDiv && toggleDiv.classList.contains('rounded-full')) {
             if (toggle.checked) {
                 toggleDiv.style.setProperty('background-color', '#16a34a', 'important'); // green-600
+                // Добавляем класс для движения вправо
+                toggleDiv.classList.add('toggle-checked');
+                // Вычисляем правильное смещение в зависимости от размера экрана
+                const width = toggleDiv.offsetWidth || 44; // по умолчанию w-11 = 44px
+                let translateX;
+                if (width <= 36) {
+                    translateX = 18; // для маленьких экранов (36px width)
+                } else if (width <= 40) {
+                    translateX = 20; // для средних экранов (40px width)
+                } else {
+                    translateX = 20; // для больших экранов (44px width)
+                }
+                toggleDiv.style.setProperty('--toggle-translate', `${translateX}px`);
+                // Также применяем напрямую через стиль для гарантии
+                const afterElement = window.getComputedStyle(toggleDiv, '::after');
+                toggleDiv.setAttribute('data-checked', 'true');
             } else {
                 toggleDiv.style.setProperty('background-color', '#e5e7eb', 'important'); // gray-200
+                toggleDiv.classList.remove('toggle-checked');
+                toggleDiv.style.setProperty('--toggle-translate', '0px');
+                toggleDiv.setAttribute('data-checked', 'false');
             }
         }
     }

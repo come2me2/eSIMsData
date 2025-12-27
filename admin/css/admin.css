@@ -692,7 +692,32 @@ label.relative > div.rounded-full::after {
     border: 1px solid #d1d5db !important;
     border-radius: 50% !important;
     transition: transform 0.2s ease, border-color 0.2s ease !important;
-    transform: translateX(0) !important;
+    transform: translateX(var(--toggle-translate, 0px)) !important;
+}
+
+/* Использование CSS переменной для движения */
+div.rounded-full[style*="--toggle-translate"]::after {
+    transform: translateX(var(--toggle-translate, 0px)) !important;
+}
+
+/* Класс для checked состояния */
+div.rounded-full.toggle-checked::after,
+div.rounded-full[data-checked="true"]::after {
+    transform: translateX(var(--toggle-translate, 20px)) !important;
+    border-color: white !important;
+}
+
+/* Универсальное правило для всех toggle switches с классом toggle-checked */
+div.rounded-full.toggle-checked::after {
+    transform: translateX(20px) !important;
+}
+
+/* Для маленьких экранов */
+@media (max-width: 480px) {
+    div.rounded-full.toggle-checked::after,
+    div.rounded-full[data-checked="true"]::after {
+        transform: translateX(18px) !important;
+    }
 }
 
 /* Toggle switch circle when checked - универсальные селекторы */
@@ -802,7 +827,10 @@ body #markupEnabled:checked ~ div.rounded-full {
 body #paymentCardTelegramStars label input[type="checkbox"]:checked ~ div.rounded-full::after,
 body #paymentCardCrypto label input[type="checkbox"]:checked ~ div.rounded-full::after,
 body #paymentCardBankCard label input[type="checkbox"]:checked ~ div.rounded-full::after,
-body #markupEnabled:checked ~ div.rounded-full::after {
+body #markupEnabled:checked ~ div.rounded-full::after,
+body #paymentCardTelegramStars div.rounded-full.toggle-checked::after,
+body #paymentCardCrypto div.rounded-full.toggle-checked::after,
+body #paymentCardBankCard div.rounded-full.toggle-checked::after {
     transform: translateX(20px) !important;
     border-color: white !important;
 }
