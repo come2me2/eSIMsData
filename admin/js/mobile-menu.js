@@ -1,6 +1,14 @@
 /**
  * Mobile Menu Handler
  * Manages mobile sidebar menu toggle functionality
+ * 
+ * Features:
+ * - Auto-hide menu when navigation link is clicked on mobile
+ * - Auto-hide on logout button click
+ * - Smooth animations with cubic-bezier easing
+ * - Responsive behavior based on screen size
+ * - Keyboard support (ESC to close)
+ * - Touch-friendly with visual feedback
  */
 
 (function() {
@@ -39,13 +47,24 @@
         // Close menu when clicking on a navigation link (only on mobile)
         const navLinks = sidebar.querySelectorAll('nav a');
         navLinks.forEach(function(link) {
-            link.addEventListener('click', function() {
+            link.addEventListener('click', function(e) {
                 // Only close if we're in mobile view
                 if (window.innerWidth <= 1024) {
-                    setTimeout(closeMenu, 100);
+                    // Close immediately for better UX
+                    closeMenu();
                 }
             });
         });
+
+        // Close menu when clicking on logout button (only on mobile)
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', function() {
+                if (window.innerWidth <= 1024) {
+                    closeMenu();
+                }
+            });
+        }
 
         // Close menu on escape key (only on mobile)
         document.addEventListener('keydown', function(e) {

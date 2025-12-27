@@ -147,6 +147,7 @@ aside#sidebar {
     background-color: #1f2937;
     color: white;
     overflow-y: auto;
+    will-change: transform;
 }
 
 /* Mobile menu button */
@@ -176,7 +177,6 @@ aside#sidebar {
 
 /* Overlay for mobile menu */
 .sidebar-overlay {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;
@@ -185,12 +185,15 @@ aside#sidebar {
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 999;
     opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+    visibility: hidden;
+    transition: opacity 0.25s ease-in-out, visibility 0.25s ease-in-out;
+    pointer-events: none;
 }
 
 .sidebar-overlay.show {
-    display: block;
     opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 /* Desktop - ensure sidebar is always visible */
@@ -225,13 +228,14 @@ aside#sidebar {
     /* Hide sidebar by default */
     aside#sidebar {
         transform: translateX(-100%);
-        transition: transform 0.3s ease-in-out;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         z-index: 1000;
     }
     
     /* Show sidebar when open */
     aside#sidebar.open {
         transform: translateX(0);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     /* Remove left margin from main */
@@ -388,6 +392,24 @@ aside#sidebar {
     /* Better spacing for touch */
     nav a {
         padding: 1rem 1.5rem !important;
+    }
+    
+    /* Active state for touch feedback */
+    nav a:active {
+        background-color: #374151 !important;
+        transition: background-color 0.1s;
+    }
+}
+
+/* Mobile menu link animations */
+@media (max-width: 1024px) {
+    aside#sidebar nav a {
+        transition: background-color 0.15s ease;
+    }
+    
+    aside#sidebar nav a:active {
+        background-color: #4b5563;
+        transform: scale(0.98);
     }
 }
 
