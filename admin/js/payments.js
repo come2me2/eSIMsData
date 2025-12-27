@@ -251,6 +251,11 @@ function initToggleSwitches() {
     function updateToggleStyle(toggle) {
         const toggleDiv = toggle.nextElementSibling;
         if (toggleDiv && toggleDiv.classList.contains('rounded-full')) {
+            // Добавляем уникальный класс к toggleDiv для селекторов
+            if (!toggleDiv.classList.contains('toggle-switch-' + toggle.id)) {
+                toggleDiv.classList.add('toggle-switch-' + toggle.id);
+            }
+            
             if (toggle.checked) {
                 toggleDiv.style.setProperty('background-color', '#16a34a', 'important'); // green-600
                 // Добавляем класс для движения вправо
@@ -266,14 +271,46 @@ function initToggleSwitches() {
                     translateX = 20; // для больших экранов (44px width)
                 }
                 toggleDiv.style.setProperty('--toggle-translate', `${translateX}px`);
-                // Также применяем напрямую через стиль для гарантии
-                const afterElement = window.getComputedStyle(toggleDiv, '::after');
                 toggleDiv.setAttribute('data-checked', 'true');
+                toggleDiv.setAttribute('data-translate-x', `${translateX}`);
+                
+                // Применяем стиль напрямую через добавление стилей к элементу
+                // Создаем или обновляем style элемент для ::after
+                let styleId = 'toggle-style-' + toggle.id;
+                let styleElement = document.getElementById(styleId);
+                if (!styleElement) {
+                    styleElement = document.createElement('style');
+                    styleElement.id = styleId;
+                    document.head.appendChild(styleElement);
+                }
+                // Используем уникальный класс для селектора
+                styleElement.textContent = `
+                    .toggle-switch-${toggle.id}.toggle-checked::after,
+                    input#${toggle.id}:checked ~ .toggle-switch-${toggle.id}::after,
+                    #paymentCardTelegramStars input#${toggle.id}:checked ~ div.rounded-full::after,
+                    #paymentCardCrypto input#${toggle.id}:checked ~ div.rounded-full::after,
+                    #paymentCardBankCard input#${toggle.id}:checked ~ div.rounded-full::after {
+                        transform: translateX(${translateX}px) !important;
+                        -webkit-transform: translateX(${translateX}px) !important;
+                        -moz-transform: translateX(${translateX}px) !important;
+                        -ms-transform: translateX(${translateX}px) !important;
+                        -o-transform: translateX(${translateX}px) !important;
+                        border-color: white !important;
+                    }
+                `;
             } else {
                 toggleDiv.style.setProperty('background-color', '#e5e7eb', 'important'); // gray-200
                 toggleDiv.classList.remove('toggle-checked');
                 toggleDiv.style.setProperty('--toggle-translate', '0px');
                 toggleDiv.setAttribute('data-checked', 'false');
+                toggleDiv.removeAttribute('data-translate-x');
+                
+                // Удаляем динамический style элемент
+                let styleId = 'toggle-style-' + toggle.id;
+                let styleElement = document.getElementById(styleId);
+                if (styleElement) {
+                    styleElement.remove();
+                }
             }
         }
     }

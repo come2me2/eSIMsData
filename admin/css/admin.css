@@ -702,20 +702,30 @@ div.rounded-full[style*="--toggle-translate"]::after {
 
 /* Класс для checked состояния */
 div.rounded-full.toggle-checked::after,
-div.rounded-full[data-checked="true"]::after {
+div.rounded-full[data-checked="true"]::after,
+/* Уникальные классы для способов оплаты */
+.toggle-switch-paymentTelegramStars.toggle-checked::after,
+.toggle-switch-paymentCrypto.toggle-checked::after,
+.toggle-switch-paymentBankCard.toggle-checked::after {
     transform: translateX(var(--toggle-translate, 20px)) !important;
     border-color: white !important;
 }
 
 /* Универсальное правило для всех toggle switches с классом toggle-checked */
-div.rounded-full.toggle-checked::after {
+div.rounded-full.toggle-checked::after,
+.toggle-switch-paymentTelegramStars.toggle-checked::after,
+.toggle-switch-paymentCrypto.toggle-checked::after,
+.toggle-switch-paymentBankCard.toggle-checked::after {
     transform: translateX(20px) !important;
 }
 
 /* Для маленьких экранов */
 @media (max-width: 480px) {
     div.rounded-full.toggle-checked::after,
-    div.rounded-full[data-checked="true"]::after {
+    div.rounded-full[data-checked="true"]::after,
+    .toggle-switch-paymentTelegramStars.toggle-checked::after,
+    .toggle-switch-paymentCrypto.toggle-checked::after,
+    .toggle-switch-paymentBankCard.toggle-checked::after {
         transform: translateX(18px) !important;
     }
 }
@@ -830,8 +840,19 @@ body #paymentCardBankCard label input[type="checkbox"]:checked ~ div.rounded-ful
 body #markupEnabled:checked ~ div.rounded-full::after,
 body #paymentCardTelegramStars div.rounded-full.toggle-checked::after,
 body #paymentCardCrypto div.rounded-full.toggle-checked::after,
-body #paymentCardBankCard div.rounded-full.toggle-checked::after {
+body #paymentCardBankCard div.rounded-full.toggle-checked::after,
+/* Самые агрессивные селекторы для способов оплаты */
+body #paymentCardTelegramStars input#paymentTelegramStars:checked ~ div::after,
+body #paymentCardCrypto input#paymentCrypto:checked ~ div::after,
+body #paymentCardBankCard input#paymentBankCard:checked ~ div::after,
+body #paymentCardTelegramStars input.peer:checked ~ div.rounded-full::after,
+body #paymentCardCrypto input.peer:checked ~ div.rounded-full::after,
+body #paymentCardBankCard input.peer:checked ~ div.rounded-full::after {
     transform: translateX(20px) !important;
+    -webkit-transform: translateX(20px) !important;
+    -moz-transform: translateX(20px) !important;
+    -ms-transform: translateX(20px) !important;
+    -o-transform: translateX(20px) !important;
     border-color: white !important;
 }
 
