@@ -90,59 +90,98 @@
             <!-- Payment Methods with Markups -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Способы оплаты и наценки</h3>
+                <p class="text-sm text-gray-600 mb-6">Активируйте или деактивируйте способы оплаты. Неактивные способы не будут отображаться пользователям.</p>
                 <div class="space-y-6">
                     <!-- Telegram Stars -->
-                    <div class="border rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <label class="text-sm font-medium text-gray-700">Telegram Stars</label>
-                            <input type="checkbox" id="paymentTelegramStars" class="form-input w-auto">
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium text-gray-700 block mb-2">Дополнительная наценка (множитель)</label>
-                            <div class="flex items-center gap-2">
-                                <input type="number" id="markupTelegramStars" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.05">
-                                <span class="text-sm text-gray-500">(например: 1.05 = +5%)</span>
+                    <div id="paymentCardTelegramStars" class="border rounded-lg p-4 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <img src="../icons/Telegram Stars.svg" alt="Telegram Stars" class="w-8 h-8">
+                                <div>
+                                    <label class="text-base font-semibold text-gray-800 block">Telegram Stars</label>
+                                    <span id="statusTelegramStars" class="text-xs font-medium"></span>
+                                </div>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">Общая наценка = Базовая × Наценка способа оплаты</p>
-                            <div id="totalMarkupTelegramStars" class="text-sm font-semibold text-blue-600 mt-2"></div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="paymentTelegramStars" class="sr-only peer" onchange="Payments.togglePaymentMethod('TelegramStars')">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div id="markupFieldsTelegramStars" class="space-y-3">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-2">Дополнительная наценка (множитель)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="markupTelegramStars" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.05">
+                                    <span class="text-sm text-gray-500">(например: 1.05 = +5%)</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Общая наценка = Базовая × Наценка способа оплаты</p>
+                                <div id="totalMarkupTelegramStars" class="text-sm font-semibold text-blue-600 mt-2"></div>
+                            </div>
                         </div>
                     </div>
                     
                     <!-- Crypto -->
-                    <div class="border rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <label class="text-sm font-medium text-gray-700">Криптовалюты</label>
-                            <input type="checkbox" id="paymentCrypto" class="form-input w-auto">
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium text-gray-700 block mb-2">Дополнительная наценка (множитель)</label>
-                            <div class="flex items-center gap-2">
-                                <input type="number" id="markupCrypto" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.0">
-                                <span class="text-sm text-gray-500">(например: 1.0 = +0%)</span>
+                    <div id="paymentCardCrypto" class="border rounded-lg p-4 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <img src="../icons/Crypto Payments eSIMsData.svg" alt="Crypto" class="w-8 h-8">
+                                <div>
+                                    <label class="text-base font-semibold text-gray-800 block">Криптовалюты</label>
+                                    <span id="statusCrypto" class="text-xs font-medium"></span>
+                                </div>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">Общая наценка = Базовая × Наценка способа оплаты</p>
-                            <div id="totalMarkupCrypto" class="text-sm font-semibold text-blue-600 mt-2"></div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="paymentCrypto" class="sr-only peer" onchange="Payments.togglePaymentMethod('Crypto')">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div id="markupFieldsCrypto" class="space-y-3">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-2">Дополнительная наценка (множитель)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="markupCrypto" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.0">
+                                    <span class="text-sm text-gray-500">(например: 1.0 = +0%)</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Общая наценка = Базовая × Наценка способа оплаты</p>
+                                <div id="totalMarkupCrypto" class="text-sm font-semibold text-blue-600 mt-2"></div>
+                            </div>
                         </div>
                     </div>
                     
                     <!-- Bank Card -->
-                    <div class="border rounded-lg p-4">
-                        <div class="flex items-center justify-between mb-3">
-                            <label class="text-sm font-medium text-gray-700">Банковские карты</label>
-                            <input type="checkbox" id="paymentBankCard" class="form-input w-auto">
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium text-gray-700 block mb-2">Дополнительная наценка (множитель)</label>
-                            <div class="flex items-center gap-2">
-                                <input type="number" id="markupBankCard" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.1">
-                                <span class="text-sm text-gray-500">(например: 1.1 = +10%)</span>
+                    <div id="paymentCardBankCard" class="border rounded-lg p-4 transition-all duration-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <img src="../icons/Bank Cards eSIMsData.svg" alt="Bank Cards" class="w-8 h-8">
+                                <div>
+                                    <label class="text-base font-semibold text-gray-800 block">Банковские карты</label>
+                                    <span id="statusBankCard" class="text-xs font-medium"></span>
+                                </div>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">Общая наценка = Базовая × Наценка способа оплаты</p>
-                            <div id="totalMarkupBankCard" class="text-sm font-semibold text-blue-600 mt-2"></div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="paymentBankCard" class="sr-only peer" onchange="Payments.togglePaymentMethod('BankCard')">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div id="markupFieldsBankCard" class="space-y-3">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 block mb-2">Дополнительная наценка (множитель)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="markupBankCard" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.1">
+                                    <span class="text-sm text-gray-500">(например: 1.1 = +10%)</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Общая наценка = Базовая × Наценка способа оплаты</p>
+                                <div id="totalMarkupBankCard" class="text-sm font-semibold text-blue-600 mt-2"></div>
+                            </div>
                         </div>
                     </div>
                     
-                    <button onclick="Payments.savePaymentMethods()" class="btn btn-primary">Сохранить способы оплаты</button>
+                    <div class="flex items-center justify-between pt-4 border-t">
+                        <p class="text-sm text-gray-600">
+                            <span class="font-medium">Важно:</span> Деактивированные способы оплаты не будут показываться пользователям на странице checkout.
+                        </p>
+                        <button onclick="Payments.savePaymentMethods()" class="btn btn-primary">Сохранить изменения</button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -171,6 +171,48 @@ if (selectedPaymentMethod && !PAYMENT_METHODS[selectedPaymentMethod]) {
     localStorage.removeItem('checkout_payment_method');
 }
 
+function filterAvailablePaymentMethods() {
+    // Скрываем недоступные способы оплаты на основе настроек админки
+    if (!publicSettings || !publicSettings.paymentMethods) {
+        console.warn('⚠️ No public settings loaded, all payment methods will be shown');
+        return;
+    }
+    
+    const paymentMethodsMapping = {
+        'stars': 'telegramStars',
+        'stripe': 'bankCard',
+        'cryptomus': 'crypto'
+    };
+    
+    const items = document.querySelectorAll('.sheet-item[data-payment-method]');
+    console.log('[Payment Methods] Filtering payment methods:', {
+        settings: publicSettings.paymentMethods,
+        items: items.length
+    });
+    
+    items.forEach(item => {
+        const methodKey = item.getAttribute('data-payment-method');
+        const settingsKey = paymentMethodsMapping[methodKey];
+        
+        if (settingsKey && publicSettings.paymentMethods[settingsKey]) {
+            const methodSettings = publicSettings.paymentMethods[settingsKey];
+            const isEnabled = methodSettings.enabled !== false; // По умолчанию включен если не указано
+            
+            if (!isEnabled) {
+                item.style.display = 'none';
+                console.log(`[Payment Methods] ✗ Disabled: ${methodKey} (${settingsKey})`);
+            } else {
+                item.style.display = '';
+                console.log(`[Payment Methods] ✓ Enabled: ${methodKey} (${settingsKey})`);
+            }
+        } else {
+            // Если нет настроек для этого метода, показываем его по умолчанию
+            item.style.display = '';
+            console.log(`[Payment Methods] ℹ No settings for: ${methodKey}, showing by default`);
+        }
+    });
+}
+
 function setupPaymentMethodUI() {
     const btn = document.getElementById('paymentMethodBtn');
     const subtitle = document.getElementById('paymentMethodSubtitle');
@@ -191,6 +233,9 @@ function setupPaymentMethodUI() {
         });
         return;
     }
+    
+    // Фильтруем доступные способы оплаты
+    filterAvailablePaymentMethods();
     
     console.log('✅ Payment method UI initialized', {
         btn: btn,

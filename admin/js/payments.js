@@ -38,14 +38,17 @@ const Payments = {
             // Telegram Stars
             document.getElementById('paymentTelegramStars').checked = settings.paymentMethods.telegramStars?.enabled || false;
             document.getElementById('markupTelegramStars').value = settings.paymentMethods.telegramStars?.markup || settings.paymentMethods.telegramStars?.markupMultiplier || 1.05;
+            this.updatePaymentCardUI('TelegramStars', settings.paymentMethods.telegramStars?.enabled || false);
             
             // Crypto
             document.getElementById('paymentCrypto').checked = settings.paymentMethods.crypto?.enabled || false;
             document.getElementById('markupCrypto').value = settings.paymentMethods.crypto?.markup || settings.paymentMethods.crypto?.markupMultiplier || 1.0;
+            this.updatePaymentCardUI('Crypto', settings.paymentMethods.crypto?.enabled || false);
             
             // Bank Card
             document.getElementById('paymentBankCard').checked = settings.paymentMethods.bankCard?.enabled || false;
             document.getElementById('markupBankCard').value = settings.paymentMethods.bankCard?.markup || settings.paymentMethods.bankCard?.markupMultiplier || 1.1;
+            this.updatePaymentCardUI('BankCard', settings.paymentMethods.bankCard?.enabled || false);
         }
         
         // Добавляем обработчики для автоматического пересчета общей наценки
@@ -53,6 +56,38 @@ const Payments = {
         document.getElementById('markupTelegramStars').addEventListener('input', () => this.updateTotalMarkups());
         document.getElementById('markupCrypto').addEventListener('input', () => this.updateTotalMarkups());
         document.getElementById('markupBankCard').addEventListener('input', () => this.updateTotalMarkups());
+    },
+    
+    // Toggle payment method and update UI
+    togglePaymentMethod(methodName) {
+        const checkbox = document.getElementById(`payment${methodName}`);
+        const isEnabled = checkbox.checked;
+        this.updatePaymentCardUI(methodName, isEnabled);
+    },
+    
+    // Update payment card UI based on enabled state
+    updatePaymentCardUI(methodName, isEnabled) {
+        const card = document.getElementById(`paymentCard${methodName}`);
+        const status = document.getElementById(`status${methodName}`);
+        const markupFields = document.getElementById(`markupFields${methodName}`);
+        
+        if (!card || !status || !markupFields) return;
+        
+        if (isEnabled) {
+            card.classList.remove('opacity-60', 'bg-gray-50');
+            card.classList.add('border-blue-200', 'bg-blue-50');
+            status.textContent = '✓ Активен';
+            status.classList.remove('text-red-600');
+            status.classList.add('text-green-600');
+            markupFields.style.display = 'block';
+        } else {
+            card.classList.remove('border-blue-200', 'bg-blue-50');
+            card.classList.add('opacity-60', 'bg-gray-50');
+            status.textContent = '✗ Деактивирован';
+            status.classList.remove('text-green-600');
+            status.classList.add('text-red-600');
+            markupFields.style.display = 'none';
+        }
     },
     
     // Update total markups display
