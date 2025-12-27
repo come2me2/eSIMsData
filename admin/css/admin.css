@@ -388,17 +388,23 @@ aside#sidebar {
         transform: translateX(0) !important;
     }
     
-    /* Toggle switch checked state */
-    #paymentCardTelegramStars .peer:checked ~ div.rounded-full,
-    #paymentCardCrypto .peer:checked ~ div.rounded-full,
-    #paymentCardBankCard .peer:checked ~ div.rounded-full,
+    /* Toggle switch checked state - правильные селекторы */
+    #paymentCardTelegramStars input.peer:checked ~ div.rounded-full,
+    #paymentCardTelegramStars input[type="checkbox"]:checked ~ div.rounded-full,
+    #paymentCardCrypto input.peer:checked ~ div.rounded-full,
+    #paymentCardCrypto input[type="checkbox"]:checked ~ div.rounded-full,
+    #paymentCardBankCard input.peer:checked ~ div.rounded-full,
+    #paymentCardBankCard input[type="checkbox"]:checked ~ div.rounded-full,
     .flex.items-center.justify-between input:checked ~ div.rounded-full {
         background-color: #16a34a !important; /* green-600 */
     }
     
-    #paymentCardTelegramStars .peer:checked ~ div.rounded-full::after,
-    #paymentCardCrypto .peer:checked ~ div.rounded-full::after,
-    #paymentCardBankCard .peer:checked ~ div.rounded-full::after,
+    #paymentCardTelegramStars input.peer:checked ~ div.rounded-full::after,
+    #paymentCardTelegramStars input[type="checkbox"]:checked ~ div.rounded-full::after,
+    #paymentCardCrypto input.peer:checked ~ div.rounded-full::after,
+    #paymentCardCrypto input[type="checkbox"]:checked ~ div.rounded-full::after,
+    #paymentCardBankCard input.peer:checked ~ div.rounded-full::after,
+    #paymentCardBankCard input[type="checkbox"]:checked ~ div.rounded-full::after,
     .flex.items-center.justify-between input:checked ~ div.rounded-full::after {
         transform: translateX(1.25rem) !important; /* 20px for 40px width toggle */
         border-color: white !important;
@@ -546,17 +552,23 @@ aside#sidebar {
         left: 0.125rem !important;
     }
     
-    /* Checked state on small screens */
-    #paymentCardTelegramStars .peer:checked ~ div,
-    #paymentCardCrypto .peer:checked ~ div,
-    #paymentCardBankCard .peer:checked ~ div,
+    /* Checked state on small screens - правильные селекторы */
+    #paymentCardTelegramStars input.peer:checked ~ div,
+    #paymentCardTelegramStars input[type="checkbox"]:checked ~ div,
+    #paymentCardCrypto input.peer:checked ~ div,
+    #paymentCardCrypto input[type="checkbox"]:checked ~ div,
+    #paymentCardBankCard input.peer:checked ~ div,
+    #paymentCardBankCard input[type="checkbox"]:checked ~ div,
     .flex.items-center.justify-between input:checked ~ div {
         background-color: #16a34a !important; /* green-600 */
     }
     
-    #paymentCardTelegramStars .peer:checked ~ div::after,
-    #paymentCardCrypto .peer:checked ~ div::after,
-    #paymentCardBankCard .peer:checked ~ div::after,
+    #paymentCardTelegramStars input.peer:checked ~ div::after,
+    #paymentCardTelegramStars input[type="checkbox"]:checked ~ div::after,
+    #paymentCardCrypto input.peer:checked ~ div::after,
+    #paymentCardCrypto input[type="checkbox"]:checked ~ div::after,
+    #paymentCardBankCard input.peer:checked ~ div::after,
+    #paymentCardBankCard input[type="checkbox"]:checked ~ div::after,
     .flex.items-center.justify-between input:checked ~ div::after {
         transform: translateX(1.125rem) !important; /* 18px for 36px width */
     }
@@ -646,32 +658,59 @@ aside#sidebar {
     transition: background-color 0.2s;
 }
 
-/* Toggle switch when checked */
-.relative.inline-flex.items-center input:checked ~ div.rounded-full,
-.relative.inline-flex.items-center .peer:checked ~ div.rounded-full {
+/* Toggle switch when checked - универсальные селекторы для всех случаев */
+label.relative input[type="checkbox"]:checked ~ div.rounded-full,
+input.peer:checked ~ div.rounded-full,
+.relative.inline-flex.items-center input[type="checkbox"]:checked ~ div.rounded-full,
+input[type="checkbox"].sr-only.peer:checked ~ div,
+input[type="checkbox"].peer:checked ~ div.rounded-full {
     background-color: #16a34a !important; /* green-600 */
 }
 
-/* Toggle switch circle */
-.relative.inline-flex.items-center > div.rounded-full::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 20px;
-    height: 20px;
-    background-color: white;
-    border: 1px solid #d1d5db;
-    border-radius: 50%;
-    transition: transform 0.2s, border-color 0.2s;
-    transform: translateX(0);
+/* Override Tailwind peer-checked class через селектор по атрибуту */
+div.rounded-full.peer[class*="peer-checked:bg-green-600"],
+div.rounded-full[class*="peer-checked:bg-green-600"] {
+    background-color: #16a34a !important;
 }
 
-/* Toggle switch circle when checked */
-.relative.inline-flex.items-center input:checked ~ div.rounded-full::after,
-.relative.inline-flex.items-center .peer:checked ~ div.rounded-full::after {
-    transform: translateX(20px) !important; /* Move circle to the right */
-    border-color: white;
+/* Универсальное правило для всех div с классом peer-checked:bg-green-600 */
+.peer:checked ~ .peer-checked\:bg-green-600,
+input:checked ~ .peer-checked\:bg-green-600 {
+    background-color: #16a34a !important;
+}
+
+/* Toggle switch circle */
+.relative.inline-flex.items-center > div.rounded-full::after,
+label.relative > div.rounded-full::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 2px !important;
+    left: 2px !important;
+    width: 20px !important;
+    height: 20px !important;
+    background-color: white !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 50% !important;
+    transition: transform 0.2s ease, border-color 0.2s ease !important;
+    transform: translateX(0) !important;
+}
+
+/* Toggle switch circle when checked - универсальные селекторы */
+label.relative input[type="checkbox"]:checked ~ div.rounded-full::after,
+input.peer:checked ~ div.rounded-full::after,
+.relative.inline-flex.items-center input[type="checkbox"]:checked ~ div.rounded-full::after,
+input[type="checkbox"].sr-only.peer:checked ~ div::after,
+input[type="checkbox"].peer:checked ~ div.rounded-full::after,
+.peer:checked ~ .peer-checked\:after\:translate-x-full::after,
+input:checked ~ [class*="peer-checked:after:translate-x-full"]::after {
+    transform: translateX(20px) !important; /* Move circle to the right for w-11 (44px) */
+    border-color: white !important;
+}
+
+/* Универсальное правило для всех случаев через Tailwind peer механизм */
+input[type="checkbox"].peer:checked + div[class*="rounded-full"]::after,
+input[type="checkbox"]:checked ~ div[class*="rounded-full"]::after {
+    transform: translateX(20px) !important;
 }
 
 /* Ensure toggle switches are not affected by form-input */
@@ -729,6 +768,57 @@ aside#sidebar {
     aside#sidebar nav a:active {
         background-color: #4b5563;
         transform: scale(0.98);
+    }
+}
+
+/* ========================================
+   CRITICAL: Toggle Switch Styles
+   Максимальная специфичность для гарантии работы
+   ======================================== */
+
+/* Зеленый цвет для включенных toggle switches */
+body label.relative input[type="checkbox"]:checked ~ div.rounded-full,
+body input[type="checkbox"].peer:checked ~ div.rounded-full,
+body input[type="checkbox"].sr-only.peer:checked ~ div.rounded-full {
+    background-color: #16a34a !important; /* green-600 */
+}
+
+/* Движение круга вправо при включении */
+body label.relative input[type="checkbox"]:checked ~ div.rounded-full::after,
+body input[type="checkbox"].peer:checked ~ div.rounded-full::after,
+body input[type="checkbox"].sr-only.peer:checked ~ div.rounded-full::after {
+    transform: translateX(20px) !important;
+    border-color: white !important;
+}
+
+/* Для всех размеров toggle switches */
+body #paymentCardTelegramStars label input[type="checkbox"]:checked ~ div.rounded-full,
+body #paymentCardCrypto label input[type="checkbox"]:checked ~ div.rounded-full,
+body #paymentCardBankCard label input[type="checkbox"]:checked ~ div.rounded-full,
+body #markupEnabled:checked ~ div.rounded-full {
+    background-color: #16a34a !important;
+}
+
+body #paymentCardTelegramStars label input[type="checkbox"]:checked ~ div.rounded-full::after,
+body #paymentCardCrypto label input[type="checkbox"]:checked ~ div.rounded-full::after,
+body #paymentCardBankCard label input[type="checkbox"]:checked ~ div.rounded-full::after,
+body #markupEnabled:checked ~ div.rounded-full::after {
+    transform: translateX(20px) !important;
+    border-color: white !important;
+}
+
+/* Мобильные размеры */
+@media (max-width: 768px) {
+    body label.relative input[type="checkbox"]:checked ~ div.rounded-full::after,
+    body input[type="checkbox"].peer:checked ~ div.rounded-full::after {
+        transform: translateX(20px) !important; /* 20px for 40px width */
+    }
+}
+
+@media (max-width: 480px) {
+    body label.relative input[type="checkbox"]:checked ~ div.rounded-full::after,
+    body input[type="checkbox"].peer:checked ~ div.rounded-full::after {
+        transform: translateX(18px) !important; /* 18px for 36px width */
     }
 }
 

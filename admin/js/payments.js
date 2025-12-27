@@ -17,6 +17,10 @@ const Payments = {
                 this.currentSettings = data.settings;
                 this.renderSettings(data.settings);
                 this.updateTotalMarkups();
+                // Initialize toggle switches after rendering
+                setTimeout(() => {
+                    initToggleSwitches();
+                }, 100);
             }
         } catch (error) {
             console.error('Error loading settings:', error);
@@ -240,9 +244,46 @@ const Payments = {
     }
 };
 
+// Initialize toggle switches to ensure proper styling
+function initToggleSwitches() {
+    const toggles = document.querySelectorAll('input[type="checkbox"].peer, input[type="checkbox"][id^="payment"], input[type="checkbox"][id="markupEnabled"]');
+    
+    function updateToggleStyle(toggle) {
+        const toggleDiv = toggle.nextElementSibling;
+        if (toggleDiv && toggleDiv.classList.contains('rounded-full')) {
+            if (toggle.checked) {
+                toggleDiv.style.setProperty('background-color', '#16a34a', 'important'); // green-600
+            } else {
+                toggleDiv.style.setProperty('background-color', '#e5e7eb', 'important'); // gray-200
+            }
+        }
+    }
+    
+    toggles.forEach(toggle => {
+        // Update on change
+        toggle.addEventListener('change', function() {
+            updateToggleStyle(this);
+        });
+        
+        // Set initial state
+        updateToggleStyle(toggle);
+        
+        // Also watch for programmatic changes
+        const observer = new MutationObserver(() => {
+            updateToggleStyle(toggle);
+        });
+        observer.observe(toggle, { attributes: true, attributeFilter: ['checked'] });
+    });
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     Payments.loadSettings();
+    
+    // Initialize toggle switches after settings are loaded
+    setTimeout(() => {
+        initToggleSwitches();
+    }, 500);
     
     // Logout button
     const logoutBtn = document.getElementById('logoutBtn');
