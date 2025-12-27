@@ -46,24 +46,28 @@
 
         // Close menu when clicking on a navigation link (only on mobile)
         const navLinks = sidebar.querySelectorAll('nav a');
-        navLinks.forEach(function(link) {
+        console.log('[MobileMenu] Found', navLinks.length, 'navigation links');
+        
+        navLinks.forEach(function(link, index) {
             link.addEventListener('click', function(e) {
                 // Only close if we're in mobile view
                 if (window.innerWidth <= 1024) {
+                    console.log('[MobileMenu] Nav link clicked (index:', index, '), closing menu');
                     // Close immediately for better UX
                     closeMenu();
                 }
-            });
+            }, true); // Use capture phase to ensure it fires first
         });
 
         // Close menu when clicking on logout button (only on mobile)
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', function() {
+            logoutBtn.addEventListener('click', function(e) {
                 if (window.innerWidth <= 1024) {
+                    console.log('[MobileMenu] Logout button clicked, closing menu');
                     closeMenu();
                 }
-            });
+            }, true); // Use capture phase
         }
 
         // Close menu on escape key (only on mobile)
@@ -79,6 +83,8 @@
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(checkScreenSize, 250);
         });
+
+        console.log('[MobileMenu] Initialization complete. Screen width:', window.innerWidth);
     }
 
     function checkScreenSize() {
@@ -120,6 +126,7 @@
         const sidebar = document.getElementById('sidebar');
         const sidebarOverlay = document.getElementById('sidebarOverlay');
         
+        console.log('[MobileMenu] Closing menu');
         sidebar.classList.remove('open');
         sidebarOverlay.classList.remove('show');
         document.body.style.overflow = ''; // Restore scrolling
