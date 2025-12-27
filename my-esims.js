@@ -399,3 +399,68 @@ function setupNavigation() {
 }
 
 
+
+        id: esim.id || esim.orderReference || '',
+        date: esim.date || '',
+        country: esim.country || '',
+        code: esim.code || '',
+        plan: esim.plan || esim.bundle_name || '',
+        duration: esim.duration || '',
+        price: esim.price || '',
+        activationDate: esim.activationDate || '',
+        expiryDate: esim.expiryDate || '',
+        iccid: esim.iccid || '',
+        matchingId: esim.matchingId || '',
+        rspUrl: esim.rspUrl || esim.smdpAddress || '',
+        orderReference: esim.orderReference || ''
+    });
+    
+    window.location.href = `order-details.html?${params.toString()}`;
+}
+
+// Setup bottom navigation
+function setupNavigation() {
+    // Account button
+    const accountNavBtn = document.getElementById('accountNavBtn');
+    if (accountNavBtn) {
+        accountNavBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+            navigate('account.html');
+        });
+    }
+    
+    // Buy eSIM button
+    const buyESimNavBtn = document.getElementById('buyESimNavBtn');
+    if (buyESimNavBtn) {
+        buyESimNavBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+            navigate('index.html');
+        });
+    }
+    
+    // Help button
+    const helpNavBtn = document.getElementById('helpNavBtn');
+    if (helpNavBtn) {
+        helpNavBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+            navigate('help.html');
+        });
+    }
+}
+
+

@@ -5,22 +5,30 @@
  * Требуется:
  * - TELEGRAM_BOT_TOKEN
  * - STARS_RATE (курс 1 Star в USD, по умолчанию 0.013)
- * - STARS_MARGIN (наша маржа в долях, по умолчанию 0.29 = 29%)
  * - STARS_TELEGRAM_FEE (комиссия Telegram в долях, по умолчанию 0.25 = 25%)
  *
+ * НОВАЯ ЛОГИКА:
+ * 1. Получаем СЕБЕСТОИМОСТЬ (cost) от клиента
+ * 2. Загружаем настройки наценок из админки
+ * 3. Применяем базовую маржу + маржу способа оплаты
+ * 4. Рассчитываем Stars с учетом комиссии Telegram
+ *
  * Формула расчета:
- * Stars = (price / (1 - margin) / (1 - telegram_fee) / stars_rate)
+ * finalPrice = cost × baseMarkup × starsMarkup
+ * Stars = Math.ceil(finalPrice / (1 - telegram_fee) / stars_rate)
  *
  * Пример для esim_1GB_7D_AE_V2:
- * - price = $2.26 (себестоимость)
- * - margin = 0.29 (29%)
- * - telegram_fee = 0.25 (25%)
- * - stars_rate = 0.013 ($0.013 за 1 Star)
- * - Stars = (2.26 / (1 - 0.29) / (1 - 0.25) / 0.013) ≈ 326 Stars
+ * - cost = $2.26 (себестоимость)
+ * - baseMarkup = 1.29 (29% базовая маржа из админки)
+ * - starsMarkup = 1.05 (5% дополнительная маржа Stars из админки)
+ * - finalPrice = $2.26 × 1.29 × 1.05 = $3.06
+ * - Stars = $3.06 / (1 - 0.25) / 0.013 ≈ 314 Stars
  */
 
-// Загружаем переменные окружения из .env файла (на случай, если они не загружены в server.js)
 const path = require('path');
+const fs = require('fs').promises;
+
+// Загружаем переменные окружения из .env файла
 if (!process.env.TELEGRAM_BOT_TOKEN && !process.env.BOT_TOKEN) {
     try {
         require('dotenv').config({ path: path.join(__dirname, '../../.env') });
@@ -32,9 +40,11 @@ if (!process.env.TELEGRAM_BOT_TOKEN && !process.env.BOT_TOKEN) {
 // Загружаем переменные окружения с проверкой
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
 const STARS_RATE = parseFloat(process.env.STARS_RATE || '0.013'); // 1 Star = $0.013
-const STARS_MARGIN = parseFloat(process.env.STARS_MARGIN || '0.29'); // 29% маржа
 const STARS_TELEGRAM_FEE = parseFloat(process.env.STARS_TELEGRAM_FEE || '0.25'); // 25% комиссия Telegram
 const MIN_STARS = 1;
+
+// Файл с настройками админки
+const SETTINGS_FILE = path.join(__dirname, '..', '..', 'data', 'admin-settings.json');
 
 // Логируем при загрузке модуля для диагностики
 if (!BOT_TOKEN) {
@@ -42,6 +52,35 @@ if (!BOT_TOKEN) {
     console.error('   Available env vars:', Object.keys(process.env).filter(k => k.includes('TELEGRAM') || k.includes('BOT')));
 } else {
     console.log('✅ TELEGRAM_BOT_TOKEN available in create-invoice.js:', BOT_TOKEN.substring(0, 10) + '...');
+}
+
+// Загрузить настройки наценок из админки
+async function loadMarkupSettings() {
+    try {
+        const data = await fs.readFile(SETTINGS_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            // Настройки по умолчанию
+            console.log('[Stars] Using default markup settings');
+            return {
+                markup: {
+                    enabled: true,
+                    base: 1.29,
+                    defaultMultiplier: 1.29
+                },
+                paymentMethods: {
+                    telegramStars: { 
+                        enabled: true,
+                        markup: 1.05,
+                        markupMultiplier: 1.05
+                    }
+                }
+            };
+        }
+        console.error('[Stars] Error loading markup settings:', error);
+        throw error;
+    }
 }
 
 function parsePrice(value) {
@@ -112,7 +151,7 @@ module.exports = async function handler(req, res) {
             bundle_name,
             country_code,
             country_name,
-            price, // ⚠️ ВАЖНО: price должна быть СЕБЕСТОИМОСТЬЮ тарифа (cost), а не финальной ценой для пользователя
+            price, // ✅ НОВАЯ ЛОГИКА: price = себестоимость (cost) от eSIM GO
             currency = 'USD',
             telegram_user_id,
             telegram_username
@@ -125,42 +164,59 @@ module.exports = async function handler(req, res) {
             });
         }
 
-        const priceNumber = parsePrice(price);
-        if (!priceNumber) {
+        const costPrice = parsePrice(price);
+        if (!costPrice) {
             return res.status(400).json({ success: false, error: 'Invalid price format' });
         }
 
-        // Формула расчета Stars с учетом маржи и комиссии Telegram:
-        // Stars = (price / (1 - margin) / (1 - telegram_fee) / stars_rate)
-        // 
-        // Где:
-        // - price = себестоимость тарифа (cost, НЕ финальная цена!)
-        // - margin = наша маржа в долях (0.29 = 29%)
-        // - telegram_fee = комиссия Telegram в долях (0.25 = 25%)
-        // - stars_rate = курс 1 Star в USD (0.013 = $0.013)
+        // ✅ Загружаем настройки наценок из админки
+        const settings = await loadMarkupSettings();
+        const markup = settings.markup || {};
+        const paymentMethods = settings.paymentMethods || {};
+        
+        // Получаем базовую маржу (например, 1.29 = +29%)
+        const baseMarkup = markup.enabled ? (markup.base || markup.defaultMultiplier || 1.0) : 1.0;
+        
+        // Получаем маржу для Telegram Stars (например, 1.05 = +5%)
+        const starsMethod = paymentMethods.telegramStars || {};
+        const starsMarkup = starsMethod.enabled ? (starsMethod.markupMultiplier || starsMethod.markup || 1.0) : 1.0;
+        
+        // ✅ Рассчитываем финальную цену с обеими наценками
+        // finalPrice = себестоимость × базовая маржа × маржа Stars
+        const finalPrice = costPrice * baseMarkup * starsMarkup;
+        
+        console.log('[Stars] Price calculation:', {
+            cost: costPrice,
+            baseMarkup: baseMarkup,
+            starsMarkup: starsMarkup,
+            finalPrice: finalPrice
+        });
+
+        // ✅ НОВАЯ ФОРМУЛА: Stars = finalPrice / (1 - telegram_fee) / stars_rate
+        // Эта формула учитывает:
+        // 1. Финальная цена уже содержит обе наценки (базовую + Stars)
+        // 2. Комиссию Telegram 25% (из Stars вычитается, мы получаем 75%)
+        // 3. Курс Stars ($0.013 за 1 Star)
         //
-        // Пример: (2.26 / (1 - 0.29) / (1 - 0.25) / 0.013) ≈ 326 Stars
-        //
-        // ⚠️ ВАЖНО: price должна быть СЕБЕСТОИМОСТЬЮ (cost), а не финальной ценой!
-        // 
-        // Логика формулы:
-        // - Деление на (1 - margin) необходимо для учета маржи в расчете Stars
-        // - Деление на (1 - telegram_fee) учитывает комиссию Telegram
-        // - Деление на stars_rate конвертирует USD в Stars
+        // Пример: $3.06 / 0.75 / 0.013 ≈ 314 Stars
+        // Проверка: 314 × $0.013 = $4.08, после комиссии Telegram (25%): $4.08 × 0.75 = $3.06 ✅
         const amountStars = Math.max(
             MIN_STARS,
             Math.ceil(
-                priceNumber / (1 - STARS_MARGIN) / (1 - STARS_TELEGRAM_FEE) / STARS_RATE
+                finalPrice / (1 - STARS_TELEGRAM_FEE) / STARS_RATE
             )
         );
 
         console.log(`💰 Stars calculation:`, {
-            price: priceNumber, // ⚠️ Должна быть себестоимость (cost), не финальная цена!
-            margin: STARS_MARGIN,
+            cost: costPrice,
+            baseMarkup: baseMarkup,
+            starsMarkup: starsMarkup,
+            finalPrice: finalPrice.toFixed(2),
             telegramFee: STARS_TELEGRAM_FEE,
             starsRate: STARS_RATE,
             calculatedStars: amountStars,
-            formula: `(${priceNumber} / (1 - ${STARS_MARGIN}) / (1 - ${STARS_TELEGRAM_FEE}) / ${STARS_RATE})`
+            formula: `Math.ceil(${finalPrice.toFixed(2)} / (1 - ${STARS_TELEGRAM_FEE}) / ${STARS_RATE})`,
+            verification: `${amountStars} Stars × ${STARS_RATE} = $${(amountStars * STARS_RATE).toFixed(2)}, after TG fee (${STARS_TELEGRAM_FEE * 100}%): $${(amountStars * STARS_RATE * (1 - STARS_TELEGRAM_FEE)).toFixed(2)}`
         });
 
         const payloadStr = buildPayload({
@@ -197,37 +253,58 @@ module.exports = async function handler(req, res) {
             })
         });
 
-        const tgResult = await tgResponse.json();
-        
-        console.log('📋 Telegram API response:', {
-            ok: tgResult.ok,
-            resultType: typeof tgResult.result,
-            resultLength: tgResult.result?.length,
-            resultPreview: tgResult.result ? tgResult.result.substring(0, 50) + '...' : null,
-            error: tgResult.error_code || tgResult.description
-        });
-        
-        if (!tgResult.ok) {
-            console.error('❌ createInvoiceLink failed:', tgResult);
-            return res.status(500).json({
-                success: false,
-                error: tgResult.description || 'createInvoiceLink failed'
+        if (!tgResponse.ok) {
+            const errorText = await tgResponse.text();
+            console.error('❌ Telegram API error:', {
+                status: tgResponse.status,
+                statusText: tgResponse.statusText,
+                response: errorText
+            });
+            return res.status(500).json({ 
+                success: false, 
+                error: `Telegram API error: ${tgResponse.status} ${tgResponse.statusText}` 
             });
         }
 
-        console.log('✅ Invoice link created:', tgResult.result);
+        const tgData = await tgResponse.json();
+
+        if (!tgData.ok) {
+            console.error('❌ Telegram API returned error:', tgData);
+            return res.status(500).json({ 
+                success: false, 
+                error: tgData.description || 'Failed to create invoice' 
+            });
+        }
+
+        const invoiceLink = tgData.result;
+
+        console.log('✅ Invoice created successfully:', {
+            plan_id,
+            bundle_name,
+            cost: costPrice,
+            finalPrice: finalPrice.toFixed(2),
+            stars: amountStars,
+            invoiceLink: invoiceLink.substring(0, 50) + '...'
+        });
 
         return res.status(200).json({
             success: true,
-            invoiceLink: tgResult.result,
+            invoiceLink,
             amountStars,
-            payload: payloadStr
+            finalPrice: finalPrice.toFixed(2),
+            details: {
+                cost: costPrice,
+                baseMarkup,
+                starsMarkup,
+                finalPrice: finalPrice.toFixed(2)
+            }
         });
     } catch (error) {
-        console.error('❌ create-invoice error:', error);
-        return res.status(500).json({ success: false, error: error.message });
+        console.error('❌ Error creating Telegram Stars invoice:', error);
+        return res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to create invoice'
+        });
     }
 };
-
-
 

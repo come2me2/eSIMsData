@@ -145,3 +145,22 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = { loadPlansFromAPI, getFallbackPlans, clearPlansCache };
 }
 
+
+
+/**
+ * Очистка кеша
+ */
+function clearPlansCache() {
+    cachedPlans = {
+        standard: [],
+        unlimited: [],
+        country: null,
+        timestamp: null
+    };
+}
+
+// Экспорт для использования в других файлах
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { loadPlansFromAPI, getFallbackPlans, clearPlansCache };
+}
+

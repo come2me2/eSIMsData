@@ -308,3 +308,14 @@ module.exports = async function handler(req, res) {
         });
     }
 };
+
+        return res.status(result.valid ? 200 : 401).json(result);
+        
+    } catch (error) {
+        console.error('Validation API error:', error);
+        return res.status(500).json({ 
+            valid: false, 
+            error: 'Internal server error: ' + error.message 
+        });
+    }
+};

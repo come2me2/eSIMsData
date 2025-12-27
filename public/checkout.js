@@ -1170,6 +1170,18 @@ function setupStarsButton() {
         const currency = plan.currency || 'USD';
         const bundleName = plan.bundle_name || plan.id;
         
+        // ✅ ВАЖНО: Вычисляем себестоимость (cost), разделив цену на базовую маржу
+        // Цена из API уже содержит базовую маржу (например, 1.29 = +29%)
+        // Нам нужно передать в create-invoice именно себестоимость
+        const baseMarkup = publicSettings?.markup?.base || publicSettings?.markup?.defaultMultiplier || 1.29;
+        const costPrice = priceValue / baseMarkup;
+        
+        console.log('[Stars] Price calculation:', {
+            priceWithMarkup: priceValue,
+            baseMarkup: baseMarkup,
+            costPrice: costPrice.toFixed(2)
+        });
+        
         const originalText = starsBtn.textContent;
         starsBtn.textContent = 'Creating invoice...';
         starsBtn.disabled = true;
@@ -1189,7 +1201,7 @@ function setupStarsButton() {
                     bundle_name: bundleName,
                     country_code: orderData.code,
                     country_name: orderData.name,
-                    price: priceValue || plan.price,
+                    price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
                     currency,
                     telegram_user_id: auth.getUserId(),
                     telegram_username: auth.getUsername()

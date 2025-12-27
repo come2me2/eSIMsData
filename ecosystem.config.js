@@ -39,3 +39,22 @@ module.exports = {
         exp_backoff_restart_delay: 100
     }]
 };
+
+            TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET
+        },
+        error_file: '/var/www/esimsdata/logs/pm2-error.log',
+        out_file: '/var/www/esimsdata/logs/pm2-out.log',
+        log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+        merge_logs: true,
+        autorestart: true,
+        watch: false,
+        max_memory_restart: '1G',
+        min_uptime: '60s',
+        max_restarts: 3,
+        restart_delay: 10000,
+        listen_timeout: 10000,
+        kill_timeout: 10000,
+        wait_ready: true,
+        exp_backoff_restart_delay: 100
+    }]
+};

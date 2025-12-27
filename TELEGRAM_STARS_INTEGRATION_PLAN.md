@@ -334,3 +334,8 @@ function convertUSDToStars(usdPrice) {
 - [Bot API - Payments](https://core.telegram.org/bots/api#payments)
 - [Telegram Stars Announcement](https://telegram.org/blog/telegram-stars)
 
+
+
+
+
+

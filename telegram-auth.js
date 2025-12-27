@@ -447,3 +447,15 @@ if (typeof module !== 'undefined' && module.exports) {
 
 
 
+
+
+// Экспорт для использования в модулях
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = TelegramAuth;
+}
+
+
+
+
+
+

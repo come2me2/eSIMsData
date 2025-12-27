@@ -102,3 +102,5 @@ async function addMockOrder() {
 // Запускаем скрипт
 addMockOrder();
 
+
+
