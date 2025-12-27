@@ -31,6 +31,8 @@ const Payments = {
             document.getElementById('markupEnabled').checked = settings.markup.enabled || false;
             const baseMarkup = settings.markup.base || settings.markup.defaultMultiplier || 1.29;
             document.getElementById('baseMarkup').value = baseMarkup;
+            // Update toggle state (enable/disable input field)
+            this.updateBaseMarkupToggle();
         }
         
         // Payment methods with markups
@@ -147,6 +149,24 @@ const Payments = {
             console.error('Error saving base markup:', error);
             this.showError('Ошибка сохранения базовой наценки');
         }
+    },
+    
+    // Update base markup toggle (called when toggle is changed)
+    updateBaseMarkupToggle() {
+        const enabled = document.getElementById('markupEnabled').checked;
+        const baseMarkupField = document.getElementById('baseMarkup');
+        
+        // Visual feedback - можно добавить стилизацию
+        if (enabled) {
+            baseMarkupField.disabled = false;
+            baseMarkupField.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            baseMarkupField.disabled = true;
+            baseMarkupField.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+        
+        // Обновляем общие наценки, если они зависят от базовой
+        this.updateTotalMarkups();
     },
     
     // Save payment methods

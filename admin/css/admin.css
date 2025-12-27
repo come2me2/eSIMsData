@@ -297,15 +297,44 @@ aside#sidebar {
         font-size: 1.25rem !important;
     }
     
-    /* Adjust flex items to stack on mobile - BUT NOT for payment cards */
-    .flex.items-center.justify-between:not(#paymentCardTelegramStars .flex.items-center.justify-between):not(#paymentCardCrypto .flex.items-center.justify-between):not(#paymentCardBankCard .flex.items-center.justify-between) {
+    /* Adjust flex items to stack on mobile - BUT NOT for payment cards and base markup */
+    .flex.items-center.justify-between:not(#paymentCardTelegramStars .flex.items-center.justify-between):not(#paymentCardCrypto .flex.items-center.justify-between):not(#paymentCardBankCard .flex.items-center.justify-between):not(.bg-white.rounded-lg.shadow .flex.items-center.justify-between) {
         flex-direction: column;
         align-items: flex-start !important;
         gap: 1rem;
     }
     
+    /* Base markup toggle - keep horizontal layout */
+    .bg-white.rounded-lg.shadow .flex.items-center.justify-between {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+    }
+    
     .flex.items-center.justify-between > * {
-        width: 100%;
+        width: auto;
+    }
+    
+    /* Ensure toggle is on the right for base markup */
+    .bg-white.rounded-lg.shadow .flex.items-center.justify-between > label.relative {
+        margin-left: auto;
+        flex-shrink: 0;
+        order: 2; /* Ensure it's after the label */
+    }
+    
+    /* Base markup label should be on the left */
+    .bg-white.rounded-lg.shadow .flex.items-center.justify-between > label.text-sm {
+        order: 1;
+        flex: 1;
+    }
+    
+    /* Payment cards - ensure toggle switches are always on the right */
+    #paymentCardTelegramStars .flex.items-center.justify-between,
+    #paymentCardCrypto .flex.items-center.justify-between,
+    #paymentCardBankCard .flex.items-center.justify-between {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
     }
     
     /* Payment cards specific styles */
@@ -535,9 +564,21 @@ aside#sidebar {
     /* Ensure toggle stays on the right */
     #paymentCardTelegramStars .relative.inline-flex.items-center,
     #paymentCardCrypto .relative.inline-flex.items-center,
-    #paymentCardBankCard .relative.inline-flex.items-center {
+    #paymentCardBankCard .relative.inline-flex.items-center,
+    .bg-white.rounded-lg.shadow .flex.items-center.justify-between > label.relative {
         margin-left: 0.5rem;
         flex-shrink: 0;
+        order: 2 !important;
+    }
+    
+    /* Ensure labels stay on the left */
+    .bg-white.rounded-lg.shadow .flex.items-center.justify-between > label.text-sm,
+    #paymentCardTelegramStars .flex.items-center.gap-4,
+    #paymentCardCrypto .flex.items-center.gap-4,
+    #paymentCardBankCard .flex.items-center.gap-4 {
+        order: 1 !important;
+        flex: 1;
+        min-width: 0;
     }
     
     /* Payment input max width */
