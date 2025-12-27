@@ -137,19 +137,257 @@
     overflow-y: auto;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    aside {
-        transform: translateX(-100%);
-        transition: transform 0.3s;
+/* Sidebar base styles */
+aside#sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 16rem; /* 256px = w-64 */
+    background-color: #1f2937;
+    color: white;
+    overflow-y: auto;
+}
+
+/* Mobile menu button */
+.mobile-menu-btn {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1100;
+    background-color: #1f2937;
+    color: white;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-menu-btn:hover {
+    background-color: #374151;
+}
+
+.mobile-menu-btn:active {
+    background-color: #4b5563;
+    transform: scale(0.95);
+}
+
+/* Overlay for mobile menu */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.sidebar-overlay.show {
+    display: block;
+    opacity: 1;
+}
+
+/* Desktop - ensure sidebar is always visible */
+@media (min-width: 1025px) {
+    .mobile-menu-btn {
+        display: none !important;
     }
     
-    aside.open {
+    aside#sidebar {
+        transform: translateX(0) !important;
+        display: block !important;
+        position: fixed !important;
+    }
+    
+    .sidebar-overlay {
+        display: none !important;
+    }
+    
+    /* Ensure main content has proper margin on desktop */
+    main {
+        margin-left: 16rem !important; /* 256px = w-64 */
+    }
+}
+
+/* Responsive - Tablets and Mobile */
+@media (max-width: 1024px) {
+    /* Show mobile menu button */
+    .mobile-menu-btn {
+        display: block !important;
+    }
+    
+    /* Hide sidebar by default */
+    aside#sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 1000;
+    }
+    
+    /* Show sidebar when open */
+    aside#sidebar.open {
         transform: translateX(0);
     }
     
+    /* Remove left margin from main */
     main {
-        margin-left: 0;
+        margin-left: 0 !important;
+        padding: 1rem;
+    }
+    
+    /* Adjust header spacing for mobile button */
+    main > div:first-child {
+        margin-top: 3rem;
+    }
+    
+    /* Mobile cards for stats */
+    .grid.grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4 {
+        grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    }
+    
+    /* Adjust modal width for mobile */
+    .modal-content {
+        max-width: 95% !important;
+        margin: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Mobile table styles - scroll horizontally */
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    table {
+        font-size: 0.875rem;
+    }
+    
+    table th,
+    table td {
+        padding: 0.5rem 0.75rem !important;
+        white-space: nowrap;
+    }
+    
+    /* Compact buttons on mobile */
+    .btn {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.875rem;
+    }
+    
+    /* Stack filter inputs vertically */
+    .grid.grid-cols-1.md\:grid-cols-4 {
+        grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    }
+    
+    /* Smaller headings on mobile */
+    h2 {
+        font-size: 1.5rem !important;
+    }
+    
+    h3 {
+        font-size: 1.25rem !important;
+    }
+    
+    /* Adjust flex items to stack on mobile */
+    .flex.items-center.justify-between {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
+    
+    .flex.items-center.justify-between > * {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Extra small devices */
+    main {
+        padding: 0.75rem;
+    }
+    
+    .bg-white.rounded-lg.shadow {
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+    }
+    
+    /* Smaller text for mobile */
+    body {
+        font-size: 0.875rem;
+    }
+    
+    /* Adjust sidebar width on very small screens */
+    aside {
+        width: 80vw;
+        max-width: 280px;
+    }
+    
+    /* Stack modal header items */
+    .modal-content .flex.items-center.justify-between {
+        flex-direction: row !important;
+        align-items: center !important;
+    }
+    
+    /* Payment method cards on mobile */
+    .border.rounded-lg.p-6,
+    .border.rounded-lg.p-4 {
+        padding: 1rem !important;
+    }
+    
+    /* Smaller icons on mobile */
+    img[alt="Telegram Stars"],
+    img[alt="Crypto"],
+    img[alt="Bank Cards"] {
+        width: 2rem !important;
+        height: 2rem !important;
+    }
+}
+
+/* Additional responsive improvements */
+@media (max-width: 640px) {
+    /* Stack payment method toggles vertically */
+    .flex.items-center.justify-between > .flex.items-center {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
+    /* Improve form input spacing on mobile */
+    .space-y-4 > div {
+        margin-top: 1rem;
+    }
+    
+    /* Better button sizing on mobile */
+    button.btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Improve table pagination on mobile */
+    #pagination {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+    /* Increase tap targets for touch devices */
+    button,
+    a,
+    input[type="checkbox"],
+    input[type="radio"] {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Better spacing for touch */
+    nav a {
+        padding: 1rem 1.5rem !important;
     }
 }
 

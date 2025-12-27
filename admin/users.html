@@ -8,8 +8,18 @@
     <link rel="stylesheet" href="css/admin.css">
 </head>
 <body class="bg-gray-100">
+    <!-- Mobile Menu Button -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Открыть меню">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+    </button>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Sidebar Navigation -->
-    <aside class="fixed left-0 top-0 h-full w-64 bg-gray-800 text-white">
+    <aside class="fixed left-0 top-0 h-full w-64 bg-gray-800 text-white" id="sidebar">
         <div class="p-6">
             <h1 class="text-2xl font-bold">eSIMsData</h1>
             <p class="text-gray-400 text-sm mt-1">Admin Dashboard</p>
@@ -117,6 +127,7 @@
 
     <script src="js/auth.js"></script>
     <script src="js/users.js"></script>
+    <script src="js/mobile-menu.js"></script>
 </body>
 </html>
 
