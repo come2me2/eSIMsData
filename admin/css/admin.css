@@ -568,8 +568,14 @@ aside#sidebar {
     .flex.items-center.justify-between label.relative > div {
         width: 2.25rem !important; /* 36px */
         height: 1.25rem !important; /* 20px */
+        min-width: 2.25rem !important;
+        min-height: 1.25rem !important;
+        max-width: 2.25rem !important; /* Предотвращаем увеличение */
+        max-height: 1.25rem !important; /* Предотвращаем увеличение */
         background-color: #e5e7eb !important;
         border-radius: 9999px !important;
+        /* Гарантируем продолговатую форму */
+        aspect-ratio: 2.2 / 1 !important;
     }
     
     /* Toggle switch circle - smaller */
@@ -680,13 +686,30 @@ aside#sidebar {
 }
 
 /* Toggle switch container - ensure it's not affected by form-input styles */
-.relative.inline-flex.items-center > div.rounded-full {
+.relative.inline-flex.items-center > div.rounded-full,
+label.relative > div.rounded-full {
     display: block !important;
     position: relative !important;
     cursor: pointer;
-    background-color: #e5e7eb; /* gray-200 */
-    border-radius: 9999px;
+    background-color: #e5e7eb !important; /* gray-200 */
+    border-radius: 9999px !important;
     transition: background-color 0.2s;
+    /* Гарантируем продолговатую форму - width всегда больше height */
+    min-width: 2.25rem !important; /* 36px минимум */
+    min-height: 1.25rem !important; /* 20px минимум */
+    /* Соотношение сторон для продолговатой формы */
+    aspect-ratio: 2.2 / 1 !important; /* width всегда примерно в 2.2 раза больше height */
+}
+
+/* Десктоп - стандартный размер w-11 h-6 */
+@media (min-width: 1025px) {
+    .relative.inline-flex.items-center > div.rounded-full,
+    label.relative > div.rounded-full {
+        width: 2.75rem !important; /* 44px = w-11 */
+        height: 1.5rem !important; /* 24px = h-6 */
+        min-width: 2.75rem !important;
+        min-height: 1.5rem !important;
+    }
 }
 
 /* Toggle switch when checked - универсальные селекторы для всех случаев */
@@ -841,6 +864,43 @@ input[type="checkbox"]:checked ~ div[class*="rounded-full"]::after {
    CRITICAL: Toggle Switch Styles
    Максимальная специфичность для гарантии работы
    ======================================== */
+
+/* УНИВЕРСАЛЬНОЕ ПРАВИЛО: Гарантируем продолговатую форму для всех toggle switches */
+div.rounded-full[class*="w-11"],
+div.rounded-full[class*="h-6"],
+.relative.inline-flex.items-center > div.rounded-full,
+label.relative > div.rounded-full,
+div.w-11.h-6.rounded-full {
+    /* Предотвращаем круглую форму - width всегда больше height */
+    aspect-ratio: 1.83 / 1 !important; /* w-11/h-6 = 44/24 = 1.83 */
+    /* Дополнительная защита - явно задаем соотношение */
+    box-sizing: border-box !important;
+}
+
+/* Переопределение для всех размеров - гарантируем продолговатую форму */
+@media (min-width: 1025px) {
+    div.rounded-full[class*="w-11"]:not(.toggle-circle),
+    .relative.inline-flex.items-center > div.rounded-full,
+    label.relative > div.rounded-full {
+        aspect-ratio: 1.83 / 1 !important; /* 44px / 24px */
+    }
+}
+
+@media (max-width: 1024px) {
+    div.rounded-full[class*="w-11"]:not(.toggle-circle),
+    .relative.inline-flex.items-center > div.rounded-full,
+    label.relative > div.rounded-full {
+        aspect-ratio: 1.82 / 1 !important; /* 40px / 22px ≈ 1.82 */
+    }
+}
+
+@media (max-width: 480px) {
+    div.rounded-full[class*="w-11"]:not(.toggle-circle),
+    .relative.inline-flex.items-center > div.rounded-full,
+    label.relative > div.rounded-full {
+        aspect-ratio: 1.8 / 1 !important; /* 36px / 20px = 1.8 */
+    }
+}
 
 /* Зеленый цвет для включенных toggle switches */
 body label.relative input[type="checkbox"]:checked ~ div.rounded-full,
