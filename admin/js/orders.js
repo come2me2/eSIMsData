@@ -274,7 +274,7 @@ const Orders = {
                             <div class="pt-3 border-t border-gray-200">
                                 <span class="text-sm text-gray-600 block mb-3">QR код</span>
                                 <div class="flex flex-col items-center gap-3">
-                                    <img src="${qrCode}" alt="QR Code" class="w-40 h-40 border-2 border-gray-200 rounded-xl object-contain bg-white shadow-sm">
+                                    <img src="${qrCode}" alt="QR Code" class="w-28 h-28 border-2 border-gray-200 rounded-xl object-contain bg-white shadow-sm">
                                     <button onclick="Orders.downloadQR('${qrCode}', '${order.orderReference || order.id || 'order'}')" class="btn btn-secondary text-sm px-4 py-2">
                                         <svg class="w-4 h-4 inline mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
