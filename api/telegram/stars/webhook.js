@@ -213,8 +213,9 @@ module.exports = async function handler(req, res) {
                 
                 // Сохраняем заказ через API
                 try {
+                    const telegramUserId = payloadObj.uid || (message.from && message.from.id);
                     const saveOrderReq = {
-                        telegram_user_id: payloadObj.uid || (message.from && message.from.id),
+                        telegram_user_id: telegramUserId,
                         orderReference: orderRef,
                         iccid: assignments?.iccid || null,
                         matchingId: assignments?.matchingId || null,
@@ -225,9 +226,15 @@ module.exports = async function handler(req, res) {
                         plan_type: payloadObj.pt || null,
                         bundle_name: payloadObj.bn || null,
                         price: orderData.total || null,
-                        currency: orderData.currency || null,
+                        currency: orderData.currency || 'USD',
                         status: orderData.status || 'completed',
-                        createdAt: new Date().toISOString()
+                        createdAt: new Date().toISOString(),
+                        // Новые обязательные поля
+                        source: 'telegram_mini_app',
+                        customer: telegramUserId,
+                        provider_product_id: payloadObj.bn || bundle_name || null,
+                        provider_base_price_usd: payloadObj.bp || orderData.basePrice || null, // bp = base price из payload
+                        payment_method: 'telegram_stars'
                     };
                     
                     // Вызываем API для сохранения заказа

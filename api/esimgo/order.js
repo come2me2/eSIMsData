@@ -126,7 +126,66 @@ module.exports = async function handler(req, res) {
             }
         }
         
-        // TODO: Сохранить заказ в БД с привязкой к telegram_user_id
+        // Сохраняем заказ в БД с привязкой к telegram_user_id
+        if (!isTestMode && telegram_user_id && order.orderReference) {
+            try {
+                const saveOrderHandler = require('../orders');
+                
+                // Создаем mock request/response для сохранения заказа
+                const saveOrderReq = {
+                    method: 'POST',
+                    body: {
+                        telegram_user_id: telegram_user_id,
+                        orderReference: order.orderReference,
+                        iccid: assignments?.iccid || null,
+                        matchingId: assignments?.matchingId || null,
+                        smdpAddress: assignments?.smdpAddress || null,
+                        country_code: country_code || null,
+                        country_name: country_name || null,
+                        plan_id: plan_id || null,
+                        plan_type: plan_type || null,
+                        bundle_name: bundleName || null,
+                        price: order.total || null,
+                        currency: order.currency || 'USD',
+                        status: order.status || 'completed',
+                        createdAt: new Date().toISOString(),
+                        // Новые обязательные поля
+                        source: 'telegram_mini_app',
+                        customer: telegram_user_id,
+                        provider_product_id: bundleName || null,
+                        provider_base_price_usd: req.body.provider_base_price_usd || order.basePrice || null,
+                        payment_method: req.body.payment_method || null
+                    }
+                };
+                
+                let saveOrderStatusCode = 200;
+                let saveOrderData = null;
+                
+                const saveOrderRes = {
+                    status: (code) => {
+                        saveOrderStatusCode = code;
+                        return {
+                            json: (data) => {
+                                saveOrderData = data;
+                            }
+                        };
+                    },
+                    setHeader: () => {},
+                    statusCode: 200
+                };
+                
+                await saveOrderHandler(saveOrderReq, saveOrderRes);
+                
+                if (saveOrderStatusCode === 200) {
+                    console.log('✅ Order saved to database:', order.orderReference);
+                } else {
+                    console.warn('⚠️ Failed to save order to database:', saveOrderData);
+                }
+            } catch (saveError) {
+                console.error('❌ Error saving order to database:', saveError);
+                // Не критично, продолжаем
+            }
+        }
         
         return res.status(200).json({
             success: true,

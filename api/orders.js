@@ -111,7 +111,13 @@ module.exports = async function handler(req, res) {
                 price,
                 currency,
                 status = 'completed',
-                createdAt
+                createdAt,
+                // Новые обязательные поля
+                source = 'telegram_mini_app',
+                customer, // Если не передано, используем telegram_user_id
+                provider_product_id, // Если не передано, используем bundle_name
+                provider_base_price_usd,
+                payment_method
             } = req.body;
             
             if (!telegram_user_id) {
@@ -139,21 +145,50 @@ module.exports = async function handler(req, res) {
                 o => o.orderReference === orderReference
             );
             
+            // Извлекаем дату и время из createdAt
+            const createdAtDate = createdAt ? new Date(createdAt) : new Date();
+            const date = createdAtDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            const time = createdAtDate.toTimeString().split(' ')[0]; // HH:MM:SS
+            
             const orderData = {
+                // Базовые поля
                 orderReference,
+                number: orderReference, // Дублируем для удобства
+                
+                // Обязательные поля согласно требованиям
+                source: source || 'telegram_mini_app',
+                customer: customer || telegram_user_id,
+                provider_product_id: provider_product_id || bundle_name || null,
+                provider_base_price_usd: provider_base_price_usd || null,
+                payment_method: payment_method || null,
+                date: date,
+                time: time,
+                status: status,
+                
+                // eSIM данные
                 iccid: iccid || null,
                 matchingId: matchingId || null,
                 smdpAddress: smdpAddress || null,
+                
+                // Географические данные
                 country_code: country_code || null,
                 country_name: country_name || null,
+                
+                // План данных
                 plan_id: plan_id || null,
                 plan_type: plan_type || null,
                 bundle_name: bundle_name || null,
+                
+                // Цены
                 price: price || null,
                 currency: currency || null,
-                status,
-                createdAt: createdAt || new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                
+                // Временные метки
+                createdAt: createdAt || createdAtDate.toISOString(),
+                updatedAt: new Date().toISOString(),
+                
+                // Для обратной совместимости
+                telegram_user_id: telegram_user_id
             };
             
             if (existingIndex >= 0) {

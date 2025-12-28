@@ -716,6 +716,21 @@ async function processPurchase(orderWithUser, auth, tg) {
             console.warn('⚠️ TEST MODE: Order will be validated but not created');
         }
         
+        // Получаем базовую цену провайдера (до наценок)
+        let providerBasePriceUsd = null;
+        if (selectedPlan.basePrice !== undefined && selectedPlan.basePrice !== null) {
+            providerBasePriceUsd = parseFloat(selectedPlan.basePrice);
+        } else if (selectedPlan.priceValue) {
+            // Если basePrice нет, используем priceValue как базовую цену
+            providerBasePriceUsd = parseFloat(selectedPlan.priceValue);
+        } else if (selectedPlan.price) {
+            // Извлекаем числовое значение из строки цены
+            const priceMatch = selectedPlan.price.toString().match(/([\d.,]+)/);
+            if (priceMatch) {
+                providerBasePriceUsd = parseFloat(priceMatch[1].replace(',', '.'));
+            }
+        }
+        
         // Создаем заказ
         purchaseBtn.textContent = testMode ? 'Validating order...' : 'Creating order...';
         const orderResponse = await fetch('/api/esimgo/order', {
@@ -730,7 +745,9 @@ async function processPurchase(orderWithUser, auth, tg) {
                 country_name: orderWithUser.name,
                 plan_id: orderWithUser.planId,
                 plan_type: orderWithUser.planType,
-                test_mode: testMode // Передаем режим тестирования
+                test_mode: testMode, // Передаем режим тестирования
+                payment_method: selectedPaymentMethod || null,
+                provider_base_price_usd: providerBasePriceUsd
             })
         });
         
