@@ -294,26 +294,18 @@
     transform: scale(1.1);
 }
 
-/* QR Code container */
+/* QR Code container - базовый размер для десктопа */
 #orderDetails img[alt="QR Code"] {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     border: 2px solid #e5e7eb;
     transition: all 0.2s ease;
-    width: 128px !important; /* w-32 = 128px для десктопа */
-    height: 128px !important;
+    width: 112px !important; /* w-28 = 112px для десктопа */
+    height: 112px !important;
 }
 
 #orderDetails img[alt="QR Code"]:hover {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     transform: scale(1.02);
-}
-
-/* Desktop: еще меньше размер QR-кода */
-@media (min-width: 1025px) {
-    #orderDetails img[alt="QR Code"] {
-        width: 112px !important; /* w-28 = 112px */
-        height: 112px !important;
-    }
 }
 
 /* Status badge improvements */
