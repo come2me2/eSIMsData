@@ -140,6 +140,8 @@ async function loadPlansForCheckout() {
 let originalPrice = '';
 let isPromoApplied = false;
 let discountPercent = 0;
+let discountAmount = 0; // Discount amount in dollars
+let appliedPromocode = null; // Applied promocode data
 
 // ===== Payment method (UI only for now) =====
 const PAYMENT_METHODS = {
@@ -1196,38 +1198,65 @@ function updateOrderDetailsWithRealPlans() {
 function updateTotalPrice() {
     const totalPriceElement = document.getElementById('checkoutTotalPrice');
     
-    if (isPromoApplied && discountPercent > 0) {
-        // Extract numeric value from price string (e.g., "$ 9.99" -> 9.99)
-        const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
-        if (priceMatch) {
-            const originalPriceValue = parseFloat(priceMatch[1]);
-            const discountedPrice = originalPriceValue * (1 - discountPercent / 100);
-            const newPrice = `$ ${discountedPrice.toFixed(2)}`;
-            
-            totalPriceElement.innerHTML = `
-                <span class="checkout-total-price-old">${originalPrice}</span>
-                <span class="checkout-total-price-new">${newPrice}</span>
-            `;
+    // Извлекаем базовую цену
+    let basePrice = 0;
+    const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
+    if (priceMatch) {
+        basePrice = parseFloat(priceMatch[1]);
+    }
+    
+    // Применяем наценку способа оплаты, если выбрана
+    if (publicSettings && selectedPaymentMethod && basePrice > 0) {
+        const paymentMethodKey = selectedPaymentMethod === 'stars' ? 'telegramStars' :
+                                 selectedPaymentMethod === 'cryptomus' ? 'crypto' :
+                                 selectedPaymentMethod === 'stripe' ? 'bankCard' : null;
+        
+        if (paymentMethodKey && publicSettings.paymentMethods[paymentMethodKey]) {
+            const paymentMethod = publicSettings.paymentMethods[paymentMethodKey];
+            if (paymentMethod.enabled && paymentMethod.markupMultiplier) {
+                basePrice = basePrice * paymentMethod.markupMultiplier;
+            }
         }
+    }
+    
+    // Применяем промокод, если активен
+    if (isPromoApplied && (discountPercent > 0 || discountAmount > 0)) {
+        let discountedPrice = basePrice;
+        
+        if (discountPercent > 0) {
+            // Процентная скидка
+            discountedPrice = basePrice * (1 - discountPercent / 100);
+        } else if (discountAmount > 0) {
+            // Фиксированная скидка
+            discountedPrice = Math.max(0, basePrice - discountAmount);
+        }
+        
+        const originalPriceDisplay = basePrice > 0 ? `$ ${basePrice.toFixed(2)}` : originalPrice;
+        const newPrice = `$ ${discountedPrice.toFixed(2)}`;
+        
+        totalPriceElement.innerHTML = `
+            <span class="checkout-total-price-old">${originalPriceDisplay}</span>
+            <span class="checkout-total-price-new">${newPrice}</span>
+        `;
     } else {
-        totalPriceElement.textContent = originalPrice;
+        // Без промокода, но с наценкой способа оплаты
+        if (basePrice > 0) {
+            totalPriceElement.textContent = `$ ${basePrice.toFixed(2)}`;
+        } else {
+            totalPriceElement.textContent = originalPrice;
+        }
     }
 }
 
 // Setup promo code button
-function setupPromoCode() {
+async function setupPromoCode() {
     const promoBtn = document.getElementById('promoBtn');
     const promoInput = document.getElementById('promoInput');
     const promoError = document.getElementById('promoError');
     const promoSuccess = document.getElementById('promoSuccess');
     
-    // Valid promo codes with discounts
-    const promoCodes = {
-        'PROMO': 30  // 30% discount
-    };
-    
     if (promoBtn && promoInput && promoError && promoSuccess) {
-        promoBtn.addEventListener('click', () => {
+        promoBtn.addEventListener('click', async () => {
             const promoCode = promoInput.value.trim().toUpperCase();
             
             if (!promoCode) {
@@ -1240,32 +1269,97 @@ function setupPromoCode() {
                 tg.HapticFeedback.impactOccurred('light');
             }
             
-            // Check if promo code is valid
-            if (promoCodes.hasOwnProperty(promoCode)) {
-                // Valid promo code
-                isPromoApplied = true;
-                discountPercent = promoCodes[promoCode];
+            // Получаем текущую цену для валидации промокода
+            let currentPrice = 0;
+            const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
+            if (priceMatch) {
+                currentPrice = parseFloat(priceMatch[1]);
+            }
+            
+            // Применяем наценку способа оплаты, если выбрана
+            if (publicSettings && selectedPaymentMethod && currentPrice > 0) {
+                const paymentMethodKey = selectedPaymentMethod === 'stars' ? 'telegramStars' :
+                                         selectedPaymentMethod === 'cryptomus' ? 'crypto' :
+                                         selectedPaymentMethod === 'stripe' ? 'bankCard' : null;
                 
-                promoError.style.display = 'none';
-                promoSuccess.style.display = 'block';
-                promoInput.style.borderColor = 'transparent';
-                
-                // Update price with discount
-                updateTotalPrice();
-                
-                if (tg) {
-                    tg.HapticFeedback.notificationOccurred('success');
+                if (paymentMethodKey && publicSettings.paymentMethods[paymentMethodKey]) {
+                    const paymentMethod = publicSettings.paymentMethods[paymentMethodKey];
+                    if (paymentMethod.enabled && paymentMethod.markupMultiplier) {
+                        currentPrice = currentPrice * paymentMethod.markupMultiplier;
+                    }
                 }
-            } else {
-                // Invalid promo code
+            }
+            
+            // Валидируем промокод через API
+            try {
+                const response = await fetch('/api/promocode/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: promoCode,
+                        amount: currentPrice
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.discount) {
+                    // Valid promo code
+                    isPromoApplied = true;
+                    appliedPromocode = data.promocode;
+                    
+                    // Сохраняем информацию о скидке
+                    if (data.promocode.type === 'percent') {
+                        discountPercent = data.promocode.discount;
+                        discountAmount = data.discount.amount;
+                    } else {
+                        discountPercent = 0;
+                        discountAmount = data.discount.amount;
+                    }
+                    
+                    promoError.style.display = 'none';
+                    promoSuccess.style.display = 'block';
+                    promoInput.style.borderColor = 'transparent';
+                    
+                    // Update price with discount
+                    updateTotalPrice();
+                    
+                    if (tg) {
+                        tg.HapticFeedback.notificationOccurred('success');
+                    }
+                } else {
+                    // Invalid promo code
+                    isPromoApplied = false;
+                    discountPercent = 0;
+                    discountAmount = 0;
+                    appliedPromocode = null;
+                    
+                    promoError.textContent = data.error || 'Промокод недействителен';
+                    promoError.style.display = 'block';
+                    promoSuccess.style.display = 'none';
+                    promoInput.style.borderColor = '#FF3B30';
+                    
+                    // Reset price to original
+                    updateTotalPrice();
+                    
+                    if (tg) {
+                        tg.HapticFeedback.notificationOccurred('error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error validating promocode:', error);
                 isPromoApplied = false;
                 discountPercent = 0;
+                discountAmount = 0;
+                appliedPromocode = null;
                 
+                promoError.textContent = 'Ошибка проверки промокода';
                 promoError.style.display = 'block';
                 promoSuccess.style.display = 'none';
                 promoInput.style.borderColor = '#FF3B30';
                 
-                // Reset price to original
                 updateTotalPrice();
                 
                 if (tg) {
@@ -1285,6 +1379,8 @@ function setupPromoCode() {
                 if (isPromoApplied) {
                     isPromoApplied = false;
                     discountPercent = 0;
+                    discountAmount = 0;
+                    appliedPromocode = null;
                     updateTotalPrice();
                 }
             }
@@ -1410,92 +1506,6 @@ function setupPurchaseButton() {
             }
         }
     });
-}
-
-
-        }
-        
-        // Создаем заказ
-        purchaseBtn.textContent = testMode ? 'Validating order...' : 'Creating order...';
-        const orderResponse = await fetch('/api/esimgo/order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                bundle_name: bundleName,
-                telegram_user_id: orderWithUser.telegram_user_id,
-                telegram_username: orderWithUser.telegram_username,
-                user_name: orderWithUser.user_name,
-                country_code: orderWithUser.code,
-                country_name: orderWithUser.name,
-                plan_id: orderWithUser.planId,
-                plan_type: orderWithUser.planType,
-                test_mode: testMode // Передаем режим тестирования
-            })
-        });
-        
-        const orderResult = await orderResponse.json();
-        
-        if (!orderResult.success) {
-            throw new Error(orderResult.error || 'Failed to create order');
-        }
-        
-        // Проверяем режим тестирования
-        if (orderResult.test_mode) {
-            console.log('✅ Order validated (TEST MODE):', orderResult.data);
-            
-            // В тестовом режиме показываем информацию о валидации
-            if (tg) {
-                tg.showAlert(
-                    `✅ Validation successful!\n\n` +
-                    `Price: ${orderResult.data.currency} ${orderResult.data.total}\n` +
-                    `Bundle: ${bundleName}\n\n` +
-                    `This was a test. No real order was created.\n` +
-                    `Remove ?test=true from URL to create real orders.`
-                );
-            } else {
-                alert(
-                    `✅ Validation successful!\n\n` +
-                    `Price: ${orderResult.data.currency} ${orderResult.data.total}\n` +
-                    `Bundle: ${bundleName}\n\n` +
-                    `This was a test. No real order was created.`
-                );
-            }
-            
-            purchaseBtn.textContent = originalText;
-            purchaseBtn.disabled = false;
-            return; // Не продолжаем с получением QR кода в тестовом режиме
-        }
-        
-        console.log('Order created:', orderResult.data);
-        
-        // Если есть assignments (QR код), показываем их
-        if (orderResult.data.assignments) {
-            showOrderSuccess(orderResult.data, tg);
-        } else if (orderResult.data.orderReference) {
-            // Если assignments не получены сразу, получаем их отдельно
-            purchaseBtn.textContent = 'Getting QR code...';
-            await getAndShowAssignments(orderResult.data.orderReference, tg);
-        } else {
-            throw new Error('Order created but no eSIM data received');
-        }
-        
-        if (tg) {
-            tg.HapticFeedback.notificationOccurred('success');
-        }
-        
-    } catch (error) {
-        console.error('Purchase failed:', error);
-        
-        purchaseBtn.textContent = originalText;
-        purchaseBtn.disabled = false;
-        
-        if (tg) {
-            tg.HapticFeedback.notificationOccurred('error');
-            tg.showAlert('Purchase failed: ' + error.message);
-        } else {
-            alert('Purchase failed: ' + error.message);
-        }
-    }
 }
 
 /**
@@ -1878,38 +1888,65 @@ function updateOrderDetailsWithRealPlans() {
 function updateTotalPrice() {
     const totalPriceElement = document.getElementById('checkoutTotalPrice');
     
-    if (isPromoApplied && discountPercent > 0) {
-        // Extract numeric value from price string (e.g., "$ 9.99" -> 9.99)
-        const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
-        if (priceMatch) {
-            const originalPriceValue = parseFloat(priceMatch[1]);
-            const discountedPrice = originalPriceValue * (1 - discountPercent / 100);
-            const newPrice = `$ ${discountedPrice.toFixed(2)}`;
-            
-            totalPriceElement.innerHTML = `
-                <span class="checkout-total-price-old">${originalPrice}</span>
-                <span class="checkout-total-price-new">${newPrice}</span>
-            `;
+    // Извлекаем базовую цену
+    let basePrice = 0;
+    const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
+    if (priceMatch) {
+        basePrice = parseFloat(priceMatch[1]);
+    }
+    
+    // Применяем наценку способа оплаты, если выбрана
+    if (publicSettings && selectedPaymentMethod && basePrice > 0) {
+        const paymentMethodKey = selectedPaymentMethod === 'stars' ? 'telegramStars' :
+                                 selectedPaymentMethod === 'cryptomus' ? 'crypto' :
+                                 selectedPaymentMethod === 'stripe' ? 'bankCard' : null;
+        
+        if (paymentMethodKey && publicSettings.paymentMethods[paymentMethodKey]) {
+            const paymentMethod = publicSettings.paymentMethods[paymentMethodKey];
+            if (paymentMethod.enabled && paymentMethod.markupMultiplier) {
+                basePrice = basePrice * paymentMethod.markupMultiplier;
+            }
         }
+    }
+    
+    // Применяем промокод, если активен
+    if (isPromoApplied && (discountPercent > 0 || discountAmount > 0)) {
+        let discountedPrice = basePrice;
+        
+        if (discountPercent > 0) {
+            // Процентная скидка
+            discountedPrice = basePrice * (1 - discountPercent / 100);
+        } else if (discountAmount > 0) {
+            // Фиксированная скидка
+            discountedPrice = Math.max(0, basePrice - discountAmount);
+        }
+        
+        const originalPriceDisplay = basePrice > 0 ? `$ ${basePrice.toFixed(2)}` : originalPrice;
+        const newPrice = `$ ${discountedPrice.toFixed(2)}`;
+        
+        totalPriceElement.innerHTML = `
+            <span class="checkout-total-price-old">${originalPriceDisplay}</span>
+            <span class="checkout-total-price-new">${newPrice}</span>
+        `;
     } else {
-        totalPriceElement.textContent = originalPrice;
+        // Без промокода, но с наценкой способа оплаты
+        if (basePrice > 0) {
+            totalPriceElement.textContent = `$ ${basePrice.toFixed(2)}`;
+        } else {
+            totalPriceElement.textContent = originalPrice;
+        }
     }
 }
 
 // Setup promo code button
-function setupPromoCode() {
+async function setupPromoCode() {
     const promoBtn = document.getElementById('promoBtn');
     const promoInput = document.getElementById('promoInput');
     const promoError = document.getElementById('promoError');
     const promoSuccess = document.getElementById('promoSuccess');
     
-    // Valid promo codes with discounts
-    const promoCodes = {
-        'PROMO': 30  // 30% discount
-    };
-    
     if (promoBtn && promoInput && promoError && promoSuccess) {
-        promoBtn.addEventListener('click', () => {
+        promoBtn.addEventListener('click', async () => {
             const promoCode = promoInput.value.trim().toUpperCase();
             
             if (!promoCode) {
@@ -1922,32 +1959,97 @@ function setupPromoCode() {
                 tg.HapticFeedback.impactOccurred('light');
             }
             
-            // Check if promo code is valid
-            if (promoCodes.hasOwnProperty(promoCode)) {
-                // Valid promo code
-                isPromoApplied = true;
-                discountPercent = promoCodes[promoCode];
+            // Получаем текущую цену для валидации промокода
+            let currentPrice = 0;
+            const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
+            if (priceMatch) {
+                currentPrice = parseFloat(priceMatch[1]);
+            }
+            
+            // Применяем наценку способа оплаты, если выбрана
+            if (publicSettings && selectedPaymentMethod && currentPrice > 0) {
+                const paymentMethodKey = selectedPaymentMethod === 'stars' ? 'telegramStars' :
+                                         selectedPaymentMethod === 'cryptomus' ? 'crypto' :
+                                         selectedPaymentMethod === 'stripe' ? 'bankCard' : null;
                 
-                promoError.style.display = 'none';
-                promoSuccess.style.display = 'block';
-                promoInput.style.borderColor = 'transparent';
-                
-                // Update price with discount
-                updateTotalPrice();
-                
-                if (tg) {
-                    tg.HapticFeedback.notificationOccurred('success');
+                if (paymentMethodKey && publicSettings.paymentMethods[paymentMethodKey]) {
+                    const paymentMethod = publicSettings.paymentMethods[paymentMethodKey];
+                    if (paymentMethod.enabled && paymentMethod.markupMultiplier) {
+                        currentPrice = currentPrice * paymentMethod.markupMultiplier;
+                    }
                 }
-            } else {
-                // Invalid promo code
+            }
+            
+            // Валидируем промокод через API
+            try {
+                const response = await fetch('/api/promocode/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: promoCode,
+                        amount: currentPrice
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.discount) {
+                    // Valid promo code
+                    isPromoApplied = true;
+                    appliedPromocode = data.promocode;
+                    
+                    // Сохраняем информацию о скидке
+                    if (data.promocode.type === 'percent') {
+                        discountPercent = data.promocode.discount;
+                        discountAmount = data.discount.amount;
+                    } else {
+                        discountPercent = 0;
+                        discountAmount = data.discount.amount;
+                    }
+                    
+                    promoError.style.display = 'none';
+                    promoSuccess.style.display = 'block';
+                    promoInput.style.borderColor = 'transparent';
+                    
+                    // Update price with discount
+                    updateTotalPrice();
+                    
+                    if (tg) {
+                        tg.HapticFeedback.notificationOccurred('success');
+                    }
+                } else {
+                    // Invalid promo code
+                    isPromoApplied = false;
+                    discountPercent = 0;
+                    discountAmount = 0;
+                    appliedPromocode = null;
+                    
+                    promoError.textContent = data.error || 'Промокод недействителен';
+                    promoError.style.display = 'block';
+                    promoSuccess.style.display = 'none';
+                    promoInput.style.borderColor = '#FF3B30';
+                    
+                    // Reset price to original
+                    updateTotalPrice();
+                    
+                    if (tg) {
+                        tg.HapticFeedback.notificationOccurred('error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error validating promocode:', error);
                 isPromoApplied = false;
                 discountPercent = 0;
+                discountAmount = 0;
+                appliedPromocode = null;
                 
+                promoError.textContent = 'Ошибка проверки промокода';
                 promoError.style.display = 'block';
                 promoSuccess.style.display = 'none';
                 promoInput.style.borderColor = '#FF3B30';
                 
-                // Reset price to original
                 updateTotalPrice();
                 
                 if (tg) {
@@ -1967,6 +2069,8 @@ function setupPromoCode() {
                 if (isPromoApplied) {
                     isPromoApplied = false;
                     discountPercent = 0;
+                    discountAmount = 0;
+                    appliedPromocode = null;
                     updateTotalPrice();
                 }
             }

@@ -158,7 +158,7 @@ module.exports = async function handler(req, res) {
         
         // POST /api/admin/settings/promocodes - создать промокод
         if (req.method === 'POST' && section === 'promocodes') {
-            const { code, discount, type, validUntil, maxUses, usedCount = 0 } = req.body || {};
+            const { code, discount, type, startDate, validUntil, maxUses, status = 'active', usedCount = 0 } = req.body || {};
             
             if (!code || !discount || !type) {
                 return res.status(400).json({
@@ -181,8 +181,10 @@ module.exports = async function handler(req, res) {
                 code,
                 discount: parseFloat(discount),
                 type, // "percent" or "fixed"
+                startDate: startDate || null,
                 validUntil: validUntil || null,
                 maxUses: maxUses || null,
+                status: status || 'active', // "active" or "inactive"
                 usedCount: usedCount || 0,
                 createdAt: new Date().toISOString()
             };
@@ -193,6 +195,37 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({
                 success: true,
                 promocode
+            });
+        }
+        
+        // PUT /api/admin/settings/promocodes/:code - обновить промокод
+        if (req.method === 'PUT' && section === 'promocodes') {
+            const code = urlParts[urlParts.length - 1];
+            const { discount, type, startDate, validUntil, maxUses, status } = req.body || {};
+            const settings = await loadSettings();
+            
+            const index = settings.promocodes.findIndex(p => p.code === code);
+            if (index === -1) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Promocode not found'
+                });
+            }
+            
+            // Обновляем промокод
+            if (discount !== undefined) settings.promocodes[index].discount = parseFloat(discount);
+            if (type !== undefined) settings.promocodes[index].type = type;
+            if (startDate !== undefined) settings.promocodes[index].startDate = startDate || null;
+            if (validUntil !== undefined) settings.promocodes[index].validUntil = validUntil || null;
+            if (maxUses !== undefined) settings.promocodes[index].maxUses = maxUses || null;
+            if (status !== undefined) settings.promocodes[index].status = status;
+            settings.promocodes[index].updatedAt = new Date().toISOString();
+            
+            await saveSettings(settings);
+            
+            return res.status(200).json({
+                success: true,
+                promocode: settings.promocodes[index]
             });
         }
         
