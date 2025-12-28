@@ -195,7 +195,7 @@ const Users = {
                                                 </div>
                                                 <div class="text-right ml-4">
                                                     <div class="text-sm font-bold text-gray-900">$${order.price || '0.00'}</div>
-                                                    <a href="orders.html?search=${order.orderReference || order.id || order.number}" class="text-xs text-blue-600 hover:text-blue-800">Открыть</a>
+                                                    <button onclick="Users.openOrderDetails('${order.orderReference || order.id || order.number}', '${user.telegram_user_id}')" class="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">Открыть</button>
                                                 </div>
                                             </div>
                                         `;
@@ -221,6 +221,18 @@ const Users = {
                 </div>
             </div>
         `;
+    },
+    
+    // Open order details modal
+    async openOrderDetails(orderId, userId) {
+        // Check if Orders is available (we're on users page, need to load orders functionality)
+        if (typeof Orders !== 'undefined') {
+            // If orders.js is loaded, use its function
+            await Orders.showOrderDetails(orderId, userId);
+        } else {
+            // Otherwise, navigate to orders page with search
+            window.location.href = `orders.html?search=${orderId}`;
+        }
     },
     
     showError(message) {
