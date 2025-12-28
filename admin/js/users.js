@@ -86,6 +86,17 @@ const Users = {
         const container = document.getElementById('userDetails');
         if (!container) return;
         
+        // Форматируем даты
+        const registrationDate = user.registrationDate || user.firstOrderDate;
+        const formattedRegistrationDate = registrationDate 
+            ? new Date(registrationDate).toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            : 'N/A';
         const firstOrderDate = user.firstOrderDate 
             ? new Date(user.firstOrderDate).toLocaleDateString('ru-RU', {
                 year: 'numeric',
@@ -106,70 +117,106 @@ const Users = {
             : 'N/A';
         
         container.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Основная информация -->
-                <div class="space-y-4">
+                <div class="space-y-5">
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-2">Основная информация</h4>
-                        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-                            <div>
-                                <span class="text-sm text-gray-600">Telegram ID:</span>
-                                <span class="ml-2 font-medium">${user.telegram_user_id}</span>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Основная информация</h4>
+                        <div class="bg-gray-50 rounded-lg p-5 space-y-4">
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">Telegram ID</span>
+                                <span class="ml-4 font-semibold text-gray-900 text-right">${user.telegram_user_id}</span>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-600">Username:</span>
-                                <span class="ml-2 font-medium">${user.telegram_username ? `@${user.telegram_username}` : 'Не указан'}</span>
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">Username</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right">${user.telegram_username ? `@${user.telegram_username}` : 'Не указан'}</span>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-600">Всего заказов:</span>
-                                <span class="ml-2 font-semibold text-lg">${user.totalOrders}</span>
+                            <div class="flex items-start justify-between pt-3 border-t border-gray-200">
+                                <span class="text-sm text-gray-600">Всего заказов</span>
+                                <span class="ml-4 font-bold text-xl text-blue-600">${user.totalOrders}</span>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-600">Всего потрачено:</span>
-                                <span class="ml-2 font-semibold text-lg text-green-600">$${user.totalSpent.toFixed(2)}</span>
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">Всего потрачено</span>
+                                <span class="ml-4 font-bold text-xl text-green-600">$${user.totalSpent.toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
                     
+                    <!-- Даты -->
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-2">Даты</h4>
-                        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-                            <div>
-                                <span class="text-sm text-gray-600">Первый заказ:</span>
-                                <span class="ml-2 font-medium">${firstOrderDate}</span>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Даты</h4>
+                        <div class="bg-gray-50 rounded-lg p-5 space-y-4">
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">Дата регистрации</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right text-xs">${formattedRegistrationDate}</span>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-600">Последний заказ:</span>
-                                <span class="ml-2 font-medium">${lastOrderDate}</span>
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">Первый заказ</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right text-xs">${firstOrderDate}</span>
+                            </div>
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">Последний заказ</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right text-xs">${lastOrderDate}</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Заказы пользователя -->
-                <div>
-                    <h4 class="text-sm font-semibold text-gray-500 uppercase mb-2">Последние заказы</h4>
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        ${user.orders && user.orders.length > 0 ? `
-                            <div class="space-y-2 max-h-96 overflow-y-auto">
-                                ${user.orders.slice(0, 10).map(order => {
-                                    const orderDate = new Date(order.createdAt || order.date || 0).toLocaleDateString('ru-RU');
-                                    return `
-                                        <div class="flex items-center justify-between p-2 bg-white rounded border">
-                                            <div>
-                                                <span class="text-sm font-medium">#${order.orderReference || order.id || 'N/A'}</span>
-                                                <span class="text-xs text-gray-500 ml-2">${order.country_name || order.country_code || ''}</span>
+                <div class="space-y-5">
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Последние заказы</h4>
+                        <div class="bg-gray-50 rounded-lg p-5">
+                            ${user.orders && user.orders.length > 0 ? `
+                                <div class="space-y-2 max-h-96 overflow-y-auto">
+                                    ${user.orders.slice(0, 10).map(order => {
+                                        const orderDate = new Date(order.createdAt || order.date || 0).toLocaleDateString('ru-RU');
+                                        const orderStatus = order.status || 'completed';
+                                        const statusMap = {
+                                            'completed': { text: 'Completed', color: 'bg-green-100 text-green-800' },
+                                            'on_hold': { text: 'On Hold', color: 'bg-yellow-100 text-yellow-800' },
+                                            'canceled': { text: 'Canceled', color: 'bg-gray-100 text-gray-800' },
+                                            'failed': { text: 'Failed', color: 'bg-red-100 text-red-800' },
+                                            'pending': { text: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
+                                            'processing': { text: 'Processing', color: 'bg-blue-100 text-blue-800' }
+                                        };
+                                        const statusInfo = statusMap[orderStatus] || { text: orderStatus, color: 'bg-gray-100 text-gray-800' };
+                                        
+                                        return `
+                                            <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
+                                                <div class="flex-1">
+                                                    <div class="flex items-center gap-2 mb-1">
+                                                        <span class="text-sm font-semibold text-gray-900">#${order.orderReference || order.id || order.number || 'N/A'}</span>
+                                                        <span class="px-2 py-0.5 text-xs font-medium rounded ${statusInfo.color}">${statusInfo.text}</span>
+                                                    </div>
+                                                    <div class="text-xs text-gray-500">
+                                                        ${order.country_name || order.country_code || 'N/A'} • ${orderDate}
+                                                    </div>
+                                                </div>
+                                                <div class="text-right ml-4">
+                                                    <div class="text-sm font-bold text-gray-900">$${order.price || '0.00'}</div>
+                                                    <a href="orders.html?search=${order.orderReference || order.id || order.number}" class="text-xs text-blue-600 hover:text-blue-800">Открыть</a>
+                                                </div>
                                             </div>
-                                            <div class="text-right">
-                                                <div class="text-sm font-semibold">$${order.price || '0.00'}</div>
-                                                <div class="text-xs text-gray-500">${orderDate}</div>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                            ${user.orders.length > 10 ? `<p class="text-sm text-gray-500 mt-2">И еще ${user.orders.length - 10} заказов...</p>` : ''}
-                        ` : '<p class="text-sm text-gray-500">Нет заказов</p>'}
+                                        `;
+                                    }).join('')}
+                                </div>
+                                ${user.orders.length > 10 ? `
+                                    <div class="mt-3 pt-3 border-t border-gray-200 text-center">
+                                        <a href="orders.html?userId=${user.telegram_user_id}" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                            Показать все заказы (еще ${user.orders.length - 10})
+                                        </a>
+                                    </div>
+                                ` : ''}
+                            ` : `
+                                <div class="text-center py-8">
+                                    <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                    </svg>
+                                    <p class="text-sm text-gray-500">Нет заказов</p>
+                                </div>
+                            `}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -55,6 +55,7 @@ async function getAllUsers() {
                 totalSpent: 0,
                 firstOrderDate: null,
                 lastOrderDate: null,
+                registrationDate: null, // Дата регистрации (первый заказ)
                 orders: []
             };
         }
@@ -66,6 +67,7 @@ async function getAllUsers() {
         const orderDate = new Date(order.createdAt || order.date || 0);
         if (!usersMap[userId].firstOrderDate || orderDate < usersMap[userId].firstOrderDate) {
             usersMap[userId].firstOrderDate = orderDate;
+            usersMap[userId].registrationDate = orderDate; // Дата регистрации = дата первого заказа
         }
         if (!usersMap[userId].lastOrderDate || orderDate > usersMap[userId].lastOrderDate) {
             usersMap[userId].lastOrderDate = orderDate;
