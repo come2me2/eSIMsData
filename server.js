@@ -117,6 +117,9 @@ const apiRoutes = {
 
 // Регистрация API routes
 Object.entries(apiRoutes).forEach(([route, handler]) => {
+    // Для admin/settings используем handler напрямую, так как функции экспортируются отдельно
+    const routeHandler = route === '/api/admin/settings' ? handler : handler;
+    
     // Специальная обработка для admin auth (только POST для login)
     if (route === '/api/admin/auth/login') {
         app.post(route, async (req, res) => {

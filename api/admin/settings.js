@@ -15,7 +15,7 @@ const auth = require('./auth');
 
 const SETTINGS_FILE = path.join(__dirname, '..', '..', 'data', 'admin-settings.json');
 
-// Загрузить настройки
+// Загрузить настройки (экспортируем для использования в других модулях)
 async function loadSettings() {
     try {
         const data = await fs.readFile(SETTINGS_FILE, 'utf8');
@@ -62,7 +62,8 @@ async function saveSettings(settings) {
     await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
 }
 
-module.exports = async function handler(req, res) {
+// Экспортируем handler как основной экспорт
+async function handler(req, res) {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
@@ -262,6 +263,12 @@ module.exports = async function handler(req, res) {
             error: error.message || 'Internal server error'
         });
     }
-};
+}
+
+// Экспортируем функции для использования в других модулях
+handler.loadSettings = loadSettings;
+handler.saveSettings = saveSettings;
+
+module.exports = handler;
 
 

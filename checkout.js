@@ -735,22 +735,33 @@ async function processPurchase(orderWithUser, auth, tg) {
         
         // Создаем заказ
         purchaseBtn.textContent = testMode ? 'Validating order...' : 'Creating order...';
+        
+        // Подготовка данных заказа
+        const orderPayload = {
+            bundle_name: bundleName,
+            telegram_user_id: orderWithUser.telegram_user_id,
+            telegram_username: orderWithUser.telegram_username,
+            user_name: orderWithUser.user_name,
+            country_code: orderWithUser.code,
+            country_name: orderWithUser.name,
+            plan_id: orderWithUser.planId,
+            plan_type: orderWithUser.planType,
+            test_mode: testMode, // Передаем режим тестирования
+            payment_method: selectedPaymentMethod || null,
+            provider_base_price_usd: providerBasePriceUsd
+        };
+        
+        // Добавляем промокод, если применён
+        if (isPromoApplied && appliedPromocode) {
+            orderPayload.promocode = appliedPromocode.code;
+            orderPayload.discount_amount = discountAmount;
+            orderPayload.discount_percent = discountPercent;
+        }
+        
         const orderResponse = await fetch('/api/esimgo/order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                bundle_name: bundleName,
-                telegram_user_id: orderWithUser.telegram_user_id,
-                telegram_username: orderWithUser.telegram_username,
-                user_name: orderWithUser.user_name,
-                country_code: orderWithUser.code,
-                country_name: orderWithUser.name,
-                plan_id: orderWithUser.planId,
-                plan_type: orderWithUser.planType,
-                test_mode: testMode, // Передаем режим тестирования
-                payment_method: selectedPaymentMethod || null,
-                provider_base_price_usd: providerBasePriceUsd
-            })
+            body: JSON.stringify(orderPayload)
         });
         
         const orderResult = await orderResponse.json();

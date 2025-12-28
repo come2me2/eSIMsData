@@ -117,7 +117,11 @@ module.exports = async function handler(req, res) {
                 customer, // Если не передано, используем telegram_user_id
                 provider_product_id, // Если не передано, используем bundle_name
                 provider_base_price_usd,
-                payment_method
+                payment_method,
+                // Промокод
+                promocode,
+                discount_amount,
+                discount_percent
             } = req.body;
             
             if (!telegram_user_id) {
@@ -182,6 +186,11 @@ module.exports = async function handler(req, res) {
                 // Цены
                 price: price || null,
                 currency: currency || null,
+                
+                // Промокод
+                promocode: promocode || null,
+                discount_amount: discount_amount || null,
+                discount_percent: discount_percent || null,
                 
                 // Временные метки
                 createdAt: createdAt || createdAtDate.toISOString(),

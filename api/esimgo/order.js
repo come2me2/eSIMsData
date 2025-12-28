@@ -154,7 +154,11 @@ module.exports = async function handler(req, res) {
                         customer: telegram_user_id,
                         provider_product_id: bundleName || null,
                         provider_base_price_usd: req.body.provider_base_price_usd || order.basePrice || null,
-                        payment_method: req.body.payment_method || null
+                        payment_method: req.body.payment_method || null,
+                        // Промокод, если применён
+                        promocode: req.body.promocode || null,
+                        discount_amount: req.body.discount_amount || null,
+                        discount_percent: req.body.discount_percent || null
                     }
                 };
                 
@@ -178,6 +182,24 @@ module.exports = async function handler(req, res) {
                 
                 if (saveOrderStatusCode === 200) {
                     console.log('✅ Order saved to database:', order.orderReference);
+                    
+                    // Увеличиваем счётчик использований промокода, если он был применён
+                    if (req.body.promocode) {
+                        try {
+                            const settingsHandler = require('../admin/settings');
+                            const settings = await settingsHandler.loadSettings();
+                            
+                            const promocodeIndex = settings.promocodes.findIndex(p => p.code.toUpperCase() === req.body.promocode.toUpperCase());
+                            if (promocodeIndex !== -1) {
+                                settings.promocodes[promocodeIndex].usedCount = (settings.promocodes[promocodeIndex].usedCount || 0) + 1;
+                                await settingsHandler.saveSettings(settings);
+                                console.log(`✅ Promocode usage count increased: ${req.body.promocode} (${settings.promocodes[promocodeIndex].usedCount})`);
+                            }
+                        } catch (promoError) {
+                            console.error('❌ Error updating promocode usage count:', promoError);
+                            // Не критично, продолжаем
+                        }
+                    }
                 } else {
                     console.warn('⚠️ Failed to save order to database:', saveOrderData);
                 }
