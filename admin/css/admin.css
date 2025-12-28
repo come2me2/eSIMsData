@@ -165,9 +165,23 @@
     margin: 2rem auto;
 }
 
+/* Override max-width for specific modal sizes */
+.modal-content.max-w-2xl {
+    max-width: 42rem !important; /* 672px */
+}
+
+.modal-content.max-w-4xl {
+    max-width: 56rem !important; /* 896px */
+}
+
 @media (max-width: 1280px) {
     .modal-content {
         max-width: 90%;
+    }
+    
+    .modal-content.max-w-2xl,
+    .modal-content.max-w-4xl {
+        max-width: 90% !important;
     }
 }
 
@@ -218,27 +232,42 @@
     justify-content: center;
 }
 
-#closeModal:hover {
+#closeModal:hover,
+#closeUserModal:hover,
+#closePromocodeModal:hover {
     background-color: #f3f4f6;
     color: #111827;
     transform: rotate(90deg);
 }
 
+#closeUserModal,
+#closePromocodeModal {
+    transition: all 0.2s ease;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Order details container */
 #orderDetails,
-#userDetails {
+#userDetails,
+#promocodeDetails {
     padding: 2.5rem;
     padding-bottom: 2.5rem;
 }
 
 /* Ensure content doesn't stick to edges */
 #orderDetails > *:first-child,
-#userDetails > *:first-child {
+#userDetails > *:first-child,
+#promocodeDetails > *:first-child {
     margin-top: 0;
 }
 
 #orderDetails > *:last-child,
-#userDetails > *:last-child {
+#userDetails > *:last-child,
+#promocodeDetails > *:last-child {
     margin-bottom: 0;
     padding-bottom: 0;
 }
@@ -268,9 +297,26 @@
 
 /* Space-y containers */
 #orderDetails .space-y-5,
-#userDetails .space-y-5 {
+#userDetails .space-y-5,
+#promocodeDetails .space-y-5 {
     padding-left: 0;
     padding-right: 0;
+}
+
+/* Form styles in modals */
+#promocodeDetails form {
+    padding: 0;
+}
+
+#promocodeDetails .form-input {
+    margin-top: 0.5rem;
+    width: 100%;
+}
+
+#promocodeDetails label {
+    display: block;
+    font-weight: 500;
+    color: #374151;
 }
 
 /* Info card improvements */
@@ -409,7 +455,8 @@
     }
     
     #orderDetails,
-    #userDetails {
+    #userDetails,
+    #promocodeDetails {
         padding: 1.5rem;
         padding-bottom: 1.5rem;
     }
@@ -474,7 +521,8 @@
     }
     
     #orderDetails,
-    #userDetails {
+    #userDetails,
+    #promocodeDetails {
         padding: 1rem 1.25rem;
         padding-bottom: 1rem;
     }
