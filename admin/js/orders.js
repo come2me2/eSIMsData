@@ -170,50 +170,52 @@ const Orders = {
         const qrCode = order.qrCode || order.assignments?.qrCode || order.esimData?.qrCode || order.qr_code || null;
         
         container.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Основная информация -->
-                <div class="space-y-4">
+                <div class="space-y-5">
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-2">Основная информация</h4>
-                        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-                            <div>
-                                <span class="text-sm text-gray-600">ID заказа:</span>
-                                <span class="ml-2 font-medium">#${order.orderReference || order.id || 'N/A'}</span>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Основная информация</h4>
+                        <div class="bg-gray-50 rounded-lg p-5 space-y-4">
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">ID заказа</span>
+                                <span class="ml-4 font-semibold text-gray-900 text-right">#${order.orderReference || order.id || 'N/A'}</span>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-600">Пользователь:</span>
-                                <span class="ml-2 font-medium">${order.telegram_username ? `@${order.telegram_username}` : order.telegram_user_id || 'N/A'}</span>
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">Пользователь</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right">${order.telegram_username ? `@${order.telegram_username}` : order.telegram_user_id || 'N/A'}</span>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-600">Страна:</span>
-                                <span class="ml-2 font-medium">${order.country_name || order.country_code || 'N/A'}</span>
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">Страна</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right">${order.country_name || order.country_code || 'N/A'}</span>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-600">План:</span>
-                                <span class="ml-2 font-medium">${order.plan_name || order.plan_id || 'N/A'}</span>
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">План</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right">${order.plan_name || order.plan_id || 'N/A'}</span>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-600">Сумма:</span>
-                                <span class="ml-2 font-semibold text-lg">$${order.price || '0.00'}</span>
+                            <div class="flex items-start justify-between pt-3 border-t border-gray-200">
+                                <span class="text-sm text-gray-600">Сумма</span>
+                                <span class="ml-4 font-bold text-xl text-blue-600">$${order.price || '0.00'}</span>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-600">Способ оплаты:</span>
-                                <span class="ml-2 font-medium">${this.getPaymentTypeText(order.payment_method || order.paymentType)}</span>
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">Способ оплаты</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right">${this.getPaymentTypeText(order.payment_method || order.paymentType)}</span>
                             </div>
-                            <div>
-                                <span class="text-sm text-gray-600">Дата создания:</span>
-                                <span class="ml-2 font-medium">${date}</span>
+                            <div class="flex items-start justify-between">
+                                <span class="text-sm text-gray-600">Дата создания</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right text-xs">${date}</span>
                             </div>
                         </div>
                     </div>
                     
                     <!-- Статус -->
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-2">Статус заказа</h4>
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="status-badge ${this.getStatusClass(order.status)}">${this.getStatusText(order.status)}</span>
-                                <select id="statusSelect" class="form-input w-auto">
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Статус заказа</h4>
+                        <div class="bg-gray-50 rounded-lg p-5">
+                            <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+                                <div class="flex items-center gap-3">
+                                    <span class="status-badge ${this.getStatusClass(order.status)}">${this.getStatusText(order.status)}</span>
+                                </div>
+                                <select id="statusSelect" class="form-input text-sm py-1.5 px-3 rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                                     <option value="on_hold" ${order.status === 'on_hold' ? 'selected' : ''}>On Hold</option>
                                     <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Completed</option>
                                     <option value="canceled" ${order.status === 'canceled' ? 'selected' : ''}>Canceled</option>
@@ -221,6 +223,9 @@ const Orders = {
                                 </select>
                             </div>
                             <button onclick="Orders.updateStatus('${order.orderReference || order.id}', '${order.telegram_user_id}')" class="btn btn-primary w-full">
+                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
                                 Обновить статус
                             </button>
                         </div>
@@ -228,66 +233,66 @@ const Orders = {
                 </div>
                 
                 <!-- eSIM данные -->
-                <div class="space-y-4">
+                <div class="space-y-5">
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-2">eSIM данные</h4>
-                        <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">eSIM данные</h4>
+                        <div class="bg-gray-50 rounded-lg p-5 space-y-4">
                             <div>
-                                <span class="text-sm text-gray-600">ICCID:</span>
-                                <div class="mt-1 flex items-center gap-2">
-                                    <code class="bg-white px-3 py-1 rounded border text-sm font-mono">${iccid}</code>
-                                    <button onclick="Orders.copyToClipboard('${iccid}')" class="text-blue-600 hover:text-blue-800">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <span class="text-sm text-gray-600 block mb-2">ICCID</span>
+                                <div class="flex items-center gap-2">
+                                    <code class="flex-1">${iccid}</code>
+                                    <button onclick="Orders.copyToClipboard('${iccid}')" class="text-blue-600 hover:text-blue-800 transition-colors" title="Копировать">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                         </svg>
                                     </button>
                                 </div>
                             </div>
                             <div>
-                                <span class="text-sm text-gray-600">Matching ID:</span>
-                                <div class="mt-1 flex items-center gap-2">
-                                    <code class="bg-white px-3 py-1 rounded border text-sm font-mono">${matchingId}</code>
-                                    <button onclick="Orders.copyToClipboard('${matchingId}')" class="text-blue-600 hover:text-blue-800">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <span class="text-sm text-gray-600 block mb-2">Matching ID</span>
+                                <div class="flex items-center gap-2">
+                                    <code class="flex-1">${matchingId}</code>
+                                    <button onclick="Orders.copyToClipboard('${matchingId}')" class="text-blue-600 hover:text-blue-800 transition-colors" title="Копировать">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                         </svg>
                                     </button>
                                 </div>
                             </div>
                             <div>
-                                <span class="text-sm text-gray-600">RSP URL:</span>
-                                <div class="mt-1 flex items-center gap-2">
-                                    <code class="bg-white px-3 py-1 rounded border text-sm font-mono">${rspUrl}</code>
-                                    <button onclick="Orders.copyToClipboard('${rspUrl}')" class="text-blue-600 hover:text-blue-800">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <span class="text-sm text-gray-600 block mb-2">RSP URL</span>
+                                <div class="flex items-center gap-2">
+                                    <code class="flex-1 break-all">${rspUrl}</code>
+                                    <button onclick="Orders.copyToClipboard('${rspUrl}')" class="text-blue-600 hover:text-blue-800 transition-colors flex-shrink-0" title="Копировать">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                         </svg>
                                     </button>
                                 </div>
                             </div>
                             ${qrCode ? `
-                            <div>
-                                <span class="text-sm text-gray-600">QR код:</span>
-                                <div class="mt-2 flex flex-col items-center gap-2">
-                                    <img src="${qrCode}" alt="QR Code" class="w-48 h-48 border rounded-lg object-contain bg-white">
-                                    <button onclick="Orders.downloadQR('${qrCode}', '${order.orderReference || order.id || 'order'}')" class="btn btn-secondary text-sm">
-                                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="pt-3 border-t border-gray-200">
+                                <span class="text-sm text-gray-600 block mb-3">QR код</span>
+                                <div class="flex flex-col items-center gap-3">
+                                    <img src="${qrCode}" alt="QR Code" class="w-40 h-40 border-2 border-gray-200 rounded-xl object-contain bg-white shadow-sm">
+                                    <button onclick="Orders.downloadQR('${qrCode}', '${order.orderReference || order.id || 'order'}')" class="btn btn-secondary text-sm px-4 py-2">
+                                        <svg class="w-4 h-4 inline mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                                         </svg>
                                         Скачать QR
                                     </button>
                                 </div>
                             </div>
-                            ` : '<div class="text-sm text-gray-500">QR код не доступен</div>'}
+                            ` : '<div class="text-sm text-gray-500 text-center py-4">QR код не доступен</div>'}
                         </div>
                     </div>
                     
                     <!-- Actions -->
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-2">Действия</h4>
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <button onclick="Orders.resendESIM('${order.orderReference || order.id}', '${order.telegram_user_id}')" class="btn btn-primary w-full mb-2">
-                                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Действия</h4>
+                        <div class="bg-gray-50 rounded-lg p-5">
+                            <button onclick="Orders.resendESIM('${order.orderReference || order.id}', '${order.telegram_user_id}')" class="btn btn-primary w-full">
+                                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
                                 </svg>
                                 Отправить eSIM в Telegram
