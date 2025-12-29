@@ -115,12 +115,16 @@ const Settings = {
             });
             
             const data = await response.json();
+            console.log(`[Settings] Loaded ${section}:`, { success: data.success, contentLength: data.content?.length || 0 });
             
-            if (data.success && data.content) {
+            if (data.success && data.content !== undefined) {
                 const editor = document.getElementById(`editor-${section}`);
                 if (editor) {
                     editor.value = data.content;
+                    console.log(`[Settings] Set content for ${section}, length: ${data.content.length}`);
                 }
+            } else {
+                console.error(`[Settings] Failed to load ${section}:`, data.error);
             }
         } catch (error) {
             console.error(`Error loading ${section} content:`, error);
