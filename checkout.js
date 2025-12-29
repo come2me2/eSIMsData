@@ -1373,6 +1373,7 @@ async function setupPromoCode() {
             
             // Валидируем промокод через API
             try {
+                console.log('[Promocode] Validating:', { code: promoCode, amount: currentPrice });
                 const response = await fetch('/api/promocode/validate', {
                     method: 'POST',
                     headers: {
@@ -1385,6 +1386,7 @@ async function setupPromoCode() {
                 });
                 
                 const data = await response.json();
+                console.log('[Promocode] API Response:', data);
                 
                 if (data.success && data.discount) {
                     // Valid promo code
@@ -1412,6 +1414,7 @@ async function setupPromoCode() {
                     }
                 } else {
                     // Invalid promo code
+                    console.log('[Promocode] Validation failed:', data);
                     isPromoApplied = false;
                     discountPercent = 0;
                     discountAmount = 0;
@@ -2066,6 +2069,7 @@ async function setupPromoCode() {
             
             // Валидируем промокод через API
             try {
+                console.log('[Promocode] Validating:', { code: promoCode, amount: currentPrice });
                 const response = await fetch('/api/promocode/validate', {
                     method: 'POST',
                     headers: {
@@ -2078,6 +2082,7 @@ async function setupPromoCode() {
                 });
                 
                 const data = await response.json();
+                console.log('[Promocode] API Response:', data);
                 
                 if (data.success && data.discount) {
                     // Valid promo code
@@ -2105,6 +2110,7 @@ async function setupPromoCode() {
                     }
                 } else {
                     // Invalid promo code
+                    console.log('[Promocode] Validation failed:', data);
                     isPromoApplied = false;
                     discountPercent = 0;
                     discountAmount = 0;
