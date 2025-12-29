@@ -521,8 +521,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Filtering orders by userId:', userId);
             
             // Показываем баннер с информацией о фильтре
-            // Ищем контейнер с фильтрами и вставляем баннер после него
-            const filtersContainer = document.querySelector('.bg-white.rounded-lg.shadow.p-4.mb-4');
+            // Ищем контейнер с фильтрами в main content и вставляем баннер после него
+            const mainContent = document.querySelector('main');
+            const filtersContainer = mainContent ? mainContent.querySelector('.bg-white.rounded-lg.shadow.p-4.mb-4') : null;
             if (filtersContainer) {
                 const filterBanner = document.createElement('div');
                 filterBanner.className = 'mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between';
