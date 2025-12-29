@@ -521,9 +521,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Filtering orders by userId:', userId);
             
             // Показываем баннер с информацией о фильтре
-            // Ищем таблицу заказов и вставляем баннер перед ней
-            const ordersTable = document.querySelector('.bg-white.rounded-lg.shadow.overflow-hidden');
-            if (ordersTable) {
+            // Ищем контейнер с фильтрами и вставляем баннер после него
+            const filtersContainer = document.querySelector('.bg-white.rounded-lg.shadow.p-4.mb-4');
+            if (filtersContainer) {
                 const filterBanner = document.createElement('div');
                 filterBanner.className = 'mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between';
                 filterBanner.id = 'userFilterBanner';
@@ -541,8 +541,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         Очистить фильтр
                     </button>
                 `;
-                // Вставляем баннер перед таблицей заказов
-                ordersTable.parentNode.insertBefore(filterBanner, ordersTable);
+                // Вставляем баннер после контейнера с фильтрами
+                filtersContainer.parentNode.insertBefore(filterBanner, filtersContainer.nextSibling);
             }
         }
         
