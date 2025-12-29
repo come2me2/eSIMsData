@@ -250,12 +250,13 @@ const Payments = {
         }
         
         tbody.innerHTML = promocodes.map(promo => {
+            const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
             const startDate = promo.startDate 
-                ? new Date(promo.startDate).toLocaleDateString('ru-RU')
-                : 'Сразу';
+                ? new Date(promo.startDate).toLocaleDateString(locale)
+                : (window.i18n && window.i18n.currentLang === 'ru' ? 'Сразу' : 'Immediately');
             const validUntil = promo.validUntil 
-                ? new Date(promo.validUntil).toLocaleDateString('ru-RU')
-                : 'Без ограничений';
+                ? new Date(promo.validUntil).toLocaleDateString(locale)
+                : (window.i18n && window.i18n.currentLang === 'ru' ? 'Без ограничений' : 'No limit');
             const maxUses = promo.maxUses ? `${promo.usedCount || 0} / ${promo.maxUses}` : `${promo.usedCount || 0} / ∞`;
             const discountText = promo.type === 'percent' 
                 ? `${promo.discount}%` 

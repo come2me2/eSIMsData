@@ -35,7 +35,8 @@ const Dashboard = {
         // Total Revenue
         const totalRevenue = document.getElementById('totalRevenue');
         if (totalRevenue && stats.totalRevenue) {
-            totalRevenue.textContent = `$${stats.totalRevenue.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
+            totalRevenue.textContent = `$${stats.totalRevenue.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
 
         const revenueChange = document.getElementById('revenueChange');
@@ -48,7 +49,8 @@ const Dashboard = {
         // Total Orders
         const totalOrders = document.getElementById('totalOrders');
         if (totalOrders && stats.totalOrders !== undefined) {
-            totalOrders.textContent = stats.totalOrders.toLocaleString('ru-RU');
+            const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
+            totalOrders.textContent = stats.totalOrders.toLocaleString(locale);
         }
 
         const ordersChange = document.getElementById('ordersChange');
@@ -60,7 +62,8 @@ const Dashboard = {
         // Active Users
         const activeUsers = document.getElementById('activeUsers');
         if (activeUsers && stats.activeUsers !== undefined) {
-            activeUsers.textContent = stats.activeUsers.toLocaleString('ru-RU');
+            const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
+            activeUsers.textContent = stats.activeUsers.toLocaleString(locale);
         }
 
         const usersChange = document.getElementById('usersChange');
@@ -111,7 +114,8 @@ const Dashboard = {
         tbody.innerHTML = orders.map(order => {
             const statusClass = this.getStatusClass(order.status);
             const orderDate = order.createdAt || order.date || new Date();
-            const date = new Date(orderDate).toLocaleDateString('ru-RU', {
+            const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
+            const date = new Date(orderDate).toLocaleString(locale, {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',

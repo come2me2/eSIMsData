@@ -47,7 +47,8 @@ const Orders = {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('Server error:', response.status, errorText);
-                this.showError(`Ошибка сервера: ${response.status}`);
+                const errorMsg = window.i18n ? window.i18n.t('serverError') : 'Server error';
+                this.showError(`${errorMsg}: ${response.status}`);
                 return;
             }
             
@@ -76,13 +77,15 @@ const Orders = {
         if (!tbody) return;
         
         if (orders.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-8 text-center text-gray-500">Нет заказов</td></tr>';
+            const noOrdersText = window.i18n ? window.i18n.t('noOrders') : 'No orders';
+            tbody.innerHTML = `<tr><td colspan="9" class="px-6 py-8 text-center text-gray-500">${noOrdersText}</td></tr>`;
             return;
         }
         
         tbody.innerHTML = orders.map(order => {
             const statusClass = this.getStatusClass(order.status);
-            const date = new Date(order.createdAt || order.date || 0).toLocaleDateString('ru-RU', {
+            const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
+            const date = new Date(order.createdAt || order.date || 0).toLocaleString(locale, {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
@@ -110,7 +113,7 @@ const Orders = {
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${date}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         <button onclick="Orders.showOrderDetails('${orderId}', '${userId}')" class="text-blue-600 hover:text-blue-800 font-medium">
-                            Детали
+                            ${window.i18n ? window.i18n.t('details') : 'Details'}
                         </button>
                     </td>
                 </tr>
@@ -159,7 +162,8 @@ const Orders = {
         const container = document.getElementById('orderDetails');
         if (!container) return;
         
-        const date = new Date(order.createdAt || order.date || 0).toLocaleDateString('ru-RU', {
+        const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
+        const date = new Date(order.createdAt || order.date || 0).toLocaleString(locale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',

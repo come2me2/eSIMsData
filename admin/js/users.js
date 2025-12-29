@@ -26,16 +26,18 @@ const Users = {
         if (!tbody) return;
         
         if (users.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Нет пользователей</td></tr>';
+            const noUsersText = window.i18n ? window.i18n.t('noUsers') : 'No users';
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">${noUsersText}</td></tr>`;
             return;
         }
         
         tbody.innerHTML = users.map(user => {
+            const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
             const firstOrderDate = user.firstOrderDate 
-                ? new Date(user.firstOrderDate).toLocaleDateString('ru-RU')
+                ? new Date(user.firstOrderDate).toLocaleDateString(locale)
                 : 'N/A';
             const lastOrderDate = user.lastOrderDate 
-                ? new Date(user.lastOrderDate).toLocaleDateString('ru-RU')
+                ? new Date(user.lastOrderDate).toLocaleDateString(locale)
                 : 'N/A';
             
             const username = user.telegram_username ? `@${user.telegram_username}` : user.telegram_user_id;
@@ -49,7 +51,7 @@ const Users = {
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${lastOrderDate}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         <button onclick="Users.showUserDetails('${user.telegram_user_id}')" class="text-blue-600 hover:text-blue-800 font-medium">
-                            Детали
+                            ${window.i18n ? window.i18n.t('details') : 'Details'}
                         </button>
                         <span class="mx-2 text-gray-300">|</span>
                         <a href="orders.html?userId=${user.telegram_user_id}" class="text-blue-600 hover:text-blue-800 font-medium">
@@ -87,9 +89,10 @@ const Users = {
         if (!container) return;
         
         // Форматируем даты
+        const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
         const registrationDate = user.registrationDate || user.firstOrderDate;
         const formattedRegistrationDate = registrationDate 
-            ? new Date(registrationDate).toLocaleDateString('ru-RU', {
+            ? new Date(registrationDate).toLocaleString(locale, {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -98,7 +101,7 @@ const Users = {
             })
             : 'N/A';
         const firstOrderDate = user.firstOrderDate 
-            ? new Date(user.firstOrderDate).toLocaleDateString('ru-RU', {
+            ? new Date(user.firstOrderDate).toLocaleString(locale, {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -107,7 +110,7 @@ const Users = {
             })
             : 'N/A';
         const lastOrderDate = user.lastOrderDate 
-            ? new Date(user.lastOrderDate).toLocaleDateString('ru-RU', {
+            ? new Date(user.lastOrderDate).toLocaleString(locale, {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -170,7 +173,7 @@ const Users = {
                             ${user.orders && user.orders.length > 0 ? `
                                 <div class="space-y-2 max-h-96 overflow-y-auto">
                                     ${user.orders.slice(0, 10).map(order => {
-                                        const orderDate = new Date(order.createdAt || order.date || 0).toLocaleDateString('ru-RU');
+                                        const orderDate = new Date(order.createdAt || order.date || 0).toLocaleDateString(locale);
                                         const orderStatus = order.status || 'completed';
                                         const statusMap = {
                                             'completed': { text: 'Completed', color: 'bg-green-100 text-green-800' },

@@ -102,7 +102,18 @@ const translations = {
         // Messages
         noOrders: "No orders",
         noUsers: "No users",
-        noPayments: "No payments"
+        noPayments: "No payments",
+        serverError: "Server error",
+        
+        // Actions & Buttons
+        details: "Details",
+        viewDetails: "View Details",
+        
+        // Order Modal
+        closeModal: "Close",
+        
+        // Dates
+        monthShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     },
     ru: {
         // Common
@@ -206,8 +217,36 @@ const translations = {
         // Messages
         noOrders: "Нет заказов",
         noUsers: "Нет пользователей",
-        noPayments: "Нет платежей"
+        noPayments: "Нет платежей",
+        serverError: "Ошибка сервера",
+        
+        // Actions & Buttons
+        details: "Детали",
+        viewDetails: "Просмотр деталей",
+        
+        // Order Modal
+        closeModal: "Закрыть",
+        
+        // Dates
+        monthShort: ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"]
     }
+};
+
+// Helper function to get locale for date formatting
+I18n.prototype.getLocale = function() {
+    return this.currentLang === 'ru' ? 'ru-RU' : 'en-US';
+};
+
+// Helper function to format date with current locale
+I18n.prototype.formatDate = function(date, options = {}) {
+    const defaultOptions = {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    };
+    return new Date(date).toLocaleString(this.getLocale(), { ...defaultOptions, ...options });
 };
 
 // Language manager
