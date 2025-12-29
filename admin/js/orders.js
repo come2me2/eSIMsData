@@ -10,6 +10,7 @@ const Orders = {
     currentSearch: '',
     currentDateFrom: '',
     currentDateTo: '',
+    currentUserId: '',
     
     // Load orders
     async loadOrders(page = 1) {
@@ -26,6 +27,9 @@ const Orders = {
             }
             if (this.currentSearch) {
                 url += `&search=${encodeURIComponent(this.currentSearch)}`;
+            }
+            if (this.currentUserId) {
+                url += `&userId=${encodeURIComponent(this.currentUserId)}`;
             }
             if (this.currentDateFrom) {
                 url += `&dateFrom=${this.currentDateFrom}`;
@@ -474,6 +478,18 @@ const Orders = {
             console.error('Error downloading QR:', error);
             this.showError('Ошибка скачивания QR кода');
         }
+    },
+    
+    // Clear user filter
+    clearUserFilter() {
+        this.currentUserId = '';
+        this.currentPage = 1;
+        // Удаляем userId из URL
+        const url = new URL(window.location);
+        url.searchParams.delete('userId');
+        window.history.replaceState({}, '', url);
+        // Перезагружаем страницу для удаления баннера
+        window.location.reload();
     }
 };
 
@@ -486,6 +502,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     try {
+        // Проверяем URL параметры
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('userId');
+        const searchParam = urlParams.get('search');
+        
+        // Если есть userId в URL, устанавливаем фильтр
+        if (userId) {
+            Orders.currentUserId = userId;
+            console.log('Filtering orders by userId:', userId);
+            
+            // Показываем баннер с информацией о фильтре
+            const pageHeader = document.querySelector('h1');
+            if (pageHeader) {
+                const filterBanner = document.createElement('div');
+                filterBanner.className = 'mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between';
+                filterBanner.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                        </svg>
+                        <div>
+                            <span class="text-sm font-medium text-blue-900">Фильтр по пользователю: </span>
+                            <span class="text-sm text-blue-700">${userId}</span>
+                        </div>
+                    </div>
+                    <button onclick="Orders.clearUserFilter()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                        Очистить фильтр
+                    </button>
+                `;
+                pageHeader.parentNode.insertBefore(filterBanner, pageHeader.nextSibling);
+            }
+        }
+        
+        // Если есть search в URL, устанавливаем его
+        if (searchParam) {
+            Orders.currentSearch = searchParam;
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = searchParam;
+            }
+        }
+        
         Orders.loadOrders();
         
         // Search input
@@ -547,6 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Orders.currentStatus = '';
                 Orders.currentPaymentType = '';
                 Orders.currentSearch = '';
+                Orders.currentUserId = '';
                 Orders.currentDateFrom = '';
                 Orders.currentDateTo = '';
                 Orders.currentPage = 1;
@@ -556,6 +615,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (searchInput) searchInput.value = '';
                 if (dateFrom) dateFrom.value = '';
                 if (dateTo) dateTo.value = '';
+                
+                // Удаляем userId из URL
+                const url = new URL(window.location);
+                url.searchParams.delete('userId');
+                window.history.replaceState({}, '', url);
                 
                 Orders.loadOrders(1);
             });
