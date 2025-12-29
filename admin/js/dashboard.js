@@ -3,6 +3,9 @@
  */
 
 const Dashboard = {
+    salesChart: null,
+    paymentMethodsChart: null,
+
     // Load dashboard statistics
     async loadStats() {
         try {
@@ -13,6 +16,14 @@ const Dashboard = {
             
             if (data.success) {
                 this.updateStats(data.data);
+                
+                // Load chart data
+                if (data.data.salesData) {
+                    this.renderSalesChart(data.data.salesData);
+                }
+                if (data.data.paymentMethods) {
+                    this.renderPaymentMethodsChart(data.data.paymentMethods);
+                }
             }
         } catch (error) {
             console.error('Error loading stats:', error);
@@ -149,6 +160,123 @@ const Dashboard = {
             'cancelled': 'Отменен'
         };
         return statusMap[status] || status;
+    },
+
+    // Render sales chart
+    renderSalesChart(data) {
+        const canvas = document.getElementById('salesChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        
+        // Destroy previous chart if exists
+        if (this.salesChart) {
+            this.salesChart.destroy();
+        }
+
+        this.salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Продажи ($)',
+                    data: data.values,
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Продажи: $' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    // Render payment methods chart
+    renderPaymentMethodsChart(data) {
+        const canvas = document.getElementById('paymentMethodsChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        
+        // Destroy previous chart if exists
+        if (this.paymentMethodsChart) {
+            this.paymentMethodsChart.destroy();
+        }
+
+        const labels = {
+            'telegram_stars': 'Telegram Stars',
+            'bank_card': 'Банковская карта',
+            'crypto': 'Криптовалюта'
+        };
+
+        this.paymentMethodsChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: data.labels.map(label => labels[label] || label),
+                datasets: [{
+                    data: data.values,
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(59, 130, 246)',
+                        'rgb(16, 185, 129)',
+                        'rgb(245, 158, 11)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 };
 

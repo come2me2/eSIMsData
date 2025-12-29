@@ -38,6 +38,61 @@ async function getAllOrders() {
     }
 }
 
+// Генерация данных продаж за последние 30 дней
+function generateSalesData(orders) {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    // Заказы за последние 30 дней
+    const recentOrders = orders.filter(o => {
+        const orderDate = new Date(o.createdAt || o.date || 0);
+        return orderDate >= thirtyDaysAgo && (o.status === 'completed' || o.status === 'active');
+    });
+    
+    // Группируем по дням
+    const salesByDay = {};
+    for (let i = 0; i < 30; i++) {
+        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const dateStr = date.toISOString().split('T')[0];
+        salesByDay[dateStr] = 0;
+    }
+    
+    // Подсчитываем продажи по дням
+    recentOrders.forEach(order => {
+        const orderDate = new Date(order.createdAt || order.date || 0);
+        const dateStr = orderDate.toISOString().split('T')[0];
+        if (salesByDay[dateStr] !== undefined) {
+            salesByDay[dateStr] += parseFloat(order.price) || 0;
+        }
+    });
+    
+    // Преобразуем в массивы для графика
+    const dates = Object.keys(salesByDay).sort();
+    const labels = dates.map(date => {
+        const d = new Date(date);
+        return `${d.getDate()}.${d.getMonth() + 1}`;
+    });
+    const values = dates.map(date => Math.round(salesByDay[date] * 100) / 100);
+    
+    return { labels, values };
+}
+
+// Подсчет методов оплаты
+function calculatePaymentMethods(orders) {
+    const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'active');
+    
+    const paymentMethods = {};
+    completedOrders.forEach(order => {
+        const method = order.payment_method || order.paymentType || 'unknown';
+        paymentMethods[method] = (paymentMethods[method] || 0) + 1;
+    });
+    
+    const labels = Object.keys(paymentMethods);
+    const values = Object.values(paymentMethods);
+    
+    return { labels, values };
+}
+
 // Вычислить статистику
 function calculateStats(orders) {
     const now = new Date();
@@ -100,6 +155,10 @@ function calculateStats(orders) {
         ? conversionRate - previousConversionRate
         : 0;
     
+    // Генерация данных для графиков
+    const salesData = generateSalesData(orders);
+    const paymentMethods = calculatePaymentMethods(orders);
+    
     return {
         totalRevenue: Math.round(totalRevenue * 100) / 100,
         revenueChange: Math.round(revenueChange * 100) / 100,
@@ -108,7 +167,9 @@ function calculateStats(orders) {
         activeUsers: uniqueUsers.size,
         usersChange: recentUniqueUsers.size - previousUniqueUsers.size,
         conversionRate: Math.round(conversionRate * 100) / 100,
-        conversionChange: Math.round(conversionChange * 100) / 100
+        conversionChange: Math.round(conversionChange * 100) / 100,
+        salesData,
+        paymentMethods
     };
 }
 
