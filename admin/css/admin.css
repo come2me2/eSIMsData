@@ -311,6 +311,14 @@
     padding: 0;
 }
 
+#promocodeDetails form > div {
+    margin-top: 1.5rem;
+}
+
+#promocodeDetails form > div:first-child {
+    margin-top: 0;
+}
+
 #promocodeDetails .form-input {
     margin-top: 0.5rem;
     width: 100%;

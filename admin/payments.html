@@ -90,10 +90,8 @@
                     </div>
                     <div>
                         <label class="text-sm font-medium text-gray-700 block mb-2">Базовая наценка (множитель)</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" id="baseMarkup" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.29">
-                            <span class="text-sm text-gray-500">(например: 1.29 = +29%)</span>
-                        </div>
+                        <input type="number" id="baseMarkup" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.29">
+                        <p class="text-xs text-gray-500 mt-1">(например: 1.29 = +29%)</p>
                         <p class="text-xs text-gray-500 mt-1">Базовая наценка применяется ко всем товарам</p>
                     </div>
                     <button onclick="Payments.saveBaseMarkup()" class="btn btn-primary">Сохранить базовую наценку</button>
@@ -125,10 +123,8 @@
                         <div id="markupFieldsTelegramStars" class="space-y-4 pl-14">
                             <div>
                                 <label class="text-sm font-medium text-gray-700 block mb-3">Дополнительная наценка (множитель)</label>
-                                <div class="flex items-center gap-3 mb-2">
-                                    <input type="number" id="markupTelegramStars" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.05">
-                                    <span class="text-sm text-gray-500">(например: 1.05 = +5%)</span>
-                                </div>
+                                <input type="number" id="markupTelegramStars" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.05">
+                                <p class="text-xs text-gray-500 mt-1">(например: 1.05 = +5%)</p>
                                 <p class="text-xs text-gray-500 mt-2">Общая наценка = Базовая × Наценка способа оплаты</p>
                                 <div id="totalMarkupTelegramStars" class="text-sm font-semibold text-blue-600 mt-3"></div>
                             </div>
@@ -155,10 +151,8 @@
                         <div id="markupFieldsCrypto" class="space-y-4 pl-14">
                             <div>
                                 <label class="text-sm font-medium text-gray-700 block mb-3">Дополнительная наценка (множитель)</label>
-                                <div class="flex items-center gap-3 mb-2">
-                                    <input type="number" id="markupCrypto" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.0">
-                                    <span class="text-sm text-gray-500">(например: 1.0 = +0%)</span>
-                                </div>
+                                <input type="number" id="markupCrypto" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.0">
+                                <p class="text-xs text-gray-500 mt-1">(например: 1.0 = +0%)</p>
                                 <p class="text-xs text-gray-500 mt-2">Общая наценка = Базовая × Наценка способа оплаты</p>
                                 <div id="totalMarkupCrypto" class="text-sm font-semibold text-blue-600 mt-3"></div>
                             </div>
@@ -185,10 +179,8 @@
                         <div id="markupFieldsBankCard" class="space-y-4 pl-14">
                             <div>
                                 <label class="text-sm font-medium text-gray-700 block mb-3">Дополнительная наценка (множитель)</label>
-                                <div class="flex items-center gap-3 mb-2">
-                                    <input type="number" id="markupBankCard" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.1">
-                                    <span class="text-sm text-gray-500">(например: 1.1 = +10%)</span>
-                                </div>
+                                <input type="number" id="markupBankCard" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.1">
+                                <p class="text-xs text-gray-500 mt-1">(например: 1.1 = +10%)</p>
                                 <p class="text-xs text-gray-500 mt-2">Общая наценка = Базовая × Наценка способа оплаты</p>
                                 <div id="totalMarkupBankCard" class="text-sm font-semibold text-blue-600 mt-3"></div>
                             </div>
