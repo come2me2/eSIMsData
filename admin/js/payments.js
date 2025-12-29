@@ -132,6 +132,8 @@ const Payments = {
         const checkbox = document.getElementById(`payment${methodName}`);
         const isEnabled = checkbox.checked;
         this.updatePaymentCardUI(methodName, isEnabled);
+        // Auto-save payment methods when toggle changes
+        this.savePaymentMethods();
     },
     
     // Update payment card UI based on enabled state
