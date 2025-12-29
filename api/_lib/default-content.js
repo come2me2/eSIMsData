@@ -21,7 +21,7 @@ No, each eSIM is tied to a single device. If you need connectivity on multiple d
     privacy: `Privacy Policy
 
 Introduction
-By using esimsdata.com, you agree to the processing of your data in accordance with this Privacy Policy. Please read this document carefully and make sure you fully understand our practices before accessing or using any of our services. If you do not accept this Privacy Policy, you must immediately stop using the website and our services.
+        By using esimsdata.com, you agree to the processing of your data in accordance with this Privacy Policy. Please read this document carefully and make sure you fully understand our practices before accessing or using any of our services. If you do not accept this Privacy Policy, you must immediately stop using the website and our services.
 
 Glossary
 • User – an individual or organization using esimsdata.com to perform specific actions.
@@ -30,10 +30,10 @@ Glossary
 • Personal Data – any information directly or indirectly relating to an identifiable user.
 
 Data Collection
-We collect information you provide directly to us, such as when you create an account, make a purchase, or contact customer support. This may include your name, email address, payment information, and device information.
-
+        We collect information you provide directly to us, such as when you create an account, make a purchase, or contact customer support. This may include your name, email address, payment information, and device information.
+    
 Data Usage
-We use the collected data to provide, maintain, and improve our services, process transactions, send notifications about your account or orders, and respond to your inquiries.
+        We use the collected data to provide, maintain, and improve our services, process transactions, send notifications about your account or orders, and respond to your inquiries.
 
 Data Protection
 We implement appropriate technical and organizational measures to protect your personal data against unauthorized access, alteration, disclosure, or destruction.`,
@@ -41,7 +41,7 @@ We implement appropriate technical and organizational measures to protect your p
     refund: `Refund Policy
 
 General Policy
-At eSimsData, we strive to provide the best service possible. However, we understand that sometimes things don't work out as planned. This refund policy outlines the circumstances under which refunds may be issued.
+        At eSimsData, we strive to provide the best service possible. However, we understand that sometimes things don't work out as planned. This refund policy outlines the circumstances under which refunds may be issued.
 
 Eligibility for Refunds
 • Technical Issues: If you experience technical problems that prevent you from using the eSIM, and our support team cannot resolve the issue, you may be eligible for a refund.
@@ -54,7 +54,7 @@ Non-Refundable Situations
 • Data plans that have been partially consumed
 
 How to Request a Refund
-To request a refund, please contact our customer support team through the Help section with your order details and the reason for your refund request. We'll review your case and respond within 48 hours.
+        To request a refund, please contact our customer support team through the Help section with your order details and the reason for your refund request. We'll review your case and respond within 48 hours.
 
 Processing Time
 Approved refunds will be processed within 5-10 business days and credited back to your original payment method.`,
@@ -62,10 +62,10 @@ Approved refunds will be processed within 5-10 business days and credited back t
     terms: `Terms of Service
 
 Agreement to Terms
-By accessing and using eSimsData services, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
-
+        By accessing and using eSimsData services, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
+    
 Service Description
-eSimsData provides digital cellular connectivity services through eSIM technology. Our services allow you to access mobile data networks in various countries without the need for physical SIM cards.
+        eSimsData provides digital cellular connectivity services through eSIM technology. Our services allow you to access mobile data networks in various countries without the need for physical SIM cards.
 
 User Responsibilities
 • You must be at least 18 years old to use our services
@@ -74,16 +74,16 @@ User Responsibilities
 • You must provide accurate and complete information when making purchases
 
 Service Limitations
-While we strive to provide reliable service, we cannot guarantee uninterrupted access to our services. Network coverage and speeds may vary depending on location and local network conditions.
-
+        While we strive to provide reliable service, we cannot guarantee uninterrupted access to our services. Network coverage and speeds may vary depending on location and local network conditions.
+    
 Payment Terms
-All purchases must be paid in full at the time of order. We accept various payment methods including credit cards, Telegram Stars, and cryptocurrency. Prices are subject to change without notice.
-
+        All purchases must be paid in full at the time of order. We accept various payment methods including credit cards, Telegram Stars, and cryptocurrency. Prices are subject to change without notice.
+    
 Limitation of Liability
-eSimsData shall not be liable for any indirect, incidental, special, or consequential damages arising out of or in connection with the use of our services.
-
+        eSimsData shall not be liable for any indirect, incidental, special, or consequential damages arising out of or in connection with the use of our services.
+    
 Changes to Terms
-We reserve the right to modify these terms at any time. Continued use of our services after changes constitutes acceptance of the modified terms.
+        We reserve the right to modify these terms at any time. Continued use of our services after changes constitutes acceptance of the modified terms.
 
 Contact Information
 If you have any questions about these Terms of Service, please contact us through the Help section of our application.`

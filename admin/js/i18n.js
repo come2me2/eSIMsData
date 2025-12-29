@@ -163,6 +163,7 @@ const translations = {
         noOrders: "No orders",
         noUsers: "No users",
         noPayments: "No payments",
+        noPromocodes: "No promo codes",
         serverError: "Server error",
         
         // Actions & Buttons
@@ -264,8 +265,9 @@ class I18n {
             }
         });
         
-        // Update HTML lang attribute
-        document.documentElement.lang = this.currentLang;
+        // Update HTML lang attribute to 'en' for English calendar
+        document.documentElement.lang = 'en';
+        document.documentElement.setAttribute('lang', 'en');
     }
     
     init() {

@@ -59,6 +59,7 @@ const Payments = {
         }
         
         // Promocodes
+        console.log('[Payments] Loading promocodes:', settings.promocodes);
         if (settings.promocodes) {
             this.renderPromocodes(settings.promocodes);
         } else {
@@ -250,11 +251,16 @@ const Payments = {
     // Render promocodes table
     renderPromocodes(promocodes) {
         const tbody = document.getElementById('promocodesTable');
-        if (!tbody) return;
+        if (!tbody) {
+            console.error('[Payments] promocodesTable element not found');
+            return;
+        }
+        
+        console.log('[Payments] Rendering promocodes:', promocodes);
         
         if (!promocodes || promocodes.length === 0) {
             const t = (key) => window.i18n ? window.i18n.t(key) : key;
-            tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">${t('noPayments')}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">${t('noPromocodes')}</td></tr>`;
             return;
         }
         
@@ -321,8 +327,15 @@ const Payments = {
             document.getElementById('promocodeCode').disabled = true; // Code cannot be changed
             document.getElementById('promocodeDiscount').value = promocode.discount;
             document.getElementById('promocodeType').value = promocode.type;
-            document.getElementById('promocodeStartDate').value = promocode.startDate || '';
-            document.getElementById('promocodeValidUntil').value = promocode.validUntil || '';
+            // Format dates for date inputs (YYYY-MM-DD format)
+            const formatDateForInput = (dateString) => {
+                if (!dateString) return '';
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return '';
+                return date.toISOString().split('T')[0];
+            };
+            document.getElementById('promocodeStartDate').value = formatDateForInput(promocode.startDate);
+            document.getElementById('promocodeValidUntil').value = formatDateForInput(promocode.validUntil);
             document.getElementById('promocodeMaxUses').value = promocode.maxUses || '';
             document.getElementById('promocodeStatus').value = promocode.status || 'active';
         } else {
@@ -496,11 +509,11 @@ function initToggleSwitches() {
                 const width = toggleDiv.offsetWidth || 44; // default w-11 = 44px for desktop
                 let translateX;
                 if (width <= 36) {
-                    translateX = 18; // для маленьких экранов (36px width)
+                    translateX = 18; // for small screens (36px width)
                 } else if (width <= 40) {
-                    translateX = 20; // для средних экранов (40px width)
+                    translateX = 20; // for medium screens (40px width)
                 } else {
-                    translateX = 20; // для больших экранов/десктопа (44px width = w-11)
+                    translateX = 20; // for large screens/desktop (44px width = w-11)
                 }
                 toggleDiv.style.setProperty('--toggle-translate', `${translateX}px`);
                 toggleDiv.setAttribute('data-checked', 'true');
