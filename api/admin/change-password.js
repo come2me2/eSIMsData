@@ -11,12 +11,32 @@ const auth = require('./auth');
 
 const CREDENTIALS_FILE = path.join(__dirname, '..', '..', 'data', 'admin-credentials.json');
 
+// Default credentials (same as in auth.js)
+const DEFAULT_CREDENTIALS = {
+    username: process.env.ADMIN_USERNAME || 'admin',
+    password: process.env.ADMIN_PASSWORD || 'admin123'
+};
+
 // Load admin credentials
 async function loadCredentials() {
     try {
+        // Check if file exists
+        await fs.access(CREDENTIALS_FILE);
         const data = await fs.readFile(CREDENTIALS_FILE, 'utf8');
         return JSON.parse(data);
     } catch (error) {
+        if (error.code === 'ENOENT') {
+            // File doesn't exist, create it with default credentials
+            console.log('[change-password] Credentials file not found, creating with default credentials');
+            const hashedPassword = await bcrypt.hash(DEFAULT_CREDENTIALS.password, 10);
+            const defaultCreds = {
+                username: DEFAULT_CREDENTIALS.username,
+                password: hashedPassword,
+                createdAt: new Date().toISOString()
+            };
+            await saveCredentials(defaultCreds);
+            return defaultCreds;
+        }
         console.error('Error loading credentials:', error);
         return null;
     }
@@ -110,7 +130,11 @@ module.exports = async function handler(req, res) {
         
         // Update credentials
         credentials.password = hashedPassword;
+        credentials.username = credentials.username || DEFAULT_CREDENTIALS.username;
         credentials.updatedAt = new Date().toISOString();
+        if (!credentials.createdAt) {
+            credentials.createdAt = new Date().toISOString();
+        }
         
         const saved = await saveCredentials(credentials);
         if (!saved) {
