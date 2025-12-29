@@ -50,6 +50,15 @@ const translations = {
         resendEmail: "Resend Email",
         filterByUser: "Filter by user",
         clearFilter: "Clear filter",
+        refresh: "Refresh",
+        ordersManagement: "Order management and detailed information",
+        searchPlaceholder: "Order ID or Telegram ID",
+        all: "All",
+        dateFrom: "From",
+        dateTo: "To",
+        applyFilters: "Apply",
+        clearFilters: "Clear",
+        exportData: "Export",
         
         // Order Status
         pending: "Pending",
@@ -145,6 +154,15 @@ const translations = {
         resendEmail: "Отправить повторно",
         filterByUser: "Фильтр по пользователю",
         clearFilter: "Очистить фильтр",
+        refresh: "Обновить",
+        ordersManagement: "Управление заказами и просмотр детальной информации",
+        searchPlaceholder: "ID заказа или Telegram ID",
+        all: "Все",
+        dateFrom: "От",
+        dateTo: "До",
+        applyFilters: "Применить",
+        clearFilters: "Очистить",
+        exportData: "Экспорт",
         
         // Order Status
         pending: "Ожидание",
