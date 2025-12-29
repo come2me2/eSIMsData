@@ -7,7 +7,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-const SETTINGS_FILE = path.join(__dirname, '..', '..', 'data', 'settings.json');
+const SETTINGS_FILE = path.join(__dirname, '..', '..', 'data', 'admin-settings.json');
 
 // Load settings
 async function loadSettings() {
