@@ -1872,6 +1872,14 @@ body.checkout-page .bottom-button-container {
     display: none;
 }
 
+.text-content-wrapper {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
 .policy-title {
     font-size: 34px;
     font-weight: 700;

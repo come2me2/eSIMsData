@@ -38,7 +38,12 @@ async function loadPageContent() {
         const data = await response.json();
         
         if (data.success && data.content) {
-            contentContainer.innerHTML = data.content;
+            // Wrap text content in a div to preserve line breaks
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = 'text-content-wrapper';
+            contentWrapper.textContent = data.content;
+            contentContainer.innerHTML = '';
+            contentContainer.appendChild(contentWrapper);
             console.log(`✅ Content loaded for ${section}`);
         } else {
             throw new Error(data.error || 'Failed to load content');
