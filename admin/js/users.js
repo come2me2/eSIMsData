@@ -91,7 +91,7 @@ const Users = {
         const container = document.getElementById('userDetails');
         if (!container) return;
         
-        // Форматируем даты
+        // Format dates
         const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
         const registrationDate = user.registrationDate || user.firstOrderDate;
         const formattedRegistrationDate = registrationDate 
@@ -249,7 +249,7 @@ const Users = {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Проверяем, что Auth доступен
+    // Check that Auth is available
     if (typeof Auth === 'undefined') {
         console.error('Auth is not defined. Make sure auth.js is loaded before users.js');
         return;

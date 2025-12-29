@@ -65,7 +65,7 @@ const Payments = {
             this.renderPromocodes([]);
         }
         
-        // Добавляем обработчики для автоматического пересчета общей наценки
+        // Add handlers for automatic total markup recalculation
         document.getElementById('baseMarkup').addEventListener('input', () => this.updateTotalMarkups());
         document.getElementById('markupTelegramStars').addEventListener('input', () => this.updateTotalMarkups());
         document.getElementById('markupCrypto').addEventListener('input', () => this.updateTotalMarkups());
@@ -172,7 +172,7 @@ const Payments = {
         const enabled = document.getElementById('markupEnabled').checked;
         const baseMarkupField = document.getElementById('baseMarkup');
         
-        // Visual feedback - можно добавить стилизацию
+        // Visual feedback - can add styling
         if (enabled) {
             baseMarkupField.disabled = false;
             baseMarkupField.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -181,7 +181,7 @@ const Payments = {
             baseMarkupField.classList.add('opacity-50', 'cursor-not-allowed');
         }
         
-        // Обновляем общие наценки, если они зависят от базовой
+        // Update total markups if they depend on base markup
         this.updateTotalMarkups();
     },
     
@@ -192,16 +192,17 @@ const Payments = {
             const markupCrypto = parseFloat(document.getElementById('markupCrypto').value);
             const markupBankCard = parseFloat(document.getElementById('markupBankCard').value);
             
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
             if (isNaN(markupTelegramStars) || markupTelegramStars < 1) {
-                this.showError('Наценка для Telegram Stars должна быть не менее 1.0');
+                this.showError('Telegram Stars markup must be at least 1.0');
                 return;
             }
             if (isNaN(markupCrypto) || markupCrypto < 1) {
-                this.showError('Наценка для Криптовалют должна быть не менее 1.0');
+                this.showError('Cryptocurrencies markup must be at least 1.0');
                 return;
             }
             if (isNaN(markupBankCard) || markupBankCard < 1) {
-                this.showError('Наценка для Банковских карт должна быть не менее 1.0');
+                this.showError('Bank Cards markup must be at least 1.0');
                 return;
             }
             
@@ -232,15 +233,17 @@ const Payments = {
             
             const data = await response.json();
             
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
             if (data.success) {
-                this.showSuccess('Способы оплаты и наценки сохранены');
+                this.showSuccess(t('changesSaved'));
                 this.loadSettings();
             } else {
-                this.showError(data.error || 'Ошибка сохранения способов оплаты');
+                this.showError(data.error || t('errorSaving'));
             }
         } catch (error) {
             console.error('Error saving payment methods:', error);
-            this.showError('Ошибка сохранения способов оплаты');
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorSaving'));
         }
     },
     
@@ -250,23 +253,25 @@ const Payments = {
         if (!tbody) return;
         
         if (!promocodes || promocodes.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">Нет промокодов</td></tr>';
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">${t('noPayments')}</td></tr>`;
             return;
         }
         
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
         tbody.innerHTML = promocodes.map(promo => {
-            const locale = window.i18n ? window.i18n.getLocale() : 'en-US';
+            const locale = 'en-US';
             const startDate = promo.startDate 
                 ? new Date(promo.startDate).toLocaleDateString(locale)
-                : (window.i18n && window.i18n.currentLang === 'ru' ? 'Сразу' : 'Immediately');
+                : 'Immediately';
             const validUntil = promo.validUntil 
                 ? new Date(promo.validUntil).toLocaleDateString(locale)
-                : (window.i18n && window.i18n.currentLang === 'ru' ? 'Без ограничений' : 'No limit');
+                : 'No limit';
             const maxUses = promo.maxUses ? `${promo.usedCount || 0} / ${promo.maxUses}` : `${promo.usedCount || 0} / ∞`;
             const discountText = promo.type === 'percent' 
                 ? `${promo.discount}%` 
                 : `$${promo.discount}`;
-            const status = promo.status === 'active' ? 'Активен' : 'Неактивен';
+            const status = promo.status === 'active' ? t('active') : t('inactive');
             const statusColor = promo.status === 'active' 
                 ? 'bg-green-100 text-green-800' 
                 : 'bg-gray-100 text-gray-800';
@@ -275,7 +280,7 @@ const Payments = {
                 <tr class="hover:bg-gray-50">
                     <td class="px-4 py-3 text-sm font-medium text-gray-900">${promo.code}</td>
                     <td class="px-4 py-3 text-sm text-gray-900">${discountText}</td>
-                    <td class="px-4 py-3 text-sm text-gray-900">${promo.type === 'percent' ? 'Процент' : 'Фиксированная'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900">${promo.type === 'percent' ? t('percent') : t('fixed')}</td>
                     <td class="px-4 py-3 text-sm text-gray-500">${startDate}</td>
                     <td class="px-4 py-3 text-sm text-gray-500">${validUntil}</td>
                     <td class="px-4 py-3 text-sm text-gray-500">${maxUses}</td>
@@ -284,10 +289,10 @@ const Payments = {
                     </td>
                     <td class="px-4 py-3 text-sm">
                         <button onclick="Payments.editPromocode('${promo.code}')" class="text-blue-600 hover:text-blue-800 font-medium mr-3">
-                            Редактировать
+                            ${t('edit')}
                         </button>
                         <button onclick="Payments.deletePromocode('${promo.code}')" class="text-red-600 hover:text-red-800 font-medium">
-                            Удалить
+                            ${t('delete')}
                         </button>
                     </td>
                 </tr>
@@ -304,15 +309,16 @@ const Payments = {
         const submitBtn = document.getElementById('promocodeSubmitBtn');
         const title = modal.querySelector('h3');
         
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
         if (promocode) {
-            // Режим редактирования
+            // Edit mode
             editMode.value = 'true';
             editCode.value = promocode.code;
-            title.textContent = 'Редактировать промокод';
-            submitBtn.textContent = 'Сохранить изменения';
+            title.textContent = t('edit') + ' ' + t('promocodes').toLowerCase();
+            submitBtn.textContent = t('saveChanges');
             
             document.getElementById('promocodeCode').value = promocode.code;
-            document.getElementById('promocodeCode').disabled = true; // Код нельзя менять
+            document.getElementById('promocodeCode').disabled = true; // Code cannot be changed
             document.getElementById('promocodeDiscount').value = promocode.discount;
             document.getElementById('promocodeType').value = promocode.type;
             document.getElementById('promocodeStartDate').value = promocode.startDate || '';
@@ -320,11 +326,11 @@ const Payments = {
             document.getElementById('promocodeMaxUses').value = promocode.maxUses || '';
             document.getElementById('promocodeStatus').value = promocode.status || 'active';
         } else {
-            // Режим создания
+            // Create mode
             editMode.value = 'false';
             editCode.value = '';
-            title.textContent = 'Добавить промокод';
-            submitBtn.textContent = 'Создать промокод';
+            title.textContent = t('addPromocode');
+            submitBtn.textContent = t('createPromocode');
             form.reset();
             document.getElementById('promocodeCode').disabled = false;
         }
@@ -339,7 +345,7 @@ const Payments = {
         
         modal.classList.add('hidden');
         
-        // Очищаем форму
+        // Clear form
         form.reset();
         document.getElementById('promocodeCode').disabled = false;
         document.getElementById('promocodeEditMode').value = 'false';
@@ -372,16 +378,17 @@ const Payments = {
                 status
             };
             
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
             let response;
             if (editMode) {
-                // Редактирование
+                // Editing
                 const editCodeValue = document.getElementById('promocodeEditCode').value;
                 response = await Auth.authenticatedFetch(`/api/admin/settings/promocodes/${editCodeValue}`, {
                     method: 'PUT',
                     body: JSON.stringify(promocodeData)
                 });
             } else {
-                // Создание
+                // Creating
                 response = await Auth.authenticatedFetch('/api/admin/settings/promocodes', {
                     method: 'POST',
                     body: JSON.stringify(promocodeData)
@@ -395,41 +402,45 @@ const Payments = {
             if (data.success) {
                 this.closePromocodeModal();
                 await this.loadSettings();
-                this.showSuccess(editMode ? 'Промокод обновлен' : 'Промокод создан');
+                this.showSuccess(t('changesSaved'));
             } else {
-                this.showError(data.error || (editMode ? 'Ошибка обновления промокода' : 'Ошибка создания промокода'));
+                this.showError(data.error || t('errorSaving'));
             }
         } catch (error) {
             console.error('Error saving promocode:', error);
-            this.showError('Ошибка сохранения промокода');
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorSaving'));
         }
     },
     
     // Edit promocode
     async editPromocode(code) {
         try {
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
             const settings = this.currentSettings;
             if (!settings || !settings.promocodes) {
-                this.showError('Настройки не загружены');
+                this.showError('Settings not loaded');
                 return;
             }
             
             const promocode = settings.promocodes.find(p => p.code === code);
             if (!promocode) {
-                this.showError('Промокод не найден');
+                this.showError('Promocode not found');
                 return;
             }
             
             this.showPromocodeModal(promocode);
         } catch (error) {
             console.error('Error loading promocode for edit:', error);
-            this.showError('Ошибка загрузки промокода');
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError('Error loading promocode');
         }
     },
     
     // Delete promocode
     async deletePromocode(code) {
-        if (!confirm(`Удалить промокод ${code}?`)) return;
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
+        if (!confirm(`Delete promocode ${code}?`)) return;
         
         try {
             const response = await Auth.authenticatedFetch(`/api/admin/settings/promocodes/${code}`, {
@@ -441,20 +452,21 @@ const Payments = {
             const data = await response.json();
             
             if (data.success) {
-                this.showSuccess('Промокод удален');
+                this.showSuccess('Promocode deleted');
                 this.loadSettings();
             } else {
-                this.showError(data.error || 'Ошибка удаления промокода');
+                this.showError(data.error || 'Error deleting promocode');
             }
         } catch (error) {
             console.error('Error deleting promocode:', error);
-            this.showError('Ошибка удаления промокода');
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError('Error deleting promocode');
         }
     },
     
     // Show success message
     showSuccess(message) {
-        // Простая реализация через alert, можно улучшить
+        // Simple implementation via alert, can be improved
         alert('✓ ' + message);
     },
     
@@ -471,17 +483,17 @@ function initToggleSwitches() {
     function updateToggleStyle(toggle) {
         const toggleDiv = toggle.nextElementSibling;
         if (toggleDiv && toggleDiv.classList.contains('rounded-full')) {
-            // Добавляем уникальный класс к toggleDiv для селекторов
+            // Add unique class to toggleDiv for selectors
             if (!toggleDiv.classList.contains('toggle-switch-' + toggle.id)) {
                 toggleDiv.classList.add('toggle-switch-' + toggle.id);
             }
             
             if (toggle.checked) {
                 toggleDiv.style.setProperty('background-color', '#16a34a', 'important'); // green-600
-                // Добавляем класс для движения вправо
+                // Add class for moving right
                 toggleDiv.classList.add('toggle-checked');
-                // Вычисляем правильное смещение в зависимости от размера экрана
-                const width = toggleDiv.offsetWidth || 44; // по умолчанию w-11 = 44px для десктопа
+                // Calculate correct offset based on screen size
+                const width = toggleDiv.offsetWidth || 44; // default w-11 = 44px for desktop
                 let translateX;
                 if (width <= 36) {
                     translateX = 18; // для маленьких экранов (36px width)
@@ -494,8 +506,8 @@ function initToggleSwitches() {
                 toggleDiv.setAttribute('data-checked', 'true');
                 toggleDiv.setAttribute('data-translate-x', `${translateX}`);
                 
-                // Применяем стиль напрямую через добавление стилей к элементу
-                // Создаем или обновляем style элемент для ::after
+                // Apply style directly by adding styles to element
+                // Create or update style element for ::after
                 let styleId = 'toggle-style-' + toggle.id;
                 let styleElement = document.getElementById(styleId);
                 if (!styleElement) {
@@ -503,8 +515,8 @@ function initToggleSwitches() {
                     styleElement.id = styleId;
                     document.head.appendChild(styleElement);
                 }
-                // Используем уникальный класс для селектора
-                // Применяем для всех размеров экранов, включая десктоп
+                // Use unique class for selector
+                // Apply for all screen sizes, including desktop
                 styleElement.textContent = `
                     .toggle-switch-${toggle.id}.toggle-checked::after,
                     input#${toggle.id}:checked ~ .toggle-switch-${toggle.id}::after,
@@ -521,7 +533,7 @@ function initToggleSwitches() {
                         border-color: white !important;
                     }
                     
-                    /* Десктоп - явные правила */
+                    /* Desktop - explicit rules */
                     @media (min-width: 1025px) {
                         .toggle-switch-${toggle.id}.toggle-checked::after,
                         input#${toggle.id}:checked ~ .toggle-switch-${toggle.id}::after {
@@ -537,7 +549,7 @@ function initToggleSwitches() {
                 toggleDiv.setAttribute('data-checked', 'false');
                 toggleDiv.removeAttribute('data-translate-x');
                 
-                // Удаляем динамический style элемент
+                // Remove dynamic style element
                 let styleId = 'toggle-style-' + toggle.id;
                 let styleElement = document.getElementById(styleId);
                 if (styleElement) {

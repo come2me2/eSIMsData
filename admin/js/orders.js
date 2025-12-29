@@ -534,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const userId = urlParams.get('userId');
         const searchParam = urlParams.get('search');
         
-        // Если есть userId в URL, устанавливаем фильтр
+        // If userId is in URL, set filter
         if (userId && userId.trim() !== '') {
             Orders.currentUserId = userId.trim();
             console.log('Filtering orders by userId:', userId);
@@ -563,12 +563,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${window.i18n ? window.i18n.t('clearFilter') : 'Clear filter'}
                     </button>
                 `;
-                // Вставляем баннер после контейнера с фильтрами как соседний элемент
+                // Insert banner after filter container as sibling element
                 filtersContainer.parentNode.insertBefore(filterBanner, filtersContainer.nextSibling);
             }
         }
         
-        // Если есть search в URL, устанавливаем его
+        // If search is in URL, set it
         if (searchParam) {
             Orders.currentSearch = searchParam;
             const searchInput = document.getElementById('searchInput');
@@ -655,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 url.searchParams.delete('search');
                 window.history.replaceState({}, '', url);
                 
-                // Remove banner если есть
+                // Remove banner if exists
                 const banner = document.getElementById('userFilterBanner');
                 if (banner) {
                     banner.remove();

@@ -42,7 +42,7 @@ const Dashboard = {
         const revenueChange = document.getElementById('revenueChange');
         if (revenueChange && stats.revenueChange !== undefined) {
             const sign = stats.revenueChange >= 0 ? '+' : '';
-            revenueChange.textContent = `${sign}${stats.revenueChange.toFixed(1)}% за месяц`;
+            revenueChange.textContent = `${sign}${stats.revenueChange.toFixed(1)}% this month`;
             revenueChange.className = stats.revenueChange >= 0 ? 'text-green-600 text-sm mt-1' : 'text-red-600 text-sm mt-1';
         }
 
@@ -56,7 +56,7 @@ const Dashboard = {
         const ordersChange = document.getElementById('ordersChange');
         if (ordersChange && stats.ordersChange !== undefined) {
             const sign = stats.ordersChange >= 0 ? '+' : '';
-            ordersChange.textContent = `${sign}${stats.ordersChange} за месяц`;
+            ordersChange.textContent = `${sign}${stats.ordersChange} this month`;
         }
 
         // Active Users
@@ -69,7 +69,7 @@ const Dashboard = {
         const usersChange = document.getElementById('usersChange');
         if (usersChange && stats.usersChange !== undefined) {
             const sign = stats.usersChange >= 0 ? '+' : '';
-            usersChange.textContent = `${sign}${stats.usersChange} за месяц`;
+            usersChange.textContent = `${sign}${stats.usersChange} this month`;
         }
 
         // Conversion Rate
@@ -81,7 +81,7 @@ const Dashboard = {
         const conversionChange = document.getElementById('conversionChange');
         if (conversionChange && stats.conversionChange !== undefined) {
             const sign = stats.conversionChange >= 0 ? '+' : '';
-            conversionChange.textContent = `${sign}${stats.conversionChange.toFixed(1)}% за месяц`;
+            conversionChange.textContent = `${sign}${stats.conversionChange.toFixed(1)}% this month`;
         }
     },
 
@@ -191,7 +191,7 @@ const Dashboard = {
             data: {
                 labels: data.labels,
                 datasets: [{
-                    label: 'Продажи ($)',
+                    label: 'Sales ($)',
                     data: data.values,
                     borderColor: 'rgb(59, 130, 246)',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -212,7 +212,7 @@ const Dashboard = {
                         intersect: false,
                         callbacks: {
                             label: function(context) {
-                                return 'Продажи: $' + context.parsed.y.toFixed(2);
+                                return 'Sales: $' + context.parsed.y.toFixed(2);
                             }
                         }
                     }
@@ -245,8 +245,8 @@ const Dashboard = {
 
         const labels = {
             'telegram_stars': 'Telegram Stars',
-            'bank_card': 'Банковская карта',
-            'crypto': 'Криптовалюта'
+            'bank_card': 'Bank Card',
+            'crypto': 'Cryptocurrency'
         };
 
         this.paymentMethodsChart = new Chart(ctx, {
@@ -294,7 +294,7 @@ const Dashboard = {
 
 // Initialize dashboard on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Проверяем, что Auth доступен
+    // Check that Auth is available
     if (typeof Auth === 'undefined') {
         console.error('Auth is not defined. Make sure auth.js is loaded before dashboard.js');
         return;

@@ -66,12 +66,12 @@ const Settings = {
         
         // Validate passwords
         if (newPassword !== confirmPassword) {
-            alert('Новый пароль и подтверждение не совпадают');
+            alert('New password and confirmation do not match');
             return;
         }
         
         if (newPassword.length < 6) {
-            alert('Пароль должен содержать минимум 6 символов');
+            alert('Password must contain at least 6 characters');
             return;
         }
         
@@ -91,14 +91,14 @@ const Settings = {
             const data = await response.json();
             
             if (data.success) {
-                alert('✅ Пароль успешно изменен');
+                alert('✅ Password changed successfully');
                 document.getElementById('changePasswordForm').reset();
             } else {
-                alert('❌ Ошибка: ' + (data.error || 'Не удалось изменить пароль'));
+                alert('❌ Error: ' + (data.error || 'Failed to change password'));
             }
         } catch (error) {
             console.error('Error changing password:', error);
-            alert('❌ Ошибка при изменении пароля');
+            alert('❌ Error changing password');
         }
     },
     
@@ -157,13 +157,13 @@ const Settings = {
             
             if (data.success) {
                 // Show success message
-                this.showNotification('✅ Контент успешно сохранен', 'success');
+                this.showNotification('✅ Content saved successfully', 'success');
             } else {
-                alert('❌ Ошибка: ' + (data.error || 'Не удалось сохранить контент'));
+                alert('❌ Error: ' + (data.error || 'Failed to save content'));
             }
         } catch (error) {
             console.error(`Error saving ${section} content:`, error);
-            alert('❌ Ошибка при сохранении контента');
+            alert('❌ Error saving content');
         }
     },
     
