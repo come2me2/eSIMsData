@@ -545,8 +545,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         Очистить фильтр
                     </button>
                 `;
-                // Вставляем баннер после контейнера с фильтрами, убедившись что мы в main
-                mainElement.insertBefore(filterBanner, filtersContainer.nextSibling);
+                // Вставляем баннер после контейнера с фильтрами как соседний элемент
+                filtersContainer.parentNode.insertBefore(filterBanner, filtersContainer.nextSibling);
             }
         }
         
