@@ -521,9 +521,10 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Filtering orders by userId:', userId);
             
             // Показываем баннер с информацией о фильтре
-            // Ищем заголовок страницы в main content, а не h1 в sidebar
-            const pageHeader = document.querySelector('main h2');
-            if (pageHeader && pageHeader.textContent.includes('Заказы')) {
+            // Ищем заголовок страницы в main content
+            const mainContent = document.querySelector('main');
+            const pageHeader = mainContent ? mainContent.querySelector('h2') : null;
+            if (pageHeader && pageHeader.textContent.trim() === 'Заказы') {
                 const filterBanner = document.createElement('div');
                 filterBanner.className = 'mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between';
                 filterBanner.id = 'userFilterBanner';
