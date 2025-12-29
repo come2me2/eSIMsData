@@ -155,6 +155,8 @@ let originalPrice = '';
 let originalPriceValue = 0; // Числовое значение базовой цены (БЕЗ наценки способа оплаты)
 let isPromoApplied = false;
 let discountPercent = 0;
+let discountAmount = 0; // Фиксированная скидка в долларах
+let appliedPromocode = null; // Информация о примененном промокоде
 let publicSettings = null; // Настройки наценок
 
 // ===== Payment method (UI only for now) =====
@@ -993,12 +995,32 @@ function updateTotalPrice() {
     }
     
     // Применяем промокод, если активен
-    if (isPromoApplied && discountPercent > 0) {
-        basePrice = basePrice * (1 - discountPercent / 100);
+    if (isPromoApplied && (discountPercent > 0 || discountAmount > 0)) {
+        let discountedPrice = basePrice;
+        
+        if (discountPercent > 0) {
+            // Процентная скидка
+            discountedPrice = basePrice * (1 - discountPercent / 100);
+        } else if (discountAmount > 0) {
+            // Фиксированная скидка
+            discountedPrice = Math.max(0, basePrice - discountAmount);
+        }
+        
+        const originalPriceDisplay = basePrice > 0 ? `$ ${basePrice.toFixed(2)}` : originalPrice;
+        const newPrice = `$ ${discountedPrice.toFixed(2)}`;
+        
+        totalPriceElement.innerHTML = `
+            <span class="checkout-total-price-old">${originalPriceDisplay}</span>
+            <span class="checkout-total-price-new">${newPrice}</span>
+        `;
+    } else {
+        // Без промокода, но с наценкой способа оплаты
+        if (basePrice > 0) {
+            totalPriceElement.textContent = `$ ${basePrice.toFixed(2)}`;
+        } else {
+            totalPriceElement.textContent = originalPrice;
+        }
     }
-    
-    // Обновляем отображение
-    totalPriceElement.textContent = `$ ${basePrice.toFixed(2)}`;
 
     // Обновляем отображение Stars после пересчёта цены
     updateStarsPriceDisplay();
@@ -1018,13 +1040,8 @@ function setupPromoCode() {
         promoSuccess: !!promoSuccess
     });
     
-    // Valid promo codes with discounts
-    const promoCodes = {
-        'PROMO': 30  // 30% discount
-    };
-    
     if (promoBtn && promoInput && promoError && promoSuccess) {
-        promoBtn.addEventListener('click', (e) => {
+        promoBtn.addEventListener('click', async (e) => {
             console.log('🔵 Promo button clicked', e);
             e.preventDefault();
             e.stopPropagation();
@@ -1040,32 +1057,100 @@ function setupPromoCode() {
                 tg.HapticFeedback.impactOccurred('light');
             }
             
-            // Check if promo code is valid
-            if (promoCodes.hasOwnProperty(promoCode)) {
-                // Valid promo code
-                isPromoApplied = true;
-                discountPercent = promoCodes[promoCode];
+            // Получаем текущую цену для валидации промокода
+            let currentPrice = 0;
+            const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
+            if (priceMatch) {
+                currentPrice = parseFloat(priceMatch[1]);
+            }
+            
+            // Применяем наценку способа оплаты, если выбрана
+            if (publicSettings && selectedPaymentMethod && currentPrice > 0) {
+                const paymentMethodKey = selectedPaymentMethod === 'stars' ? 'telegramStars' :
+                                         selectedPaymentMethod === 'cryptomus' ? 'crypto' :
+                                         selectedPaymentMethod === 'stripe' ? 'bankCard' : null;
                 
-                promoError.style.display = 'none';
-                promoSuccess.style.display = 'block';
-                promoInput.style.borderColor = 'transparent';
-                
-                // Update price with discount
-                updateTotalPrice();
-                
-                if (tg) {
-                    tg.HapticFeedback.notificationOccurred('success');
+                if (paymentMethodKey && publicSettings.paymentMethods[paymentMethodKey]) {
+                    const paymentMethod = publicSettings.paymentMethods[paymentMethodKey];
+                    if (paymentMethod.enabled && paymentMethod.markupMultiplier) {
+                        currentPrice = currentPrice * paymentMethod.markupMultiplier;
+                    }
                 }
-            } else {
-                // Invalid promo code
+            }
+            
+            // Валидируем промокод через API
+            try {
+                console.log('[Promocode] Validating:', { code: promoCode, amount: currentPrice });
+                const response = await fetch('/api/promocode/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: promoCode,
+                        amount: currentPrice
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('[Promocode] API Response:', data);
+                
+                if (data.success && data.discount) {
+                    // Valid promo code
+                    isPromoApplied = true;
+                    appliedPromocode = data.promocode;
+                    
+                    // Сохраняем информацию о скидке
+                    if (data.promocode.type === 'percent') {
+                        discountPercent = data.promocode.discount;
+                        discountAmount = data.discount.amount;
+                    } else {
+                        discountPercent = 0;
+                        discountAmount = data.discount.amount;
+                    }
+                    
+                    promoError.style.display = 'none';
+                    promoSuccess.style.display = 'block';
+                    promoInput.style.borderColor = 'transparent';
+                    
+                    // Update price with discount
+                    updateTotalPrice();
+                    
+                    if (tg) {
+                        tg.HapticFeedback.notificationOccurred('success');
+                    }
+                } else {
+                    // Invalid promo code
+                    console.log('[Promocode] Validation failed:', data);
+                    isPromoApplied = false;
+                    discountPercent = 0;
+                    discountAmount = 0;
+                    appliedPromocode = null;
+                    
+                    promoError.textContent = data.error || 'Промокод недействителен';
+                    promoError.style.display = 'block';
+                    promoSuccess.style.display = 'none';
+                    promoInput.style.borderColor = '#FF3B30';
+                    
+                    // Reset price to original
+                    updateTotalPrice();
+                    
+                    if (tg) {
+                        tg.HapticFeedback.notificationOccurred('error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error validating promocode:', error);
                 isPromoApplied = false;
                 discountPercent = 0;
+                discountAmount = 0;
+                appliedPromocode = null;
                 
+                promoError.textContent = 'Ошибка проверки промокода';
                 promoError.style.display = 'block';
                 promoSuccess.style.display = 'none';
                 promoInput.style.borderColor = '#FF3B30';
                 
-                // Reset price to original
                 updateTotalPrice();
                 
                 if (tg) {
@@ -1085,6 +1170,8 @@ function setupPromoCode() {
                 if (isPromoApplied) {
                     isPromoApplied = false;
                     discountPercent = 0;
+                    discountAmount = 0;
+                    appliedPromocode = null;
                     updateTotalPrice();
                 }
             }
