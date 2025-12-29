@@ -522,9 +522,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Показываем баннер с информацией о фильтре
             // Ищем контейнер с фильтрами в main content и вставляем баннер после него
-            // Важно: ищем только внутри main, чтобы не попасть в sidebar
-            const filtersContainer = document.querySelector('main .bg-white.rounded-lg.shadow.p-4.mb-4');
-            if (filtersContainer && filtersContainer.parentNode) {
+            // Важно: убедимся, что мы работаем только с элементами внутри main
+            const mainElement = document.querySelector('main');
+            if (!mainElement) return;
+            
+            const filtersContainer = mainElement.querySelector('.bg-white.rounded-lg.shadow.p-4.mb-4');
+            if (filtersContainer && mainElement.contains(filtersContainer)) {
                 const filterBanner = document.createElement('div');
                 filterBanner.className = 'mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between';
                 filterBanner.id = 'userFilterBanner';
@@ -542,8 +545,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         Очистить фильтр
                     </button>
                 `;
-                // Вставляем баннер после контейнера с фильтрами
-                filtersContainer.parentNode.insertBefore(filterBanner, filtersContainer.nextSibling);
+                // Вставляем баннер после контейнера с фильтрами, убедившись что мы в main
+                mainElement.insertBefore(filterBanner, filtersContainer.nextSibling);
             }
         }
         
