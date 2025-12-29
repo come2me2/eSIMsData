@@ -20,7 +20,7 @@ fi
 # Git pull на сервере и перезапуск PM2
 echo "📥 Обновление сервера..."
 sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no -o LogLevel=ERROR "$SERVER_USER@$SERVER_IP" \
-    "cd $REMOTE_DIR && git stash 2>/dev/null; git pull origin main && pm2 restart all" 2>/dev/null
+    "cd $REMOTE_DIR && git fetch origin && git reset --hard origin/main && pm2 restart all" 2>/dev/null
 
 echo "✅ Готово!"
 
