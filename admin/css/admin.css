@@ -1460,3 +1460,60 @@ body #paymentCardBankCard input.peer:checked ~ div.rounded-full::after {
 
 
 
+
+/* Content Management Tabs */
+.content-tab {
+    padding: 1rem 1.5rem;
+    font-weight: 500;
+    color: #6b7280;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+}
+
+.content-tab:hover {
+    color: #111827;
+    border-bottom-color: #d1d5db;
+}
+
+.active-tab {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+.content-panel {
+    animation: fadeIn 0.3s ease-in;
+}
+
+.content-editor {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 300px;
+}
+
+.content-editor:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

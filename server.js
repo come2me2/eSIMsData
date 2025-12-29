@@ -112,7 +112,9 @@ const apiRoutes = {
     '/api/admin/stats': require('./api/admin/stats'),
     '/api/admin/orders': require('./api/admin/orders'),
     '/api/admin/users': require('./api/admin/users'),
-    '/api/admin/settings': require('./api/admin/settings')
+    '/api/admin/settings': require('./api/admin/settings'),
+    '/api/admin/change-password': require('./api/admin/change-password'),
+    '/api/admin/content': require('./api/admin/content')
 };
 
 // Регистрация API routes

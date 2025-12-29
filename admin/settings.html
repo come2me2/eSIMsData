@@ -73,37 +73,93 @@
     <main class="ml-64 p-8">
         <div class="mb-8">
             <h2 class="text-3xl font-bold text-gray-800">Настройки</h2>
-            <p class="text-gray-600 mt-2">Управление наценкой по странам</p>
+            <p class="text-gray-600 mt-2">Управление параметрами системы и контентом</p>
         </div>
 
         <div class="space-y-6">
-            <!-- Markup Settings -->
+            <!-- Change Password Section -->
             <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Наценка к товарам</h3>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <label class="text-sm font-medium text-gray-700">Включить наценку</label>
-                        <input type="checkbox" id="markupEnabled" class="form-input w-auto">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Смена пароля администратора</h3>
+                <form id="changePasswordForm" class="space-y-4 max-w-md">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Текущий пароль</label>
+                        <input type="password" id="currentPassword" class="form-input" required autocomplete="current-password">
                     </div>
                     <div>
-                        <label class="text-sm font-medium text-gray-700 block mb-2">Базовая наценка (множитель)</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" id="baseMarkup" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.29">
-                            <span class="text-sm text-gray-500">(например: 1.29 = +29%)</span>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">Базовая наценка применяется ко всем товарам</p>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Новый пароль</label>
+                        <input type="password" id="newPassword" class="form-input" required minlength="6" autocomplete="new-password">
+                        <p class="text-xs text-gray-500 mt-1">Минимум 6 символов</p>
                     </div>
                     <div>
-                        <label class="text-sm font-medium text-gray-700 block mb-2">Наценка по странам</label>
-                        <div id="countryMarkupsList" class="space-y-2 mb-3">
-                            <!-- Динамически добавляемые элементы -->
-                        </div>
-                        <button onclick="Settings.addCountryMarkup()" class="btn btn-secondary text-sm">+ Добавить страну</button>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Подтвердите новый пароль</label>
+                        <input type="password" id="confirmPassword" class="form-input" required minlength="6" autocomplete="new-password">
                     </div>
-                    <button onclick="Settings.saveMarkup()" class="btn btn-primary">Сохранить наценку</button>
-                </div>
+                    <button type="submit" class="btn btn-primary">Сменить пароль</button>
+                </form>
             </div>
 
+            <!-- Content Management Tabs -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="border-b border-gray-200">
+                    <nav class="flex -mb-px">
+                        <button onclick="Settings.switchTab('faq')" id="tab-faq" class="content-tab active-tab">
+                            FAQ
+                        </button>
+                        <button onclick="Settings.switchTab('privacy')" id="tab-privacy" class="content-tab">
+                            Privacy Policy
+                        </button>
+                        <button onclick="Settings.switchTab('refund')" id="tab-refund" class="content-tab">
+                            Refund Policy
+                        </button>
+                        <button onclick="Settings.switchTab('terms')" id="tab-terms" class="content-tab">
+                            Terms of Service
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="p-6">
+                    <!-- FAQ Tab -->
+                    <div id="content-faq" class="content-panel">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">FAQ (Часто задаваемые вопросы)</h3>
+                            <button onclick="Settings.saveContent('faq')" class="btn btn-primary">Сохранить</button>
+                        </div>
+                        <textarea id="editor-faq" class="content-editor" rows="20" placeholder="Введите содержимое FAQ в формате Markdown или HTML..."></textarea>
+                        <p class="text-xs text-gray-500 mt-2">Поддерживается Markdown и HTML разметка</p>
+                    </div>
+
+                    <!-- Privacy Policy Tab -->
+                    <div id="content-privacy" class="content-panel hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">Privacy Policy (Политика конфиденциальности)</h3>
+                            <button onclick="Settings.saveContent('privacy')" class="btn btn-primary">Сохранить</button>
+                        </div>
+                        <textarea id="editor-privacy" class="content-editor" rows="20" placeholder="Введите политику конфиденциальности..."></textarea>
+                        <p class="text-xs text-gray-500 mt-2">Поддерживается Markdown и HTML разметка</p>
+                    </div>
+
+                    <!-- Refund Policy Tab -->
+                    <div id="content-refund" class="content-panel hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">Refund Policy (Политика возврата)</h3>
+                            <button onclick="Settings.saveContent('refund')" class="btn btn-primary">Сохранить</button>
+                        </div>
+                        <textarea id="editor-refund" class="content-editor" rows="20" placeholder="Введите политику возврата..."></textarea>
+                        <p class="text-xs text-gray-500 mt-2">Поддерживается Markdown и HTML разметка</p>
+                    </div>
+
+                    <!-- Terms of Service Tab -->
+                    <div id="content-terms" class="content-panel hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">Terms of Service (Условия использования)</h3>
+                            <button onclick="Settings.saveContent('terms')" class="btn btn-primary">Сохранить</button>
+                        </div>
+                        <textarea id="editor-terms" class="content-editor" rows="20" placeholder="Введите условия использования..."></textarea>
+                        <p class="text-xs text-gray-500 mt-2">Поддерживается Markdown и HTML разметка</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -112,5 +168,3 @@
     <script src="js/mobile-menu.js"></script>
 </body>
 </html>
-
-

@@ -1,167 +1,237 @@
 /**
- * Settings management page
- * This page handles only country markups. Payment methods and promocodes have been moved to payments.html
+ * Admin Settings Management
+ * Handles password changes and content management
  */
 
 const Settings = {
-    currentSettings: null,
+    currentTab: 'faq',
     
-    // Load settings
-    async loadSettings() {
-        try {
-            const response = await Auth.authenticatedFetch('/api/admin/settings');
-            if (!response) return;
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                this.currentSettings = data.settings;
-                this.renderSettings(data.settings);
-            }
-        } catch (error) {
-            console.error('Error loading settings:', error);
-            this.showError('Ошибка загрузки настроек');
+    /**
+     * Initialize settings page
+     */
+    async init() {
+        console.log('Settings page initialized');
+        
+        // Load all content on page load
+        await this.loadContent('faq');
+        await this.loadContent('privacy');
+        await this.loadContent('refund');
+        await this.loadContent('terms');
+        
+        // Setup password change form
+        const form = document.getElementById('changePasswordForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.changePassword(e));
         }
     },
     
-    // Render settings
-    renderSettings(settings) {
-        // Markup
-        if (settings.markup) {
-            document.getElementById('markupEnabled').checked = settings.markup.enabled || false;
-            // Базовая наценка как множитель (например, 1.29 вместо 29%)
-            const baseMarkup = settings.markup.base || settings.markup.defaultMultiplier || 1.29;
-            document.getElementById('baseMarkup').value = baseMarkup;
-            this.renderCountryMarkups(settings.markup.countryMarkups || {});
+    /**
+     * Switch between content tabs
+     */
+    switchTab(tabName) {
+        // Hide all content panels
+        document.querySelectorAll('.content-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+        
+        // Remove active class from all tabs
+        document.querySelectorAll('.content-tab').forEach(tab => {
+            tab.classList.remove('active-tab');
+        });
+        
+        // Show selected panel
+        const panel = document.getElementById(`content-${tabName}`);
+        if (panel) {
+            panel.classList.remove('hidden');
         }
+        
+        // Activate selected tab
+        const tab = document.getElementById(`tab-${tabName}`);
+        if (tab) {
+            tab.classList.add('active-tab');
+        }
+        
+        this.currentTab = tabName;
     },
     
-    // Render country markups
-    renderCountryMarkups(countryMarkups) {
-        const container = document.getElementById('countryMarkupsList');
-        if (!container) return;
+    /**
+     * Change admin password
+     */
+    async changePassword(e) {
+        e.preventDefault();
         
-        container.innerHTML = Object.entries(countryMarkups).map(([country, percent]) => `
-            <div class="flex items-center gap-2 bg-gray-50 p-2 rounded">
-                <input type="text" value="${country}" class="form-input flex-1" placeholder="Код страны (US, GB, etc.)" readonly>
-                <input type="number" value="${percent}" class="form-input w-24" min="0" max="100" step="0.1" placeholder="%" data-country="${country}">
-                <button onclick="Settings.removeCountryMarkup('${country}')" class="text-red-600 hover:text-red-800">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-        `).join('');
-    },
-    
-    // Add country markup
-    addCountryMarkup() {
-        const container = document.getElementById('countryMarkupsList');
-        if (!container) return;
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
         
-        const countryCode = prompt('Введите код страны (например: US, GB, DE):');
-        if (!countryCode) return;
-        
-        const percent = prompt('Введите наценку в процентах:');
-        if (!percent || isNaN(percent)) return;
-        
-        const markup = parseFloat(percent);
-        if (isNaN(markup) || markup < 0 || markup > 100) {
-            this.showError('Неверное значение наценки');
+        // Validate passwords
+        if (newPassword !== confirmPassword) {
+            alert('Новый пароль и подтверждение не совпадают');
             return;
         }
         
-        // Добавляем новый элемент
-        const div = document.createElement('div');
-        div.className = 'flex items-center gap-2 bg-gray-50 p-2 rounded';
-        div.innerHTML = `
-            <input type="text" value="${countryCode.toUpperCase()}" class="form-input flex-1" placeholder="Код страны" readonly>
-            <input type="number" value="${markup}" class="form-input w-24" min="0" max="100" step="0.1" placeholder="%" data-country="${countryCode.toUpperCase()}">
-            <button onclick="this.parentElement.remove()" class="text-red-600 hover:text-red-800">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        `;
-        container.appendChild(div);
-    },
-    
-    // Remove country markup
-    removeCountryMarkup(country) {
-        const inputs = document.querySelectorAll(`#countryMarkupsList input[data-country="${country}"]`);
-        inputs.forEach(input => {
-            const div = input.closest('.flex');
-            if (div) div.remove();
-        });
-    },
-    
-    // Save markup settings
-    async saveMarkup() {
+        if (newPassword.length < 6) {
+            alert('Пароль должен содержать минимум 6 символов');
+            return;
+        }
+        
         try {
-            const enabled = document.getElementById('markupEnabled').checked;
-            const baseMarkup = parseFloat(document.getElementById('baseMarkup').value);
-            
-            if (isNaN(baseMarkup) || baseMarkup < 1) {
-                this.showError('Базовая наценка должна быть не менее 1.0');
-                return;
-            }
-            
-            // Собираем наценки по странам (оставляем как проценты для обратной совместимости)
-            const countryMarkups = {};
-            const countryInputs = document.querySelectorAll('#countryMarkupsList input[data-country]');
-            countryInputs.forEach(input => {
-                const country = input.getAttribute('data-country');
-                const percent = parseFloat(input.value);
-                if (country && !isNaN(percent)) {
-                    countryMarkups[country] = percent;
-                }
-            });
-            
-            const response = await Auth.authenticatedFetch('/api/admin/settings/markup', {
-                method: 'PUT',
+            const response = await fetch('/api/admin/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${Auth.getToken()}`
+                },
                 body: JSON.stringify({
-                    enabled,
-                    base: baseMarkup, // Сохраняем как множитель
-                    defaultMultiplier: baseMarkup, // Для обратной совместимости
-                    countryMarkups
+                    currentPassword,
+                    newPassword
                 })
             });
-            
-            if (!response) return;
             
             const data = await response.json();
             
             if (data.success) {
-                this.showSuccess('Наценка сохранена');
-                this.loadSettings();
+                alert('✅ Пароль успешно изменен');
+                document.getElementById('changePasswordForm').reset();
             } else {
-                this.showError(data.error || 'Ошибка сохранения наценки');
+                alert('❌ Ошибка: ' + (data.error || 'Не удалось изменить пароль'));
             }
         } catch (error) {
-            console.error('Error saving markup:', error);
-            this.showError('Ошибка сохранения наценки');
+            console.error('Error changing password:', error);
+            alert('❌ Ошибка при изменении пароля');
         }
     },
     
-    showError(message) {
-        alert('Ошибка: ' + message);
+    /**
+     * Load content for a specific section
+     */
+    async loadContent(section) {
+        try {
+            const response = await fetch(`/api/admin/content/${section}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${Auth.getToken()}`
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success && data.content) {
+                const editor = document.getElementById(`editor-${section}`);
+                if (editor) {
+                    editor.value = data.content;
+                }
+            }
+        } catch (error) {
+            console.error(`Error loading ${section} content:`, error);
+        }
     },
     
-    showSuccess(message) {
-        alert('Успешно: ' + message);
+    /**
+     * Save content for a specific section
+     */
+    async saveContent(section) {
+        const editor = document.getElementById(`editor-${section}`);
+        if (!editor) {
+            console.error(`Editor for ${section} not found`);
+            return;
+        }
+        
+        const content = editor.value;
+        
+        try {
+            const response = await fetch(`/api/admin/content/${section}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${Auth.getToken()}`
+                },
+                body: JSON.stringify({ content })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Show success message
+                this.showNotification('✅ Контент успешно сохранен', 'success');
+            } else {
+                alert('❌ Ошибка: ' + (data.error || 'Не удалось сохранить контент'));
+            }
+        } catch (error) {
+            console.error(`Error saving ${section} content:`, error);
+            alert('❌ Ошибка при сохранении контента');
+        }
+    },
+    
+    /**
+     * Show notification
+     */
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+            color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
     }
 };
 
+// Add animation styles
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Проверяем, что Auth доступен
     if (typeof Auth === 'undefined') {
         console.error('Auth is not defined. Make sure auth.js is loaded before settings.js');
         return;
     }
     
     try {
-        Settings.loadSettings();
+        Settings.init();
     } catch (error) {
         console.error('Error initializing settings page:', error);
     }
