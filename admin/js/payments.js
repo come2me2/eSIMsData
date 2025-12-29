@@ -248,12 +248,12 @@ const Payments = {
     
     // Save payment methods
     async savePaymentMethods() {
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
         try {
             const markupTelegramStars = parseFloat(document.getElementById('markupTelegramStars').value);
             const markupCrypto = parseFloat(document.getElementById('markupCrypto').value);
             const markupBankCard = parseFloat(document.getElementById('markupBankCard').value);
             
-            const t = (key) => window.i18n ? window.i18n.t(key) : key;
             if (isNaN(markupTelegramStars) || markupTelegramStars < 1) {
                 this.showError('Telegram Stars markup must be at least 1.0');
                 return;
@@ -294,7 +294,6 @@ const Payments = {
             
             const data = await response.json();
             
-            const t = (key) => window.i18n ? window.i18n.t(key) : key;
             if (data.success) {
                 this.showSuccess(t('changesSaved'));
                 // Reload settings after a short delay to ensure UI is updated correctly
@@ -306,7 +305,6 @@ const Payments = {
             }
         } catch (error) {
             console.error('Error saving payment methods:', error);
-            const t = (key) => window.i18n ? window.i18n.t(key) : key;
             this.showError(t('errorSaving'));
         }
     },
