@@ -26,36 +26,36 @@
     <!-- Main Content -->
     <main class="ml-64 p-8">
         <div class="mb-8">
-            <h2 class="text-3xl font-bold text-gray-800">Payments</h2>
-            <p class="text-gray-600 mt-2">Управление наценками для способов оплаты и промокодами</p>
+            <h2 class="text-3xl font-bold text-gray-800" data-i18n="payments">Payments</h2>
+            <p class="text-gray-600 mt-2" data-i18n="paymentsManagement">Manage markups for payment methods and promo codes</p>
         </div>
 
         <div class="space-y-6">
             <!-- Base Markup -->
             <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Базовая наценка</h3>
+                <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="baseMarkup">Base Markup</h3>
                 <div class="space-y-4">
                     <div class="flex items-center justify-between">
-                        <label for="markupEnabled" class="text-sm font-medium text-gray-700 cursor-pointer">Включить наценку</label>
+                        <label for="markupEnabled" class="text-sm font-medium text-gray-700 cursor-pointer" data-i18n="enableMarkup">Enable Markup</label>
                         <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
                             <input type="checkbox" id="markupEnabled" class="sr-only peer" onchange="Payments.updateBaseMarkupToggle()">
                             <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                         </label>
                     </div>
                     <div>
-                        <label class="text-sm font-medium text-gray-700 block mb-2">Базовая наценка (множитель)</label>
+                        <label class="text-sm font-medium text-gray-700 block mb-2" data-i18n="baseMarkupMultiplier">Base Markup (multiplier)</label>
                         <input type="number" id="baseMarkup" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.29">
-                        <p class="text-xs text-gray-500 mt-1">(например: 1.29 = +29%)</p>
-                        <p class="text-xs text-gray-500 mt-1">Базовая наценка применяется ко всем товарам</p>
+                        <p class="text-xs text-gray-500 mt-1" data-i18n="baseMarkupExample">(e.g., 1.29 = +29%)</p>
+                        <p class="text-xs text-gray-500 mt-1" data-i18n="baseMarkupApplies">Base markup applies to all products</p>
                     </div>
-                    <button onclick="Payments.saveBaseMarkup()" class="btn btn-primary">Сохранить базовую наценку</button>
+                    <button onclick="Payments.saveBaseMarkup()" class="btn btn-primary" data-i18n="saveBaseMarkup">Save Base Markup</button>
                 </div>
             </div>
 
             <!-- Payment Methods with Markups -->
             <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Способы оплаты и наценки</h3>
-                <p class="text-sm text-gray-600 mb-6">Активируйте или деактивируйте способы оплаты. Неактивные способы не будут отображаться пользователям.</p>
+                <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="paymentMethodsMarkups">Payment Methods and Markups</h3>
+                <p class="text-sm text-gray-600 mb-6" data-i18n="activateDeactivateInfo">Activate or deactivate payment methods. Inactive methods will not be displayed to users.</p>
                 <div class="space-y-6">
                     <!-- Telegram Stars -->
                     <div id="paymentCardTelegramStars" class="border rounded-lg p-6 transition-all duration-200">
@@ -76,10 +76,10 @@
                         </div>
                         <div id="markupFieldsTelegramStars" class="space-y-4 pl-14">
                             <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-3">Дополнительная наценка (множитель)</label>
+                                <label class="text-sm font-medium text-gray-700 block mb-3" data-i18n="additionalMarkup">Additional Markup (multiplier)</label>
                                 <input type="number" id="markupTelegramStars" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.05">
-                                <p class="text-xs text-gray-500 mt-1">(например: 1.05 = +5%)</p>
-                                <p class="text-xs text-gray-500 mt-2">Общая наценка = Базовая × Наценка способа оплаты</p>
+                                <p class="text-xs text-gray-500 mt-1" data-i18n="additionalMarkupExample">(e.g., 1.05 = +5%)</p>
+                                <p class="text-xs text-gray-500 mt-2" data-i18n="totalMarkupFormula">Total markup = Base × Payment method markup</p>
                                 <div id="totalMarkupTelegramStars" class="text-sm font-semibold text-blue-600 mt-3"></div>
                             </div>
                         </div>
@@ -93,7 +93,7 @@
                                     <img src="../icons/Crypto Payments eSIMsData.svg" alt="Crypto" class="w-10 h-10">
                                 </div>
                                 <div>
-                                    <label class="text-base font-semibold text-gray-800 block mb-1">Криптовалюты</label>
+                                    <label class="text-base font-semibold text-gray-800 block mb-1" data-i18n="cryptocurrencies">Cryptocurrencies</label>
                                     <span id="statusCrypto" class="text-xs font-medium"></span>
                                 </div>
                             </div>
@@ -104,10 +104,10 @@
                         </div>
                         <div id="markupFieldsCrypto" class="space-y-4 pl-14">
                             <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-3">Дополнительная наценка (множитель)</label>
+                                <label class="text-sm font-medium text-gray-700 block mb-3" data-i18n="additionalMarkup">Additional Markup (multiplier)</label>
                                 <input type="number" id="markupCrypto" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.0">
-                                <p class="text-xs text-gray-500 mt-1">(например: 1.0 = +0%)</p>
-                                <p class="text-xs text-gray-500 mt-2">Общая наценка = Базовая × Наценка способа оплаты</p>
+                                <p class="text-xs text-gray-500 mt-1" data-i18n="additionalMarkupExample">(e.g., 1.05 = +5%)</p>
+                                <p class="text-xs text-gray-500 mt-2" data-i18n="totalMarkupFormula">Total markup = Base × Payment method markup</p>
                                 <div id="totalMarkupCrypto" class="text-sm font-semibold text-blue-600 mt-3"></div>
                             </div>
                         </div>
@@ -121,7 +121,7 @@
                                     <img src="../icons/Bank Cards eSIMsData.svg" alt="Bank Cards" class="w-10 h-10">
                                 </div>
                                 <div>
-                                    <label class="text-base font-semibold text-gray-800 block mb-1">Банковские карты</label>
+                                    <label class="text-base font-semibold text-gray-800 block mb-1" data-i18n="bankCards">Bank Cards</label>
                                     <span id="statusBankCard" class="text-xs font-medium"></span>
                                 </div>
                             </div>
@@ -132,10 +132,10 @@
                         </div>
                         <div id="markupFieldsBankCard" class="space-y-4 pl-14">
                             <div>
-                                <label class="text-sm font-medium text-gray-700 block mb-3">Дополнительная наценка (множитель)</label>
+                                <label class="text-sm font-medium text-gray-700 block mb-3" data-i18n="additionalMarkup">Additional Markup (multiplier)</label>
                                 <input type="number" id="markupBankCard" class="form-input w-32" min="1" max="10" step="0.01" placeholder="1.1">
-                                <p class="text-xs text-gray-500 mt-1">(например: 1.1 = +10%)</p>
-                                <p class="text-xs text-gray-500 mt-2">Общая наценка = Базовая × Наценка способа оплаты</p>
+                                <p class="text-xs text-gray-500 mt-1" data-i18n="additionalMarkupExample">(e.g., 1.05 = +5%)</p>
+                                <p class="text-xs text-gray-500 mt-2" data-i18n="totalMarkupFormula">Total markup = Base × Payment method markup</p>
                                 <div id="totalMarkupBankCard" class="text-sm font-semibold text-blue-600 mt-3"></div>
                             </div>
                         </div>
@@ -143,9 +143,9 @@
                     
                     <div class="flex items-center justify-between pt-4 border-t">
                         <p class="text-sm text-gray-600">
-                            <span class="font-medium">Важно:</span> Деактивированные способы оплаты не будут показываться пользователям на странице checkout.
+                            <span class="font-medium" data-i18n="importantNote">Important:</span> <span data-i18n="deactivatedNotShown">Deactivated payment methods will not be shown to users on the checkout page.</span>
                         </p>
-                        <button onclick="Payments.savePaymentMethods()" class="btn btn-primary">Сохранить изменения</button>
+                        <button onclick="Payments.savePaymentMethods()" class="btn btn-primary" data-i18n="savePaymentChanges">Save Changes</button>
                     </div>
                 </div>
             </div>
@@ -153,28 +153,28 @@
             <!-- Promocodes -->
             <div class="bg-white rounded-lg shadow p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-800">Промокоды</h3>
-                    <button onclick="Payments.showPromocodeModal()" class="btn btn-primary">Добавить промокод</button>
+                    <h3 class="text-lg font-semibold text-gray-800" data-i18n="promocodes">Promo Codes</h3>
+                    <button onclick="Payments.showPromocodeModal()" class="btn btn-primary" data-i18n="addPromocode">Add Promo Code</button>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Код</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Скидка</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Тип</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Начало</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Окончание</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Использований</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Статус</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Действия</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" data-i18n="code">Code</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" data-i18n="discount">Discount</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" data-i18n="type">Type</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" data-i18n="startDate">Start</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" data-i18n="endDate">End</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" data-i18n="usageCount">Usage</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" data-i18n="status">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" data-i18n="actions">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="promocodesTable" class="bg-white divide-y divide-gray-200">
                             <tr>
                                 <td colspan="8" class="px-4 py-8 text-center text-gray-500">
                                     <div class="spinner"></div>
-                                    <p class="mt-2">Загрузка...</p>
+                                    <p class="mt-2" data-i18n="loading">Loading...</p>
                                 </td>
                             </tr>
                         </tbody>
@@ -188,7 +188,7 @@
     <div id="promocodeModal" class="modal-overlay hidden">
         <div class="modal-content max-w-2xl">
             <div class="flex items-center justify-between">
-                <h3 class="text-2xl font-bold text-gray-900">Добавить промокод</h3>
+                <h3 class="text-2xl font-bold text-gray-900" data-i18n="addPromocode">Add Promo Code</h3>
                 <button id="closePromocodeModal" onclick="Payments.closePromocodeModal()" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -198,43 +198,43 @@
             <div id="promocodeDetails" class="space-y-6">
                 <form id="promocodeForm" class="space-y-5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Код промокода</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="promocodeCode">Promo Code</label>
                         <input type="text" id="promocodeCode" class="form-input" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Скидка</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="discountValue">Discount</label>
                         <input type="number" id="promocodeDiscount" class="form-input" min="0" step="0.01" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Тип скидки</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="discountType">Discount Type</label>
                         <select id="promocodeType" class="form-input">
-                            <option value="percent">Процент (%)</option>
-                            <option value="fixed">Фиксированная сумма ($)</option>
+                            <option value="percent" data-i18n="percent">Percent (%)</option>
+                            <option value="fixed" data-i18n="fixed">Fixed Amount ($)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Дата начала действия</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="startDateFull">Start Date</label>
                         <input type="date" id="promocodeStartDate" class="form-input">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Дата окончания действия (необязательно)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="endDateOptional">End Date (optional)</label>
                         <input type="date" id="promocodeValidUntil" class="form-input">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Максимум использований (необязательно)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="maxUsage">Max Usage (optional)</label>
                         <input type="number" id="promocodeMaxUses" class="form-input" min="1">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Статус</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="status">Status</label>
                         <select id="promocodeStatus" class="form-input">
-                            <option value="active">Активен</option>
-                            <option value="inactive">Неактивен</option>
+                            <option value="active" data-i18n="active">Active</option>
+                            <option value="inactive" data-i18n="inactive">Inactive</option>
                         </select>
                     </div>
                     <input type="hidden" id="promocodeEditMode" value="false">
                     <input type="hidden" id="promocodeEditCode" value="">
                     <div class="mt-8 pt-6 border-t border-gray-200">
-                        <button type="submit" class="btn btn-primary w-full" id="promocodeSubmitBtn">Создать промокод</button>
+                        <button type="submit" class="btn btn-primary w-full" id="promocodeSubmitBtn" data-i18n="createPromocode">Create Promo Code</button>
                     </div>
                 </form>
             </div>

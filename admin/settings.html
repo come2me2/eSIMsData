@@ -26,29 +26,29 @@
     <!-- Main Content -->
     <main class="ml-64 p-8">
         <div class="mb-8">
-            <h2 class="text-3xl font-bold text-gray-800">Настройки</h2>
-            <p class="text-gray-600 mt-2">Управление параметрами системы и контентом</p>
+            <h2 class="text-3xl font-bold text-gray-800" data-i18n="settings">Settings</h2>
+            <p class="text-gray-600 mt-2" data-i18n="settingsManagement">Manage system parameters and content</p>
         </div>
 
         <div class="space-y-6">
             <!-- Change Password Section -->
             <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Смена пароля администратора</h3>
+                <h3 class="text-lg font-semibold text-gray-800 mb-4" data-i18n="changePassword">Change Administrator Password</h3>
                 <form id="changePasswordForm" class="space-y-4 max-w-md">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Текущий пароль</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="currentPassword">Current Password</label>
                         <input type="password" id="currentPassword" class="form-input" required autocomplete="current-password">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Новый пароль</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="newPassword">New Password</label>
                         <input type="password" id="newPassword" class="form-input" required minlength="6" autocomplete="new-password">
-                        <p class="text-xs text-gray-500 mt-1">Минимум 6 символов</p>
+                        <p class="text-xs text-gray-500 mt-1" data-i18n="minCharacters">Minimum 6 characters</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Подтвердите новый пароль</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="confirmPassword">Confirm New Password</label>
                         <input type="password" id="confirmPassword" class="form-input" required minlength="6" autocomplete="new-password">
                     </div>
-                    <button type="submit" class="btn btn-primary">Сменить пароль</button>
+                    <button type="submit" class="btn btn-primary" data-i18n="changePasswordBtn">Change Password</button>
                 </form>
             </div>
 
@@ -76,41 +76,41 @@
                     <!-- FAQ Tab -->
                     <div id="content-faq" class="content-panel">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-800">FAQ (Часто задаваемые вопросы)</h3>
-                            <button onclick="Settings.saveContent('faq')" class="btn btn-primary">Сохранить</button>
+                            <h3 class="text-lg font-semibold text-gray-800" data-i18n="faqDescription">FAQ (Frequently Asked Questions)</h3>
+                            <button onclick="Settings.saveContent('faq')" class="btn btn-primary" data-i18n="save">Save</button>
                         </div>
-                        <textarea id="editor-faq" class="content-editor" rows="20" placeholder="Введите содержимое FAQ (только текст)..."></textarea>
-                        <p class="text-xs text-gray-500 mt-2">Только простой текст, без HTML элементов. Используйте **текст** для жирного шрифта</p>
+                        <textarea id="editor-faq" class="content-editor" rows="20" data-i18n-placeholder="enterFAQ" placeholder="Enter FAQ content (text only)..."></textarea>
+                        <p class="text-xs text-gray-500 mt-2" data-i18n="plainTextOnly">Plain text only, no HTML elements. Use **text** for bold.</p>
                     </div>
 
                     <!-- Privacy Policy Tab -->
                     <div id="content-privacy" class="content-panel hidden">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-800">Privacy Policy (Политика конфиденциальности)</h3>
-                            <button onclick="Settings.saveContent('privacy')" class="btn btn-primary">Сохранить</button>
+                            <h3 class="text-lg font-semibold text-gray-800" data-i18n="privacyDescription">Privacy Policy</h3>
+                            <button onclick="Settings.saveContent('privacy')" class="btn btn-primary" data-i18n="save">Save</button>
                         </div>
-                        <textarea id="editor-privacy" class="content-editor" rows="20" placeholder="Введите политику конфиденциальности (только текст)..."></textarea>
-                        <p class="text-xs text-gray-500 mt-2">Только простой текст, без HTML элементов. Используйте **текст** для жирного шрифта</p>
+                        <textarea id="editor-privacy" class="content-editor" rows="20" data-i18n-placeholder="enterPrivacy" placeholder="Enter privacy policy (text only)..."></textarea>
+                        <p class="text-xs text-gray-500 mt-2" data-i18n="plainTextOnly">Plain text only, no HTML elements. Use **text** for bold.</p>
                     </div>
 
                     <!-- Refund Policy Tab -->
                     <div id="content-refund" class="content-panel hidden">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-800">Refund Policy (Политика возврата)</h3>
-                            <button onclick="Settings.saveContent('refund')" class="btn btn-primary">Сохранить</button>
+                            <h3 class="text-lg font-semibold text-gray-800" data-i18n="refundDescription">Refund Policy</h3>
+                            <button onclick="Settings.saveContent('refund')" class="btn btn-primary" data-i18n="save">Save</button>
                         </div>
-                        <textarea id="editor-refund" class="content-editor" rows="20" placeholder="Введите политику возврата (только текст)..."></textarea>
-                        <p class="text-xs text-gray-500 mt-2">Только простой текст, без HTML элементов. Используйте **текст** для жирного шрифта</p>
+                        <textarea id="editor-refund" class="content-editor" rows="20" data-i18n-placeholder="enterRefund" placeholder="Enter refund policy (text only)..."></textarea>
+                        <p class="text-xs text-gray-500 mt-2" data-i18n="plainTextOnly">Plain text only, no HTML elements. Use **text** for bold.</p>
                     </div>
 
                     <!-- Terms of Service Tab -->
                     <div id="content-terms" class="content-panel hidden">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-800">Terms of Service (Условия использования)</h3>
-                            <button onclick="Settings.saveContent('terms')" class="btn btn-primary">Сохранить</button>
+                            <h3 class="text-lg font-semibold text-gray-800" data-i18n="termsDescription">Terms of Service</h3>
+                            <button onclick="Settings.saveContent('terms')" class="btn btn-primary" data-i18n="save">Save</button>
                         </div>
-                        <textarea id="editor-terms" class="content-editor" rows="20" placeholder="Введите условия использования (только текст)..."></textarea>
-                        <p class="text-xs text-gray-500 mt-2">Только простой текст, без HTML элементов. Используйте **текст** для жирного шрифта</p>
+                        <textarea id="editor-terms" class="content-editor" rows="20" data-i18n-placeholder="enterTerms" placeholder="Enter terms of service (text only)..."></textarea>
+                        <p class="text-xs text-gray-500 mt-2" data-i18n="plainTextOnly">Plain text only, no HTML elements. Use **text** for bold.</p>
                     </div>
                 </div>
             </div>

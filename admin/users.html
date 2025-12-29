@@ -43,19 +43,19 @@
                 <table class="w-full">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Пользователь</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Заказов</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Потрачено</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Первый заказ</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Последний заказ</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="user">User</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="orders">Orders</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="totalSpent">Total Spent</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="firstOrder">First Order</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="lastOrder">Last Order</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="usersTable" class="bg-white divide-y divide-gray-200">
                         <tr>
                             <td colspan="6" class="px-6 py-8 text-center text-gray-500">
                                 <div class="spinner"></div>
-                                <p class="mt-2">Загрузка...</p>
+                                <p class="mt-2" data-i18n="loading">Loading...</p>
                             </td>
                         </tr>
                     </tbody>
@@ -68,7 +68,7 @@
     <div id="userModal" class="modal-overlay hidden">
         <div class="modal-content max-w-4xl">
             <div class="flex items-center justify-between">
-                <h3 class="text-2xl font-bold text-gray-900">Детали пользователя</h3>
+                <h3 class="text-2xl font-bold text-gray-900" data-i18n="userDetails">User Details</h3>
                 <button id="closeUserModal" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
