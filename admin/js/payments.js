@@ -15,12 +15,20 @@ const Payments = {
             
             if (data.success) {
                 this.currentSettings = data.settings;
+                console.log('[Payments] Settings loaded successfully:', data.settings);
                 this.renderSettings(data.settings);
                 this.updateTotalMarkups();
                 // Initialize toggle switches after rendering
                 setTimeout(() => {
                     initToggleSwitches();
                 }, 100);
+            } else {
+                console.error('[Payments] Failed to load settings:', data);
+                const tbody = document.getElementById('promocodesTable');
+                if (tbody) {
+                    const t = (key) => window.i18n ? window.i18n.t(key) : key;
+                    tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-red-500">Error loading settings</td></tr>`;
+                }
             }
         } catch (error) {
             console.error('Error loading settings:', error);
@@ -31,11 +39,19 @@ const Payments = {
     
     // Render settings
     renderSettings(settings) {
+        console.log('[Payments] Rendering settings:', settings);
+        
         // Base markup
         if (settings.markup) {
-            document.getElementById('markupEnabled').checked = settings.markup.enabled || false;
-            const baseMarkup = settings.markup.base || settings.markup.defaultMultiplier || 1.29;
-            document.getElementById('baseMarkup').value = baseMarkup;
+            const markupEnabledCheckbox = document.getElementById('markupEnabled');
+            if (markupEnabledCheckbox) {
+                markupEnabledCheckbox.checked = settings.markup.enabled || false;
+            }
+            const baseMarkupField = document.getElementById('baseMarkup');
+            if (baseMarkupField) {
+                const baseMarkup = settings.markup.base || settings.markup.defaultMultiplier || 1.29;
+                baseMarkupField.value = baseMarkup;
+            }
             // Update toggle state (enable/disable input field)
             this.updateBaseMarkupToggle();
         }
@@ -43,34 +59,72 @@ const Payments = {
         // Payment methods with markups
         if (settings.paymentMethods) {
             // Telegram Stars
-            document.getElementById('paymentTelegramStars').checked = settings.paymentMethods.telegramStars?.enabled || false;
-            document.getElementById('markupTelegramStars').value = settings.paymentMethods.telegramStars?.markup || settings.paymentMethods.telegramStars?.markupMultiplier || 1.05;
+            const telegramStarsCheckbox = document.getElementById('paymentTelegramStars');
+            if (telegramStarsCheckbox) {
+                telegramStarsCheckbox.checked = settings.paymentMethods.telegramStars?.enabled || false;
+            }
+            const telegramStarsMarkup = document.getElementById('markupTelegramStars');
+            if (telegramStarsMarkup) {
+                telegramStarsMarkup.value = settings.paymentMethods.telegramStars?.markup || settings.paymentMethods.telegramStars?.markupMultiplier || 1.05;
+            }
             this.updatePaymentCardUI('TelegramStars', settings.paymentMethods.telegramStars?.enabled || false);
             
             // Crypto
-            document.getElementById('paymentCrypto').checked = settings.paymentMethods.crypto?.enabled || false;
-            document.getElementById('markupCrypto').value = settings.paymentMethods.crypto?.markup || settings.paymentMethods.crypto?.markupMultiplier || 1.0;
+            const cryptoCheckbox = document.getElementById('paymentCrypto');
+            if (cryptoCheckbox) {
+                cryptoCheckbox.checked = settings.paymentMethods.crypto?.enabled || false;
+            }
+            const cryptoMarkup = document.getElementById('markupCrypto');
+            if (cryptoMarkup) {
+                cryptoMarkup.value = settings.paymentMethods.crypto?.markup || settings.paymentMethods.crypto?.markupMultiplier || 1.0;
+            }
             this.updatePaymentCardUI('Crypto', settings.paymentMethods.crypto?.enabled || false);
             
             // Bank Card
-            document.getElementById('paymentBankCard').checked = settings.paymentMethods.bankCard?.enabled || false;
-            document.getElementById('markupBankCard').value = settings.paymentMethods.bankCard?.markup || settings.paymentMethods.bankCard?.markupMultiplier || 1.1;
+            const bankCardCheckbox = document.getElementById('paymentBankCard');
+            if (bankCardCheckbox) {
+                bankCardCheckbox.checked = settings.paymentMethods.bankCard?.enabled || false;
+            }
+            const bankCardMarkup = document.getElementById('markupBankCard');
+            if (bankCardMarkup) {
+                bankCardMarkup.value = settings.paymentMethods.bankCard?.markup || settings.paymentMethods.bankCard?.markupMultiplier || 1.1;
+            }
             this.updatePaymentCardUI('BankCard', settings.paymentMethods.bankCard?.enabled || false);
         }
         
-        // Promocodes
+        // Promocodes - ensure we always render, even if promocodes is undefined
         console.log('[Payments] Loading promocodes:', settings.promocodes);
-        if (settings.promocodes) {
-            this.renderPromocodes(settings.promocodes);
-        } else {
-            this.renderPromocodes([]);
-        }
+        const promocodes = settings.promocodes || [];
+        this.renderPromocodes(promocodes);
         
-        // Add handlers for automatic total markup recalculation
-        document.getElementById('baseMarkup').addEventListener('input', () => this.updateTotalMarkups());
-        document.getElementById('markupTelegramStars').addEventListener('input', () => this.updateTotalMarkups());
-        document.getElementById('markupCrypto').addEventListener('input', () => this.updateTotalMarkups());
-        document.getElementById('markupBankCard').addEventListener('input', () => this.updateTotalMarkups());
+        // Add handlers for automatic total markup recalculation (only once)
+        this.setupMarkupInputHandlers();
+    },
+    
+    // Setup markup input handlers (called once to avoid duplicates)
+    setupMarkupInputHandlers() {
+        // Remove existing handlers if any (by cloning elements)
+        const baseMarkup = document.getElementById('baseMarkup');
+        const markupTelegramStars = document.getElementById('markupTelegramStars');
+        const markupCrypto = document.getElementById('markupCrypto');
+        const markupBankCard = document.getElementById('markupBankCard');
+        
+        if (baseMarkup && !baseMarkup.dataset.handlerAttached) {
+            baseMarkup.addEventListener('input', () => this.updateTotalMarkups());
+            baseMarkup.dataset.handlerAttached = 'true';
+        }
+        if (markupTelegramStars && !markupTelegramStars.dataset.handlerAttached) {
+            markupTelegramStars.addEventListener('input', () => this.updateTotalMarkups());
+            markupTelegramStars.dataset.handlerAttached = 'true';
+        }
+        if (markupCrypto && !markupCrypto.dataset.handlerAttached) {
+            markupCrypto.addEventListener('input', () => this.updateTotalMarkups());
+            markupCrypto.dataset.handlerAttached = 'true';
+        }
+        if (markupBankCard && !markupBankCard.dataset.handlerAttached) {
+            markupBankCard.addEventListener('input', () => this.updateTotalMarkups());
+            markupBankCard.dataset.handlerAttached = 'true';
+        }
     },
     
     // Toggle payment method and update UI
@@ -170,8 +224,12 @@ const Payments = {
     
     // Update base markup toggle (called when toggle is changed)
     updateBaseMarkupToggle() {
-        const enabled = document.getElementById('markupEnabled').checked;
+        const markupEnabledCheckbox = document.getElementById('markupEnabled');
         const baseMarkupField = document.getElementById('baseMarkup');
+        
+        if (!markupEnabledCheckbox || !baseMarkupField) return;
+        
+        const enabled = markupEnabledCheckbox.checked;
         
         // Visual feedback - can add styling
         if (enabled) {
