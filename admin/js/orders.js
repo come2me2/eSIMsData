@@ -484,12 +484,20 @@ const Orders = {
     clearUserFilter() {
         this.currentUserId = '';
         this.currentPage = 1;
+        
         // Удаляем userId из URL
         const url = new URL(window.location);
         url.searchParams.delete('userId');
         window.history.replaceState({}, '', url);
-        // Перезагружаем страницу для удаления баннера
-        window.location.reload();
+        
+        // Удаляем баннер
+        const banner = document.getElementById('userFilterBanner');
+        if (banner) {
+            banner.remove();
+        }
+        
+        // Перезагружаем заказы без фильтра
+        this.loadOrders(1);
     }
 };
 
@@ -508,8 +516,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchParam = urlParams.get('search');
         
         // Если есть userId в URL, устанавливаем фильтр
-        if (userId) {
-            Orders.currentUserId = userId;
+        if (userId && userId.trim() !== '') {
+            Orders.currentUserId = userId.trim();
             console.log('Filtering orders by userId:', userId);
             
             // Показываем баннер с информацией о фильтре
@@ -517,6 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pageHeader) {
                 const filterBanner = document.createElement('div');
                 filterBanner.className = 'mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between';
+                filterBanner.id = 'userFilterBanner';
                 filterBanner.innerHTML = `
                     <div class="flex items-center gap-3">
                         <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -619,7 +628,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Удаляем userId из URL
                 const url = new URL(window.location);
                 url.searchParams.delete('userId');
+                url.searchParams.delete('search');
                 window.history.replaceState({}, '', url);
+                
+                // Удаляем баннер если есть
+                const banner = document.getElementById('userFilterBanner');
+                if (banner) {
+                    banner.remove();
+                }
                 
                 Orders.loadOrders(1);
             });
