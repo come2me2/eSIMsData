@@ -341,3 +341,4 @@ function convertUSDToStars(usdPrice) {
 
 
 
+

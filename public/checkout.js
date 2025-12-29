@@ -949,8 +949,12 @@ async function loadPublicSettings() {
     try {
         const response = await fetch('/api/settings/public');
         const data = await response.json();
-        if (data.success && data.settings) {
-            publicSettings = data.settings;
+        if (data.success) {
+            // API возвращает markup и paymentMethods на верхнем уровне
+            publicSettings = {
+                markup: data.markup,
+                paymentMethods: data.paymentMethods
+            };
             console.log('✅ Public settings loaded:', publicSettings);
         }
     } catch (error) {

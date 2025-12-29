@@ -121,6 +121,14 @@ run_remote "cd $REMOTE_DIR && git pull origin main" || {
     rm /tmp/esimsdata_deploy.tar.gz
 }
 
+# Исправление прав доступа для статических файлов (флаги, иконки)
+# tar с macOS сохраняет ограничительные права (700), nginx не может читать
+echo -e "${BLUE}🔧 Исправляю права доступа для статических файлов...${NC}"
+run_remote "chmod -R 755 $REMOTE_DIR/public/flags/ 2>/dev/null || true"
+run_remote "chmod -R 755 $REMOTE_DIR/public/icons/ 2>/dev/null || true"
+run_remote "find $REMOTE_DIR/public -type f -name '*.svg' -exec chmod 644 {} \; 2>/dev/null || true"
+run_remote "find $REMOTE_DIR/public -type f -name '*.png' -exec chmod 644 {} \; 2>/dev/null || true"
+
 echo -e "${GREEN}✅ Код обновлен на сервере${NC}"
 echo ""
 
@@ -137,6 +145,20 @@ run_remote "cd $REMOTE_DIR && pm2 restart all || pm2 restart esimsdata || true"
 
 echo -e "${BLUE}📊 Проверяю статус PM2...${NC}"
 run_remote "pm2 status"
+
+# Шаг 5: Обновление nginx конфигурации
+echo ""
+echo -e "${YELLOW}🔧 Шаг 5/5: Обновление nginx...${NC}"
+echo -e "${BLUE}📋 Копирую nginx конфиг...${NC}"
+run_remote "cp $REMOTE_DIR/nginx.conf /etc/nginx/sites-available/esimsdata 2>/dev/null || true"
+
+echo -e "${BLUE}🔍 Проверяю nginx конфиг...${NC}"
+run_remote "nginx -t" || {
+    echo -e "${YELLOW}⚠️  Ошибка в nginx конфиге, пропускаю перезагрузку nginx${NC}"
+}
+
+echo -e "${BLUE}🔄 Перезагружаю nginx...${NC}"
+run_remote "systemctl reload nginx || nginx -s reload || true"
 
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"

@@ -57,6 +57,13 @@ const Payments = {
             this.updatePaymentCardUI('BankCard', settings.paymentMethods.bankCard?.enabled || false);
         }
         
+        // Promocodes
+        if (settings.promocodes) {
+            this.renderPromocodes(settings.promocodes);
+        } else {
+            this.renderPromocodes([]);
+        }
+        
         // Добавляем обработчики для автоматического пересчета общей наценки
         document.getElementById('baseMarkup').addEventListener('input', () => this.updateTotalMarkups());
         document.getElementById('markupTelegramStars').addEventListener('input', () => this.updateTotalMarkups());
@@ -232,6 +239,213 @@ const Payments = {
         }
     },
     
+    // Render promocodes table
+    renderPromocodes(promocodes) {
+        const tbody = document.getElementById('promocodesTable');
+        if (!tbody) return;
+        
+        if (!promocodes || promocodes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">Нет промокодов</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = promocodes.map(promo => {
+            const startDate = promo.startDate 
+                ? new Date(promo.startDate).toLocaleDateString('ru-RU')
+                : 'Сразу';
+            const validUntil = promo.validUntil 
+                ? new Date(promo.validUntil).toLocaleDateString('ru-RU')
+                : 'Без ограничений';
+            const maxUses = promo.maxUses ? `${promo.usedCount || 0} / ${promo.maxUses}` : `${promo.usedCount || 0} / ∞`;
+            const discountText = promo.type === 'percent' 
+                ? `${promo.discount}%` 
+                : `$${promo.discount}`;
+            const status = promo.status === 'active' ? 'Активен' : 'Неактивен';
+            const statusColor = promo.status === 'active' 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-gray-100 text-gray-800';
+            
+            return `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${promo.code}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900">${discountText}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900">${promo.type === 'percent' ? 'Процент' : 'Фиксированная'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${startDate}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${validUntil}</td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${maxUses}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="px-2 py-1 text-xs font-medium rounded ${statusColor}">${status}</span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                        <button onclick="Payments.editPromocode('${promo.code}')" class="text-blue-600 hover:text-blue-800 font-medium mr-3">
+                            Редактировать
+                        </button>
+                        <button onclick="Payments.deletePromocode('${promo.code}')" class="text-red-600 hover:text-red-800 font-medium">
+                            Удалить
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    },
+    
+    // Show promocode modal
+    showPromocodeModal(promocode = null) {
+        const modal = document.getElementById('promocodeModal');
+        const form = document.getElementById('promocodeForm');
+        const editMode = document.getElementById('promocodeEditMode');
+        const editCode = document.getElementById('promocodeEditCode');
+        const submitBtn = document.getElementById('promocodeSubmitBtn');
+        const title = modal.querySelector('h3');
+        
+        if (promocode) {
+            // Режим редактирования
+            editMode.value = 'true';
+            editCode.value = promocode.code;
+            title.textContent = 'Редактировать промокод';
+            submitBtn.textContent = 'Сохранить изменения';
+            
+            document.getElementById('promocodeCode').value = promocode.code;
+            document.getElementById('promocodeCode').disabled = true; // Код нельзя менять
+            document.getElementById('promocodeDiscount').value = promocode.discount;
+            document.getElementById('promocodeType').value = promocode.type;
+            document.getElementById('promocodeStartDate').value = promocode.startDate || '';
+            document.getElementById('promocodeValidUntil').value = promocode.validUntil || '';
+            document.getElementById('promocodeMaxUses').value = promocode.maxUses || '';
+            document.getElementById('promocodeStatus').value = promocode.status || 'active';
+        } else {
+            // Режим создания
+            editMode.value = 'false';
+            editCode.value = '';
+            title.textContent = 'Добавить промокод';
+            submitBtn.textContent = 'Создать промокод';
+            form.reset();
+            document.getElementById('promocodeCode').disabled = false;
+        }
+        
+        modal.classList.remove('hidden');
+    },
+    
+    // Close promocode modal
+    closePromocodeModal() {
+        const modal = document.getElementById('promocodeModal');
+        const form = document.getElementById('promocodeForm');
+        
+        modal.classList.add('hidden');
+        
+        // Очищаем форму
+        form.reset();
+        document.getElementById('promocodeCode').disabled = false;
+        document.getElementById('promocodeEditMode').value = 'false';
+        document.getElementById('promocodeEditCode').value = '';
+    },
+    
+    // Create or update promocode
+    async createPromocode(e) {
+        e.preventDefault();
+        
+        try {
+            const editMode = document.getElementById('promocodeEditMode').value === 'true';
+            const code = document.getElementById('promocodeCode').value;
+            const discount = parseFloat(document.getElementById('promocodeDiscount').value);
+            const type = document.getElementById('promocodeType').value;
+            const startDate = document.getElementById('promocodeStartDate').value || null;
+            const validUntil = document.getElementById('promocodeValidUntil').value || null;
+            const maxUses = document.getElementById('promocodeMaxUses').value 
+                ? parseInt(document.getElementById('promocodeMaxUses').value) 
+                : null;
+            const status = document.getElementById('promocodeStatus').value;
+            
+            const promocodeData = {
+                code,
+                discount,
+                type,
+                startDate,
+                validUntil,
+                maxUses,
+                status
+            };
+            
+            let response;
+            if (editMode) {
+                // Редактирование
+                const editCodeValue = document.getElementById('promocodeEditCode').value;
+                response = await Auth.authenticatedFetch(`/api/admin/settings/promocodes/${editCodeValue}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(promocodeData)
+                });
+            } else {
+                // Создание
+                response = await Auth.authenticatedFetch('/api/admin/settings/promocodes', {
+                    method: 'POST',
+                    body: JSON.stringify(promocodeData)
+                });
+            }
+            
+            if (!response) return;
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.closePromocodeModal();
+                await this.loadSettings();
+                this.showSuccess(editMode ? 'Промокод обновлен' : 'Промокод создан');
+            } else {
+                this.showError(data.error || (editMode ? 'Ошибка обновления промокода' : 'Ошибка создания промокода'));
+            }
+        } catch (error) {
+            console.error('Error saving promocode:', error);
+            this.showError('Ошибка сохранения промокода');
+        }
+    },
+    
+    // Edit promocode
+    async editPromocode(code) {
+        try {
+            const settings = this.currentSettings;
+            if (!settings || !settings.promocodes) {
+                this.showError('Настройки не загружены');
+                return;
+            }
+            
+            const promocode = settings.promocodes.find(p => p.code === code);
+            if (!promocode) {
+                this.showError('Промокод не найден');
+                return;
+            }
+            
+            this.showPromocodeModal(promocode);
+        } catch (error) {
+            console.error('Error loading promocode for edit:', error);
+            this.showError('Ошибка загрузки промокода');
+        }
+    },
+    
+    // Delete promocode
+    async deletePromocode(code) {
+        if (!confirm(`Удалить промокод ${code}?`)) return;
+        
+        try {
+            const response = await Auth.authenticatedFetch(`/api/admin/settings/promocodes/${code}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response) return;
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showSuccess('Промокод удален');
+                this.loadSettings();
+            } else {
+                this.showError(data.error || 'Ошибка удаления промокода');
+            }
+        } catch (error) {
+            console.error('Error deleting promocode:', error);
+            this.showError('Ошибка удаления промокода');
+        }
+    },
+    
     // Show success message
     showSuccess(message) {
         // Простая реализация через alert, можно улучшить
@@ -358,6 +572,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             Auth.logout();
+        });
+    }
+    
+    // Promocode form submit handler
+    const promocodeForm = document.getElementById('promocodeForm');
+    if (promocodeForm) {
+        promocodeForm.addEventListener('submit', (e) => Payments.createPromocode(e));
+    }
+    
+    // Close modal on overlay click
+    const promocodeModal = document.getElementById('promocodeModal');
+    if (promocodeModal) {
+        promocodeModal.addEventListener('click', (e) => {
+            if (e.target === promocodeModal) {
+                Payments.closePromocodeModal();
+            }
         });
     }
 });

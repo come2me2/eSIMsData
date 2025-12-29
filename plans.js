@@ -238,7 +238,7 @@ function handleNavigationClick(section) {
 }
 
 // Version for cache busting - increment when flags are updated
-const FLAG_VERSION = 'v7'; // Updated: force refresh for missing flags (AX, BM, etc.)
+const FLAG_VERSION = 'v8'; // Updated: fix flag styling (rounded corners, proper sizing)
 
 // Function to get flag image URL from local flags folder
 // Using SVG format for maximum quality (vector, scales perfectly)

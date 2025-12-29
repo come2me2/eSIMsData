@@ -12,6 +12,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const auth = require('./auth');
+const markupSettings = require('../_lib/markup-settings');
 
 const SETTINGS_FILE = path.join(__dirname, '..', '..', 'data', 'admin-settings.json');
 
@@ -60,6 +61,10 @@ async function saveSettings(settings) {
     const dataDir = path.dirname(SETTINGS_FILE);
     await fs.mkdir(dataDir, { recursive: true });
     await fs.writeFile(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+    
+    // Инвалидируем кэш настроек наценки, чтобы изменения применились немедленно
+    markupSettings.invalidateCache();
+    console.log('[Admin Settings] Settings saved, markup cache invalidated');
 }
 
 // Экспортируем handler как основной экспорт

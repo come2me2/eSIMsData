@@ -142,6 +142,28 @@ let isPromoApplied = false;
 let discountPercent = 0;
 let discountAmount = 0; // Discount amount in dollars
 let appliedPromocode = null; // Applied promocode data
+let publicSettings = null; // Настройки наценок
+
+// Загрузка публичных настроек (наценки на способы оплаты)
+async function loadPublicSettings() {
+    if (publicSettings) return publicSettings;
+    
+    try {
+        const response = await fetch('/api/settings/public');
+        const data = await response.json();
+        if (data.success) {
+            // API возвращает markup и paymentMethods на верхнем уровне
+            publicSettings = {
+                markup: data.markup,
+                paymentMethods: data.paymentMethods
+            };
+            console.log('✅ Public settings loaded:', publicSettings);
+        }
+    } catch (error) {
+        console.error('Error loading public settings:', error);
+    }
+    return publicSettings;
+}
 
 // ===== Payment method (UI only for now) =====
 const PAYMENT_METHODS = {
@@ -941,6 +963,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('🔵 DOMContentLoaded - orderData:', orderData);
     const plansLoaded = await loadPlansForCheckout();
     
+    // Загружаем публичные настройки (наценки на способы оплаты)
+    await loadPublicSettings();
+    
     console.log('🔵 Plans loaded status:', plansLoaded, {
         standardCount: standardPlans.length,
         unlimitedCount: unlimitedPlans.length,
@@ -1630,6 +1655,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Загружаем реальные планы для checkout
     console.log('🔵 DOMContentLoaded - orderData:', orderData);
     const plansLoaded = await loadPlansForCheckout();
+    
+    // Загружаем публичные настройки (наценки на способы оплаты)
+    await loadPublicSettings();
     
     console.log('🔵 Plans loaded status:', plansLoaded, {
         standardCount: standardPlans.length,
