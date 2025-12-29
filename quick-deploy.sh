@@ -17,10 +17,10 @@ if [ -n "$(git status --porcelain)" ]; then
     git push origin main 2>/dev/null || true
 fi
 
-# Git pull на сервере и перезапуск PM2
+# Git pull на сервере, установка зависимостей и перезапуск PM2
 echo "📥 Обновление сервера..."
 sshpass -p "$SERVER_PASSWORD" ssh -o StrictHostKeyChecking=no -o LogLevel=ERROR "$SERVER_USER@$SERVER_IP" \
-    "cd $REMOTE_DIR && git fetch origin && git reset --hard origin/main && pm2 restart all" 2>/dev/null
+    "cd $REMOTE_DIR && git fetch origin && git reset --hard origin/main && npm install --production && pm2 restart all" 2>/dev/null
 
 echo "✅ Готово!"
 
