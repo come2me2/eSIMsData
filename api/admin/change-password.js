@@ -117,7 +117,16 @@ module.exports = async function handler(req, res) {
         }
         
         // Verify current password
-        const isValidPassword = await bcrypt.compare(currentPassword, credentials.password);
+        // Check if password is hashed (starts with $2a$ or $2b$)
+        let isValidPassword = false;
+        if (credentials.password && (credentials.password.startsWith('$2a$') || credentials.password.startsWith('$2b$'))) {
+            // Password is hashed, use bcrypt.compare
+            isValidPassword = await bcrypt.compare(currentPassword, credentials.password);
+        } else {
+            // Password is plain text (fallback for migration from default credentials)
+            isValidPassword = currentPassword === credentials.password || currentPassword === DEFAULT_CREDENTIALS.password;
+        }
+        
         if (!isValidPassword) {
             return res.status(401).json({
                 success: false,
