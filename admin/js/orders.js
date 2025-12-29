@@ -522,11 +522,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Показываем баннер с информацией о фильтре
             // Ищем контейнер с фильтрами в main content и вставляем баннер после него
-            // Используем более специфичный селектор, чтобы не попасть в sidebar
-            const mainContent = document.querySelector('main');
-            if (!mainContent) return;
-            
-            const filtersContainer = mainContent.querySelector('.bg-white.rounded-lg.shadow.p-4.mb-4');
+            // Важно: ищем только внутри main, чтобы не попасть в sidebar
+            const filtersContainer = document.querySelector('main .bg-white.rounded-lg.shadow.p-4.mb-4');
             if (filtersContainer && filtersContainer.parentNode) {
                 const filterBanner = document.createElement('div');
                 filterBanner.className = 'mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between';
