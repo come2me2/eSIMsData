@@ -9,7 +9,7 @@
 </head>
 <body class="bg-gray-100">
     <!-- Mobile Menu Button -->
-    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Открыть меню">
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Open menu">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
         </svg>
@@ -53,7 +53,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="status">Status</label>
                         <select id="statusFilter" class="form-input w-full">
-                            <option value="">Все статусы</option>
+                            <option value="" data-i18n="all">All</option>
                             <option value="on_hold">On Hold</option>
                             <option value="completed">Completed</option>
                             <option value="canceled">Canceled</option>
@@ -63,28 +63,28 @@
                     
                     <!-- Payment Type Filter -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Способ оплаты</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="paymentMethod">Payment Method</label>
                         <select id="paymentFilter" class="form-input w-full">
-                            <option value="">Все способы</option>
+                            <option value="" data-i18n="all">All</option>
                             <option value="telegram_stars">Telegram Stars</option>
-                            <option value="crypto">Криптовалюты</option>
-                            <option value="bank_card">Банковская карта</option>
+                            <option value="crypto" data-i18n="cryptocurrencies">Cryptocurrencies</option>
+                            <option value="bank_card" data-i18n="bankCards">Bank Cards</option>
                         </select>
                     </div>
                     
                     <!-- Date Range -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Дата от</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="dateFrom">From</label>
                         <input type="date" id="dateFrom" class="form-input w-full">
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Дата до</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="dateTo">To</label>
                         <input type="date" id="dateTo" class="form-input w-full">
                     </div>
                     <div class="md:col-span-3 flex items-end">
-                        <button id="clearFilters" class="btn btn-secondary">Очистить фильтры</button>
+                        <button id="clearFilters" class="btn btn-secondary" data-i18n="clearFilters">Clear</button>
                     </div>
                 </div>
             </div>

@@ -46,16 +46,7 @@ function initializeSidebar() {
             </a>
         </nav>
         
-        <div class="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-700 space-y-4">
-            <!-- Language Selector -->
-            <div class="mb-4">
-                <label class="block text-gray-400 text-xs mb-2">${t('language')}</label>
-                <select id="languageSelector" class="w-full bg-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="en">${t('english')}</option>
-                    <option value="ru">${t('russian')}</option>
-                </select>
-            </div>
-            
+        <div class="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-700">
             <button id="logoutBtn" class="w-full flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -66,15 +57,6 @@ function initializeSidebar() {
     `;
     
     sidebar.innerHTML = sidebarHTML;
-    
-    // Initialize language selector
-    const languageSelector = document.getElementById('languageSelector');
-    if (languageSelector && window.i18n) {
-        languageSelector.value = window.i18n.currentLang;
-        languageSelector.addEventListener('change', (e) => {
-            window.i18n.setLanguage(e.target.value);
-        });
-    }
     
     // Initialize logout button
     const logoutBtn = document.getElementById('logoutBtn');

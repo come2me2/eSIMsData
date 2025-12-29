@@ -1,4 +1,4 @@
-// Language translations
+// Language translations - English only
 const translations = {
     en: {
         // Common
@@ -93,6 +93,7 @@ const translations = {
         additionalMarkup: "Additional Markup (multiplier)",
         additionalMarkupExample: "(e.g., 1.05 = +5%)",
         totalMarkupFormula: "Total markup = Base × Payment method markup",
+        totalMarkup: "Total markup",
         cryptocurrencies: "Cryptocurrencies",
         bankCards: "Bank Cards",
         importantNote: "Important:",
@@ -172,187 +173,47 @@ const translations = {
         closeModal: "Close",
         
         // Dates
-        monthShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    },
-    ru: {
-        // Common
-        dashboard: "Панель управления",
-        orders: "Заказы",
-        users: "Пользователи",
-        payments: "Платежи",
-        settings: "Настройки",
-        logout: "Выход",
-        search: "Поиск",
-        filter: "Фильтр",
-        export: "Экспорт",
-        actions: "Действия",
-        status: "Статус",
-        date: "Дата",
-        total: "Всего",
-        loading: "Загрузка...",
-        error: "Ошибка",
-        success: "Успешно",
-        cancel: "Отмена",
-        save: "Сохранить",
-        delete: "Удалить",
-        edit: "Редактировать",
-        view: "Просмотр",
-        close: "Закрыть",
+        monthShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
         
-        // Dashboard
-        totalOrders: "Всего заказов",
-        activeUsers: "Активных пользователей",
-        totalRevenue: "Общий доход",
-        pendingOrders: "Ожидающих заказов",
-        salesLast30Days: "Продажи за последние 30 дней",
-        paymentMethods: "Методы оплаты",
-        recentOrders: "Последние заказы",
-        orderNumber: "Заказ №",
-        customer: "Клиент",
-        amount: "Сумма",
-        
-        // Orders
-        allOrders: "Все заказы",
-        orderDetails: "Детали заказа",
-        orderReference: "Номер заказа",
-        telegramUsername: "Telegram Username",
-        country: "Страна",
-        plan: "Тариф",
-        price: "Цена",
-        createdAt: "Создан",
-        updateStatus: "Обновить статус",
-        resendEmail: "Отправить повторно",
-        filterByUser: "Фильтр по пользователю",
-        clearFilter: "Очистить фильтр",
-        refresh: "Обновить",
-        ordersManagement: "Управление заказами и просмотр детальной информации",
-        searchPlaceholder: "ID заказа или Telegram ID",
-        all: "Все",
-        dateFrom: "От",
-        dateTo: "До",
-        applyFilters: "Применить",
-        clearFilters: "Очистить",
-        exportData: "Экспорт",
-        
-        // Order Status
-        pending: "Ожидание",
-        completed: "Завершен",
-        cancelled: "Отменен",
-        on_hold: "На удержании",
-        
-        // Users
-        allUsers: "Все пользователи",
-        userId: "ID пользователя",
-        username: "Имя пользователя",
-        email: "Email",
-        phone: "Телефон",
-        registeredAt: "Зарегистрирован",
-        totalOrders: "Всего заказов",
-        viewOrders: "Просмотр заказов",
-        
-        // Payments
-        allPayments: "Все платежи",
-        paymentId: "ID платежа",
-        paymentMethod: "Метод оплаты",
-        transactionId: "ID транзакции",
-        paymentsManagement: "Управление наценками для способов оплаты и промокодами",
-        baseMarkup: "Базовая наценка",
-        enableMarkup: "Включить наценку",
-        baseMarkupMultiplier: "Базовая наценка (множитель)",
-        baseMarkupExample: "(например: 1.29 = +29%)",
-        baseMarkupApplies: "Базовая наценка применяется ко всем товарам",
-        saveBaseMarkup: "Сохранить базовую наценку",
-        paymentMethodsMarkups: "Способы оплаты и наценки",
-        activateDeactivateInfo: "Активируйте или деактивируйте способы оплаты. Неактивные способы не будут отображаться пользователям.",
-        additionalMarkup: "Дополнительная наценка (множитель)",
-        additionalMarkupExample: "(например: 1.05 = +5%)",
-        totalMarkupFormula: "Общая наценка = Базовая × Наценка способа оплаты",
-        cryptocurrencies: "Криптовалюты",
-        bankCards: "Банковские карты",
-        importantNote: "Важно:",
-        deactivatedNotShown: "Деактивированные способы оплаты не будут показываться пользователям на странице checkout.",
-        savePaymentChanges: "Сохранить изменения",
-        promocodes: "Промокоды",
-        addPromocode: "Добавить промокод",
-        code: "Код",
-        discount: "Скидка",
-        type: "Тип",
-        startDate: "Начало",
-        endDate: "Окончание",
-        usageCount: "Использований",
-        promocodeCode: "Код промокода",
-        discountValue: "Скидка",
-        discountType: "Тип скидки",
-        percent: "Процент (%)",
-        fixed: "Фиксированная сумма ($)",
-        startDateFull: "Дата начала действия",
-        endDateOptional: "Дата окончания действия (необязательно)",
-        maxUsage: "Максимум использований (необязательно)",
-        active: "Активен",
-        inactive: "Неактивен",
-        createPromocode: "Создать промокод",
-        id: "ID",
-        user: "Пользователь",
-        payment: "Оплата",
-        firstOrder: "Первый заказ",
-        lastOrder: "Последний заказ",
-        totalSpent: "Потрачено",
-        userDetails: "Детали пользователя",
-        
-        // Settings
-        siteSettings: "Настройки сайта",
-        faq: "FAQ",
-        privacyPolicy: "Политика конфиденциальности",
-        refundPolicy: "Политика возврата",
-        termsOfService: "Условия использования",
-        enterContent: "Введите содержимое (только текст)...",
-        plainTextOnly: "Только простой текст, без HTML элементов. Используйте **текст** для жирного шрифта.",
-        saveChanges: "Сохранить изменения",
-        changesSaved: "Изменения сохранены успешно",
-        errorSaving: "Ошибка при сохранении",
-        settingsManagement: "Управление параметрами системы и контентом",
-        changePassword: "Смена пароля администратора",
-        currentPassword: "Текущий пароль",
-        newPassword: "Новый пароль",
-        confirmPassword: "Подтвердите новый пароль",
-        minCharacters: "Минимум 6 символов",
-        changePasswordBtn: "Сменить пароль",
-        contentManagement: "Управление контентом",
-        faqDescription: "FAQ (Часто задаваемые вопросы)",
-        privacyDescription: "Privacy Policy (Политика конфиденциальности)",
-        refundDescription: "Refund Policy (Политика возврата)",
-        termsDescription: "Terms of Service (Условия использования)",
-        enterFAQ: "Введите содержимое FAQ (только текст)...",
-        enterPrivacy: "Введите политику конфиденциальности (только текст)...",
-        enterRefund: "Введите политику возврата (только текст)...",
-        enterTerms: "Введите условия использования (только текст)...",
-        
-        // Language
-        language: "Язык",
-        english: "Английский",
-        russian: "Русский",
-        
-        // Messages
-        noOrders: "Нет заказов",
-        noUsers: "Нет пользователей",
-        noPayments: "Нет платежей",
-        serverError: "Ошибка сервера",
-        
-        // Actions & Buttons
-        details: "Детали",
-        viewDetails: "Просмотр деталей",
-        
-        // Order Modal
-        closeModal: "Закрыть",
-        
-        // Dates
-        monthShort: ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"]
+        // Order Details Modal
+        orderInfo: "Order Information",
+        orderId: "Order ID",
+        orderStatus: "Order Status",
+        esimData: "eSIM Data",
+        qrCode: "QR Code",
+        qrCodeNotAvailable: "QR code not available",
+        downloadQR: "Download QR",
+        copy: "Copy",
+        sendESIMTelegram: "Send eSIM to Telegram",
+        totalOrdersCount: "Total Orders",
+        back: "Back",
+        next: "Next",
+        notSpecified: "Not specified",
+        errorLoadingOrders: "Error loading orders",
+        orderNotFound: "Order not found",
+        errorLoadingOrderDetails: "Error loading order details",
+        statusUpdated: "Order status updated",
+        errorUpdatingStatus: "Error updating status",
+        copiedToClipboard: "Copied to clipboard",
+        errorCopying: "Error copying",
+        sendESIMConfirm: "Send eSIM data to user in Telegram?",
+        esimSent: "eSIM sent to user in Telegram",
+        errorSendingESIM: "Error sending eSIM",
+        qrCodeDownloaded: "QR code downloaded",
+        errorDownloadingQR: "Error downloading QR code",
+        filterByUserLabel: "Filter by user",
+        errorLoadingUsers: "Error loading users",
+        userNotFound: "User not found",
+        errorLoadingUserDetails: "Error loading user details",
+        showAll: "Show all",
+        more: "more",
+        usersManagement: "View Telegram users and their orders"
     }
 };
 
-// Helper function to get locale for date formatting
+// Helper function to get locale for date formatting (always English)
 I18n.prototype.getLocale = function() {
-    return this.currentLang === 'ru' ? 'ru-RU' : 'en-US';
+    return 'en-US';
 };
 
 // Helper function to format date with current locale
@@ -367,29 +228,16 @@ I18n.prototype.formatDate = function(date, options = {}) {
     return new Date(date).toLocaleString(this.getLocale(), { ...defaultOptions, ...options });
 };
 
-// Language manager
+// Language manager - English only
 class I18n {
     constructor() {
-        this.currentLang = this.getStoredLanguage() || 'en'; // Default to English
+        this.currentLang = 'en'; // Always English
         this.translations = translations;
     }
     
-    getStoredLanguage() {
-        return localStorage.getItem('adminLanguage');
-    }
-    
     setLanguage(lang) {
-        if (!this.translations[lang]) {
-            console.error(`Language ${lang} not found`);
-            return;
-        }
-        
-        this.currentLang = lang;
-        localStorage.setItem('adminLanguage', lang);
-        this.updatePageLanguage();
-        
-        // Dispatch event for other scripts to listen
-        window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+        // Language switching disabled - always English
+        return;
     }
     
     t(key) {

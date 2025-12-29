@@ -24,7 +24,8 @@ const Payments = {
             }
         } catch (error) {
             console.error('Error loading settings:', error);
-            this.showError('Ошибка загрузки настроек');
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorSaving'));
         }
     },
     
@@ -86,17 +87,18 @@ const Payments = {
         
         if (!card || !status || !markupFields) return;
         
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
         if (isEnabled) {
             card.classList.remove('opacity-60', 'bg-gray-50');
             card.classList.add('border-blue-200', 'bg-blue-50');
-            status.textContent = '✓ Активен';
+            status.textContent = '✓ ' + t('active');
             status.classList.remove('text-red-600');
             status.classList.add('text-green-600');
             markupFields.style.display = 'block';
         } else {
             card.classList.remove('border-blue-200', 'bg-blue-50');
             card.classList.add('opacity-60', 'bg-gray-50');
-            status.textContent = '✗ Деактивирован';
+            status.textContent = '✗ ' + t('inactive');
             status.classList.remove('text-green-600');
             status.classList.add('text-red-600');
             markupFields.style.display = 'none';
@@ -118,12 +120,13 @@ const Payments = {
         const percentCrypto = ((totalCrypto - 1) * 100).toFixed(2);
         const percentBankCard = ((totalBankCard - 1) * 100).toFixed(2);
         
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
         document.getElementById('totalMarkupTelegramStars').textContent = 
-            `Общая наценка: ${totalTelegramStars.toFixed(4)} (${percentTelegramStars > 0 ? '+' : ''}${percentTelegramStars}%)`;
+            `${t('totalMarkup')}: ${totalTelegramStars.toFixed(4)} (${percentTelegramStars > 0 ? '+' : ''}${percentTelegramStars}%)`;
         document.getElementById('totalMarkupCrypto').textContent = 
-            `Общая наценка: ${totalCrypto.toFixed(4)} (${percentCrypto > 0 ? '+' : ''}${percentCrypto}%)`;
+            `${t('totalMarkup')}: ${totalCrypto.toFixed(4)} (${percentCrypto > 0 ? '+' : ''}${percentCrypto}%)`;
         document.getElementById('totalMarkupBankCard').textContent = 
-            `Общая наценка: ${totalBankCard.toFixed(4)} (${percentBankCard > 0 ? '+' : ''}${percentBankCard}%)`;
+            `${t('totalMarkup')}: ${totalBankCard.toFixed(4)} (${percentBankCard > 0 ? '+' : ''}${percentBankCard}%)`;
     },
     
     // Save base markup
@@ -132,8 +135,9 @@ const Payments = {
             const enabled = document.getElementById('markupEnabled').checked;
             const baseMarkup = parseFloat(document.getElementById('baseMarkup').value);
             
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
             if (isNaN(baseMarkup) || baseMarkup < 1) {
-                this.showError('Базовая наценка должна быть не менее 1.0');
+                this.showError('Base markup must be at least 1.0');
                 return;
             }
             
@@ -151,14 +155,15 @@ const Payments = {
             const data = await response.json();
             
             if (data.success) {
-                this.showSuccess('Базовая наценка сохранена');
+                this.showSuccess(t('changesSaved'));
                 this.loadSettings();
             } else {
-                this.showError(data.error || 'Ошибка сохранения базовой наценки');
+                this.showError(data.error || t('errorSaving'));
             }
         } catch (error) {
             console.error('Error saving base markup:', error);
-            this.showError('Ошибка сохранения базовой наценки');
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorSaving'));
         }
     },
     

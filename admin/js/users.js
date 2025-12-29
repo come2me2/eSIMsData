@@ -16,7 +16,8 @@ const Users = {
             }
         } catch (error) {
             console.error('Error loading users:', error);
-            this.showError('Ошибка загрузки пользователей');
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorLoadingOrders'));
         }
     },
     
@@ -55,7 +56,7 @@ const Users = {
                         </button>
                         <span class="mx-2 text-gray-300">|</span>
                         <a href="orders.html?userId=${user.telegram_user_id}" class="text-blue-600 hover:text-blue-800 font-medium">
-                            Заказы
+                            ${window.i18n ? window.i18n.t('orders') : 'Orders'}
                         </a>
                     </td>
                 </tr>
@@ -75,11 +76,13 @@ const Users = {
                 this.renderUserDetails(data.user);
                 document.getElementById('userModal').classList.remove('hidden');
             } else {
-                this.showError('Пользователь не найден');
+                const t = (key) => window.i18n ? window.i18n.t(key) : key;
+                this.showError(t('orderNotFound'));
             }
         } catch (error) {
             console.error('Error loading user details:', error);
-            this.showError('Ошибка загрузки деталей пользователя');
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorLoadingOrderDetails'));
         }
     },
     
@@ -119,12 +122,13 @@ const Users = {
             })
             : 'N/A';
         
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
         container.innerHTML = `
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Основная информация -->
+                <!-- User Information -->
                 <div class="space-y-5">
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Основная информация</h4>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">${t('orderInfo')}</h4>
                         <div class="bg-gray-50 rounded-lg p-5 space-y-4">
                             <div class="flex items-start justify-between">
                                 <span class="text-sm text-gray-600">Telegram ID</span>
@@ -132,43 +136,43 @@ const Users = {
                             </div>
                             <div class="flex items-start justify-between">
                                 <span class="text-sm text-gray-600">Username</span>
-                                <span class="ml-4 font-medium text-gray-900 text-right">${user.telegram_username ? `@${user.telegram_username}` : 'Не указан'}</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right">${user.telegram_username ? `@${user.telegram_username}` : t('notSpecified')}</span>
                             </div>
                             <div class="flex items-start justify-between pt-3 border-t border-gray-200">
-                                <span class="text-sm text-gray-600">Всего заказов</span>
+                                <span class="text-sm text-gray-600">${t('totalOrders')}</span>
                                 <span class="ml-4 font-bold text-xl text-blue-600">${user.totalOrders}</span>
                             </div>
                             <div class="flex items-start justify-between">
-                                <span class="text-sm text-gray-600">Всего потрачено</span>
+                                <span class="text-sm text-gray-600">${t('totalSpent')}</span>
                                 <span class="ml-4 font-bold text-xl text-green-600">$${user.totalSpent.toFixed(2)}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Даты -->
+                    <!-- Dates -->
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Даты</h4>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">${t('date')}</h4>
                         <div class="bg-gray-50 rounded-lg p-5 space-y-4">
                             <div class="flex items-start justify-between">
-                                <span class="text-sm text-gray-600">Дата регистрации</span>
+                                <span class="text-sm text-gray-600">${t('registeredAt')}</span>
                                 <span class="ml-4 font-medium text-gray-900 text-right text-xs">${formattedRegistrationDate}</span>
                             </div>
                             <div class="flex items-start justify-between">
-                                <span class="text-sm text-gray-600">Первый заказ</span>
+                                <span class="text-sm text-gray-600">${t('firstOrder')}</span>
                                 <span class="ml-4 font-medium text-gray-900 text-right text-xs">${firstOrderDate}</span>
                             </div>
                             <div class="flex items-start justify-between">
-                                <span class="text-sm text-gray-600">Последний заказ</span>
+                                <span class="text-sm text-gray-600">${t('lastOrder')}</span>
                                 <span class="ml-4 font-medium text-gray-900 text-right text-xs">${lastOrderDate}</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Заказы пользователя -->
+                <!-- User Orders -->
                 <div class="space-y-5">
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Последние заказы</h4>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">${t('recentOrders')}</h4>
                         <div class="bg-gray-50 rounded-lg p-5">
                             ${user.orders && user.orders.length > 0 ? `
                                 <div class="space-y-2 max-h-96 overflow-y-auto">
@@ -198,7 +202,7 @@ const Users = {
                                                 </div>
                                                 <div class="text-right ml-4">
                                                     <div class="text-sm font-bold text-gray-900">$${order.price || '0.00'}</div>
-                                                    <button onclick="Users.openOrderDetails('${order.orderReference || order.id || order.number}', '${user.telegram_user_id}')" class="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">Открыть</button>
+                                                    <button onclick="Users.openOrderDetails('${order.orderReference || order.id || order.number}', '${user.telegram_user_id}')" class="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">${t('viewDetails')}</button>
                                                 </div>
                                             </div>
                                         `;
@@ -207,7 +211,7 @@ const Users = {
                                 ${user.orders.length > 10 ? `
                                     <div class="mt-3 pt-3 border-t border-gray-200 text-center">
                                         <a href="orders.html?userId=${user.telegram_user_id}" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                                            Показать все заказы (еще ${user.orders.length - 10})
+                                            ${t('viewAll')} (${user.orders.length - 10} more)
                                         </a>
                                     </div>
                                 ` : ''}
@@ -216,7 +220,7 @@ const Users = {
                                     <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                                     </svg>
-                                    <p class="text-sm text-gray-500">Нет заказов</p>
+                                    <p class="text-sm text-gray-500">${t('noOrders')}</p>
                                 </div>
                             `}
                         </div>
@@ -239,7 +243,7 @@ const Users = {
     },
     
     showError(message) {
-        alert('Ошибка: ' + message);
+        alert('Error: ' + message);
     }
 };
 

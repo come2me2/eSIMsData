@@ -18,7 +18,7 @@ const Orders = {
             const offset = (page - 1) * this.pageSize;
             let url = `/api/admin/orders?limit=${this.pageSize}&offset=${offset}&sort=createdAt&order=desc`;
             
-            // Применяем все фильтры
+            // Apply all filters
             if (this.currentStatus) {
                 url += `&status=${this.currentStatus}`;
             }
@@ -59,13 +59,15 @@ const Orders = {
                 this.renderPagination(data.total || 0, page);
             } else {
                 console.error('API returned error:', data);
-                this.showError(data.error || 'Ошибка загрузки заказов');
-                // Показываем пустую таблицу при ошибке
+                const t = (key) => window.i18n ? window.i18n.t(key) : key;
+                this.showError(data.error || t('errorLoadingOrders'));
+                // Show empty table on error
                 this.renderOrders([]);
             }
         } catch (error) {
             console.error('Error loading orders:', error);
-            this.showError('Ошибка загрузки заказов: ' + error.message);
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorLoadingOrders') + ': ' + error.message);
             // Показываем пустую таблицу при ошибке
             this.renderOrders([]);
         }
@@ -124,8 +126,8 @@ const Orders = {
     // Show order details modal
     async showOrderDetails(orderId, userId) {
         try {
-            // Формируем fullOrderId: userId_orderReference
-            // Если userId есть и не равен 'N/A', используем формат userId_orderId
+            // Build fullOrderId: userId_orderReference
+            // If userId exists and is not 'N/A', use format userId_orderId
             const fullOrderId = (userId && userId !== 'N/A' && orderId && orderId !== 'N/A') 
                 ? `${userId}_${orderId}` 
                 : orderId;
@@ -138,7 +140,8 @@ const Orders = {
             if (!response.ok) {
                 const errorData = await response.json();
                 console.error('[Orders] Server error:', response.status, errorData);
-                this.showError(errorData.error || 'Заказ не найден');
+                const t = (key) => window.i18n ? window.i18n.t(key) : key;
+                this.showError(errorData.error || t('orderNotFound'));
                 return;
             }
             
@@ -149,11 +152,13 @@ const Orders = {
                 document.getElementById('orderModal').classList.remove('hidden');
             } else {
                 console.error('[Orders] Order not found in response:', data);
-                this.showError('Заказ не найден');
+                const t = (key) => window.i18n ? window.i18n.t(key) : key;
+                this.showError(t('orderNotFound'));
             }
         } catch (error) {
             console.error('Error loading order details:', error);
-            this.showError('Ошибка загрузки деталей заказа: ' + error.message);
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorLoadingOrderDetails') + ': ' + error.message);
         }
     },
     
@@ -171,53 +176,54 @@ const Orders = {
             minute: '2-digit'
         });
         
-        // eSIM данные - проверяем все возможные источники
-        const iccid = order.iccid || order.assignments?.iccid || order.esimData?.iccid || 'Не указан';
-        const matchingId = order.matchingId || order.assignments?.matchingId || order.esimData?.matchingId || 'Не указан';
-        const rspUrl = order.rspUrl || order.smdpAddress || order.assignments?.smdpAddress || order.esimData?.smdpAddress || 'Не указан';
+        // eSIM data - check all possible sources
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
+        const iccid = order.iccid || order.assignments?.iccid || order.esimData?.iccid || t('notSpecified');
+        const matchingId = order.matchingId || order.assignments?.matchingId || order.esimData?.matchingId || t('notSpecified');
+        const rspUrl = order.rspUrl || order.smdpAddress || order.assignments?.smdpAddress || order.esimData?.smdpAddress || t('notSpecified');
         const qrCode = order.qrCode || order.assignments?.qrCode || order.esimData?.qrCode || order.qr_code || null;
         
         container.innerHTML = `
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Основная информация -->
+                <!-- Order Information -->
                 <div class="space-y-5">
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Основная информация</h4>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">${t('orderInfo')}</h4>
                         <div class="bg-gray-50 rounded-lg p-5 space-y-4">
                             <div class="flex items-start justify-between">
-                                <span class="text-sm text-gray-600">ID заказа</span>
+                                <span class="text-sm text-gray-600">${t('orderId')}</span>
                                 <span class="ml-4 font-semibold text-gray-900 text-right">#${order.orderReference || order.id || 'N/A'}</span>
                             </div>
                             <div class="flex items-start justify-between">
-                                <span class="text-sm text-gray-600">Пользователь</span>
+                                <span class="text-sm text-gray-600">${t('user')}</span>
                                 <span class="ml-4 font-medium text-gray-900 text-right">${order.telegram_username ? `@${order.telegram_username}` : order.telegram_user_id || 'N/A'}</span>
                             </div>
                             <div class="flex items-start justify-between">
-                                <span class="text-sm text-gray-600">Страна</span>
+                                <span class="text-sm text-gray-600">${t('country')}</span>
                                 <span class="ml-4 font-medium text-gray-900 text-right">${order.country_name || order.country_code || 'N/A'}</span>
                             </div>
                             <div class="flex items-start justify-between">
-                                <span class="text-sm text-gray-600">План</span>
+                                <span class="text-sm text-gray-600">${t('plan')}</span>
                                 <span class="ml-4 font-medium text-gray-900 text-right">${order.plan_name || order.plan_id || 'N/A'}</span>
                             </div>
                             <div class="flex items-start justify-between pt-3 border-t border-gray-200">
-                                <span class="text-sm text-gray-600">Сумма</span>
+                                <span class="text-sm text-gray-600">${t('amount')}</span>
                                 <span class="ml-4 font-bold text-xl text-blue-600">$${order.price || '0.00'}</span>
                             </div>
                             <div class="flex items-start justify-between">
-                                <span class="text-sm text-gray-600">Способ оплаты</span>
+                                <span class="text-sm text-gray-600">${t('paymentMethod')}</span>
                                 <span class="ml-4 font-medium text-gray-900 text-right">${this.getPaymentTypeText(order.payment_method || order.paymentType)}</span>
                             </div>
                             <div class="flex items-start justify-between">
-                                <span class="text-sm text-gray-600">Дата создания</span>
+                                <span class="text-sm text-gray-600">${t('createdAt')}</span>
                                 <span class="ml-4 font-medium text-gray-900 text-right text-xs">${date}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Статус -->
+                    <!-- Order Status -->
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Статус заказа</h4>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">${t('orderStatus')}</h4>
                         <div class="bg-gray-50 rounded-lg p-5">
                             <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
                                 <div class="flex items-center gap-3">
@@ -234,22 +240,22 @@ const Orders = {
                                 <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
-                                Обновить статус
+                                ${t('updateStatus')}
                             </button>
                         </div>
                     </div>
                 </div>
                 
-                <!-- eSIM данные -->
+                <!-- eSIM Data -->
                 <div class="space-y-5">
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">eSIM данные</h4>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">${t('esimData')}</h4>
                         <div class="bg-gray-50 rounded-lg p-5 space-y-4">
                             <div>
                                 <span class="text-sm text-gray-600 block mb-2">ICCID</span>
                                 <div class="flex items-center gap-2">
                                     <code class="flex-1">${iccid}</code>
-                                    <button onclick="Orders.copyToClipboard('${iccid}')" class="text-blue-600 hover:text-blue-800 transition-colors" title="Копировать">
+                                    <button onclick="Orders.copyToClipboard('${iccid}')" class="text-blue-600 hover:text-blue-800 transition-colors" title="${t('copy')}">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                         </svg>
@@ -260,7 +266,7 @@ const Orders = {
                                 <span class="text-sm text-gray-600 block mb-2">Matching ID</span>
                                 <div class="flex items-center gap-2">
                                     <code class="flex-1">${matchingId}</code>
-                                    <button onclick="Orders.copyToClipboard('${matchingId}')" class="text-blue-600 hover:text-blue-800 transition-colors" title="Копировать">
+                                    <button onclick="Orders.copyToClipboard('${matchingId}')" class="text-blue-600 hover:text-blue-800 transition-colors" title="${t('copy')}">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                         </svg>
@@ -271,7 +277,7 @@ const Orders = {
                                 <span class="text-sm text-gray-600 block mb-2">RSP URL</span>
                                 <div class="flex items-center gap-2">
                                     <code class="flex-1 break-all">${rspUrl}</code>
-                                    <button onclick="Orders.copyToClipboard('${rspUrl}')" class="text-blue-600 hover:text-blue-800 transition-colors flex-shrink-0" title="Копировать">
+                                    <button onclick="Orders.copyToClipboard('${rspUrl}')" class="text-blue-600 hover:text-blue-800 transition-colors flex-shrink-0" title="${t('copy')}">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                         </svg>
@@ -280,30 +286,30 @@ const Orders = {
                             </div>
                             ${qrCode ? `
                             <div class="pt-3 border-t border-gray-200">
-                                <span class="text-sm text-gray-600 block mb-3">QR код</span>
+                                <span class="text-sm text-gray-600 block mb-3">${t('qrCode')}</span>
                                 <div class="flex flex-col items-center gap-3">
                                     <img src="${qrCode}" alt="QR Code" class="w-28 h-28 border-2 border-gray-200 rounded-xl object-contain bg-white shadow-sm">
                                     <button onclick="Orders.downloadQR('${qrCode}', '${order.orderReference || order.id || 'order'}')" class="btn btn-secondary text-sm px-4 py-2">
                                         <svg class="w-4 h-4 inline mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                                         </svg>
-                                        Скачать QR
+                                        ${t('downloadQR')}
                                     </button>
                                 </div>
                             </div>
-                            ` : '<div class="text-sm text-gray-500 text-center py-4">QR код не доступен</div>'}
+                            ` : `<div class="text-sm text-gray-500 text-center py-4">${t('qrCodeNotAvailable')}</div>`}
                         </div>
                     </div>
                     
                     <!-- Actions -->
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">Действия</h4>
+                        <h4 class="text-sm font-semibold text-gray-500 uppercase mb-3">${t('actions')}</h4>
                         <div class="bg-gray-50 rounded-lg p-5">
                             <button onclick="Orders.resendESIM('${order.orderReference || order.id}', '${order.telegram_user_id}')" class="btn btn-primary w-full">
                                 <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
                                 </svg>
-                                Отправить eSIM в Telegram
+                                ${t('sendESIMTelegram')}
                             </button>
                         </div>
                     </div>
@@ -332,25 +338,29 @@ const Orders = {
             const data = await response.json();
             
             if (data.success) {
-                this.showSuccess('Статус заказа обновлен');
+                const t = (key) => window.i18n ? window.i18n.t(key) : key;
+                this.showSuccess(t('statusUpdated'));
                 this.loadOrders(this.currentPage);
                 document.getElementById('orderModal').classList.add('hidden');
             } else {
-                this.showError(data.error || 'Ошибка обновления статуса');
+                const t = (key) => window.i18n ? window.i18n.t(key) : key;
+                this.showError(data.error || t('errorUpdatingStatus'));
             }
         } catch (error) {
             console.error('Error updating status:', error);
-            this.showError('Ошибка обновления статуса');
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorUpdatingStatus'));
         }
     },
     
     // Copy to clipboard
     copyToClipboard(text) {
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
         navigator.clipboard.writeText(text).then(() => {
-            this.showSuccess('Скопировано в буфер обмена');
+            this.showSuccess(t('copiedToClipboard'));
         }).catch(err => {
             console.error('Failed to copy:', err);
-            this.showError('Ошибка копирования');
+            this.showError(t('errorCopying'));
         });
     },
     
@@ -359,17 +369,18 @@ const Orders = {
         const container = document.getElementById('pagination');
         if (!container) return;
         
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
         const totalPages = Math.ceil(total / this.pageSize);
         if (totalPages <= 1) {
-            container.innerHTML = `<div class="text-sm text-gray-600">Всего заказов: ${total}</div>`;
+            container.innerHTML = `<div class="text-sm text-gray-600">${t('totalOrdersCount')}: ${total}</div>`;
             return;
         }
         
-        let html = `<div class="text-sm text-gray-600">Всего заказов: ${total}</div>`;
+        let html = `<div class="text-sm text-gray-600">${t('totalOrdersCount')}: ${total}</div>`;
         html += '<div class="flex gap-2">';
         
         if (currentPage > 1) {
-            html += `<button onclick="Orders.loadOrders(${currentPage - 1})" class="px-3 py-1 border rounded hover:bg-gray-50">Назад</button>`;
+            html += `<button onclick="Orders.loadOrders(${currentPage - 1})" class="px-3 py-1 border rounded hover:bg-gray-50">${t('back')}</button>`;
         }
         
         for (let i = 1; i <= totalPages; i++) {
@@ -381,7 +392,7 @@ const Orders = {
         }
         
         if (currentPage < totalPages) {
-            html += `<button onclick="Orders.loadOrders(${currentPage + 1})" class="px-3 py-1 border rounded hover:bg-gray-50">Вперед</button>`;
+            html += `<button onclick="Orders.loadOrders(${currentPage + 1})" class="px-3 py-1 border rounded hover:bg-gray-50">${t('next')}</button>`;
         }
         
         html += '</div>';
@@ -395,7 +406,7 @@ const Orders = {
             'completed': 'status-completed',
             'canceled': 'status-failed',
             'failed': 'status-failed',
-            // Старые статусы для обратной совместимости
+            // Old statuses for backward compatibility
             'pending': 'status-pending',
             'processing': 'status-pending',
             'active': 'status-completed',
@@ -411,7 +422,7 @@ const Orders = {
             'completed': 'Completed',
             'canceled': 'Canceled',
             'failed': 'Failed',
-            // Старые статусы для обратной совместимости
+            // Old statuses for backward compatibility
             'pending': 'On Hold',
             'processing': 'On Hold',
             'active': 'Completed',
@@ -422,18 +433,20 @@ const Orders = {
     
     // Get payment type text
     getPaymentTypeText(paymentType) {
-        if (!paymentType) return 'Не указан';
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
+        if (!paymentType) return t('notSpecified');
         const paymentMap = {
             'telegram_stars': 'Telegram Stars',
-            'crypto': 'Криптовалюты',
-            'bank_card': 'Банковская карта'
+            'crypto': t('cryptocurrencies'),
+            'bank_card': t('bankCards')
         };
         return paymentMap[paymentType] || paymentType;
     },
     
     // Resend eSIM to Telegram
     async resendESIM(orderId, userId) {
-        if (!confirm('Отправить данные eSIM пользователю в Telegram?')) return;
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
+        if (!confirm(t('sendESIMConfirm'))) return;
         
         try {
             const fullOrderId = userId && orderId ? `${userId}_${orderId}` : orderId;
@@ -446,30 +459,32 @@ const Orders = {
             const data = await response.json();
             
             if (data.success) {
-                this.showSuccess('eSIM отправлен пользователю в Telegram');
+                this.showSuccess(t('esimSent'));
             } else {
-                this.showError(data.error || 'Ошибка отправки eSIM');
+                this.showError(data.error || t('errorSendingESIM'));
             }
         } catch (error) {
             console.error('Error resending eSIM:', error);
-            this.showError('Ошибка отправки eSIM');
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorSendingESIM'));
         }
     },
     
     // Show error message
     showError(message) {
         // Simple alert for now, can be improved with toast notifications
-        alert('Ошибка: ' + message);
+        alert('Error: ' + message);
     },
     
     // Show success message
     showSuccess(message) {
         // Simple alert for now, can be improved with toast notifications
-        alert('Успешно: ' + message);
+        alert('Success: ' + message);
     },
     
     // Download QR code
     downloadQR(qrCodeUrl, orderId) {
+        const t = (key) => window.i18n ? window.i18n.t(key) : key;
         try {
             const link = document.createElement('a');
             link.href = qrCodeUrl;
@@ -477,10 +492,10 @@ const Orders = {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            this.showSuccess('QR код скачан');
+            this.showSuccess(t('qrCodeDownloaded'));
         } catch (error) {
             console.error('Error downloading QR:', error);
-            this.showError('Ошибка скачивания QR кода');
+            this.showError(t('errorDownloadingQR'));
         }
     },
     
@@ -489,32 +504,32 @@ const Orders = {
         this.currentUserId = '';
         this.currentPage = 1;
         
-        // Удаляем userId из URL
+        // Remove userId from URL
         const url = new URL(window.location);
         url.searchParams.delete('userId');
         window.history.replaceState({}, '', url);
         
-        // Удаляем баннер
+        // Remove banner
         const banner = document.getElementById('userFilterBanner');
         if (banner) {
             banner.remove();
         }
         
-        // Перезагружаем заказы без фильтра
+        // Reload orders without filter
         this.loadOrders(1);
     }
 };
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Проверяем, что Auth доступен
+    // Check that Auth is available
     if (typeof Auth === 'undefined') {
         console.error('Auth is not defined. Make sure auth.js is loaded before orders.js');
         return;
     }
     
     try {
-        // Проверяем URL параметры
+        // Check URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const userId = urlParams.get('userId');
         const searchParam = urlParams.get('search');
@@ -540,12 +555,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
                         </svg>
                         <div>
-                            <span class="text-sm font-medium text-blue-900">Фильтр по пользователю: </span>
+                            <span class="text-sm font-medium text-blue-900">${window.i18n ? window.i18n.t('filterByUserLabel') : 'Filter by user'}: </span>
                             <span class="text-sm text-blue-700">${userId}</span>
                         </div>
                     </div>
                     <button onclick="Orders.clearUserFilter()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                        Очистить фильтр
+                        ${window.i18n ? window.i18n.t('clearFilter') : 'Clear filter'}
                     </button>
                 `;
                 // Вставляем баннер после контейнера с фильтрами как соседний элемент
@@ -634,13 +649,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dateFrom) dateFrom.value = '';
                 if (dateTo) dateTo.value = '';
                 
-                // Удаляем userId из URL
+                // Remove userId from URL
                 const url = new URL(window.location);
                 url.searchParams.delete('userId');
                 url.searchParams.delete('search');
                 window.history.replaceState({}, '', url);
                 
-                // Удаляем баннер если есть
+                // Remove banner если есть
                 const banner = document.getElementById('userFilterBanner');
                 if (banner) {
                     banner.remove();
