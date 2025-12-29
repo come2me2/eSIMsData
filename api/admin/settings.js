@@ -99,7 +99,8 @@ async function handler(req, res) {
     
     try {
         const urlParts = req.path.split('/').filter(Boolean);
-        const section = urlParts[urlParts.length - 1]; // markup, paymentMethods, promocodes
+        const section = urlParts[0]; // markup, paymentMethods, promocodes
+        const resourceId = urlParts[1]; // код промокода для DELETE/PUT
         
         // GET /api/admin/settings - получить все настройки
         if (req.method === 'GET' && !section) {
@@ -205,8 +206,8 @@ async function handler(req, res) {
         }
         
         // PUT /api/admin/settings/promocodes/:code - обновить промокод
-        if (req.method === 'PUT' && section === 'promocodes') {
-            const code = urlParts[urlParts.length - 1];
+        if (req.method === 'PUT' && section === 'promocodes' && resourceId) {
+            const code = resourceId;
             const { discount, type, startDate, validUntil, maxUses, status } = req.body || {};
             const settings = await loadSettings();
             
@@ -236,8 +237,8 @@ async function handler(req, res) {
         }
         
         // DELETE /api/admin/settings/promocodes/:code - удалить промокод
-        if (req.method === 'DELETE' && section === 'promocodes') {
-            const code = urlParts[urlParts.length - 1];
+        if (req.method === 'DELETE' && section === 'promocodes' && resourceId) {
+            const code = resourceId;
             const settings = await loadSettings();
             
             const index = settings.promocodes.findIndex(p => p.code === code);
