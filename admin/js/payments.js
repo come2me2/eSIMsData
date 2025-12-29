@@ -297,7 +297,10 @@ const Payments = {
             const t = (key) => window.i18n ? window.i18n.t(key) : key;
             if (data.success) {
                 this.showSuccess(t('changesSaved'));
-                this.loadSettings();
+                // Reload settings after a short delay to ensure UI is updated correctly
+                setTimeout(() => {
+                    this.loadSettings();
+                }, 500);
             } else {
                 this.showError(data.error || t('errorSaving'));
             }
@@ -539,13 +542,45 @@ const Payments = {
     
     // Show success message
     showSuccess(message) {
-        // Simple implementation via alert, can be improved
-        alert('✓ ' + message);
+        this.showNotification('✓ ' + message, 'success');
     },
     
     // Show error message
     showError(message) {
-        alert('✗ ' + message);
+        this.showNotification('✗ ' + message, 'error');
+    },
+    
+    // Show notification
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+            color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s ease-out';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
     }
 };
 
