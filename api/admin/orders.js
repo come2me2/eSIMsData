@@ -129,9 +129,9 @@ module.exports = async function handler(req, res) {
         
         // Определяем orderId - только если есть хотя бы один элемент пути
         // Пустой путь означает список всех заказов
-        const orderId = urlParts.length > 0 ? urlParts[urlParts.length - 1] : null;
-        const isStatusUpdate = urlParts.length > 1 && urlParts[urlParts.length - 2] === 'status';
+        const isStatusUpdate = urlParts.length > 1 && urlParts[urlParts.length - 1] === 'status';
         const isResend = urlParts.length > 1 && urlParts[urlParts.length - 1] === 'resend';
+        const orderId = (isStatusUpdate || isResend) ? urlParts[0] : (urlParts.length > 0 ? urlParts[urlParts.length - 1] : null);
         
         console.log(`[Admin Orders API] orderId: ${orderId}, isStatusUpdate: ${isStatusUpdate}, isResend: ${isResend}, urlParts.length: ${urlParts.length}`);
         
