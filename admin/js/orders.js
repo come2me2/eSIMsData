@@ -521,13 +521,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Filtering orders by userId:', userId);
             
             // Показываем баннер с информацией о фильтре
-            // Ищем контейнер с фильтрами в main content и вставляем баннер после него
-            // Важно: убедимся, что мы работаем только с элементами внутри main
-            const mainElement = document.querySelector('main');
-            if (!mainElement) return;
+            // Ищем контейнер с фильтрами по наличию searchInput внутри него
+            const searchInput = document.getElementById('searchInput');
+            if (!searchInput) return;
             
-            const filtersContainer = mainElement.querySelector('.bg-white.rounded-lg.shadow.p-4.mb-4');
-            if (filtersContainer && mainElement.contains(filtersContainer)) {
+            const filtersContainer = searchInput.closest('.bg-white.rounded-lg.shadow.p-4.mb-4');
+            if (filtersContainer) {
                 const filterBanner = document.createElement('div');
                 filterBanner.className = 'mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between';
                 filterBanner.id = 'userFilterBanner';
