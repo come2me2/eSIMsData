@@ -104,7 +104,7 @@ const Dashboard = {
         if (!tbody) return;
 
         if (orders.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Нет заказов</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">${window.i18n ? window.i18n.t('noOrders') : 'No orders'}</td></tr>`;
             return;
         }
 
@@ -151,13 +151,21 @@ const Dashboard = {
 
     // Get status text
     getStatusText(status) {
+        if (window.i18n) {
+            // Use i18n if available
+            const key = status || 'pending';
+            return window.i18n.t(key);
+        }
+        
+        // Fallback to English
         const statusMap = {
-            'completed': 'Завершен',
-            'pending': 'Ожидает',
-            'failed': 'Ошибка',
-            'processing': 'Обработка',
-            'active': 'Активен',
-            'cancelled': 'Отменен'
+            'completed': 'Completed',
+            'pending': 'Pending',
+            'failed': 'Failed',
+            'processing': 'Processing',
+            'active': 'Active',
+            'cancelled': 'Cancelled',
+            'on_hold': 'On Hold'
         };
         return statusMap[status] || status;
     },
