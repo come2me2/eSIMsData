@@ -304,17 +304,7 @@ class I18n {
     
     init() {
         this.updatePageLanguage();
-        this.initLanguageSelector();
-    }
-    
-    initLanguageSelector() {
-        const selector = document.getElementById('languageSelector');
-        if (!selector) return;
-        
-        selector.value = this.currentLang;
-        selector.addEventListener('change', (e) => {
-            this.setLanguage(e.target.value);
-        });
+        // Note: languageSelector is now initialized by sidebar.js
     }
 }
 
