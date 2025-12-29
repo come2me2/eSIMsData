@@ -107,6 +107,8 @@ const apiRoutes = {
     '/api/promocode/validate': require('./api/promocode/validate'),
     // Public Settings API (for markup)
     '/api/settings/public': require('./api/settings/public'),
+    // Public Content API (for FAQ, Privacy, etc.)
+    '/api/content': require('./api/content/public'),
     // Admin Panel API
     '/api/admin/auth/login': require('./api/admin/auth'),
     '/api/admin/stats': require('./api/admin/stats'),
