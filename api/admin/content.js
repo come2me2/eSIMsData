@@ -63,11 +63,20 @@ module.exports = async function handler(req, res) {
     }
     
     // Verify authentication
-    const authResult = auth.verifyToken(req);
-    if (!authResult.valid) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({
             success: false,
-            error: authResult.error || 'Unauthorized'
+            error: 'Unauthorized - Missing or invalid Authorization header'
+        });
+    }
+    
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    const payload = auth.verifyToken(token);
+    if (!payload) {
+        return res.status(401).json({
+            success: false,
+            error: 'Invalid or expired token'
         });
     }
     
