@@ -142,8 +142,8 @@ Object.entries(apiRoutes).forEach(([route, handler]) => {
         });
     } else {
         // Поддержка всех методов для каждого endpoint
-        // Для admin API используем app.use для поддержки подпутей (например, /api/admin/orders/:id)
-        if (route.startsWith('/api/admin/')) {
+        // Для admin API и content API используем app.use для поддержки подпутей
+        if (route.startsWith('/api/admin/') || route === '/api/content') {
             // Используем app.use для обработки всех подпутей
             app.use(route, async (req, res, next) => {
                 try {
