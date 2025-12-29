@@ -212,23 +212,6 @@ const translations = {
     }
 };
 
-// Helper function to get locale for date formatting (always English)
-I18n.prototype.getLocale = function() {
-    return 'en-US';
-};
-
-// Helper function to format date with current locale
-I18n.prototype.formatDate = function(date, options = {}) {
-    const defaultOptions = {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-    return new Date(date).toLocaleString(this.getLocale(), { ...defaultOptions, ...options });
-};
-
 // Language manager - English only
 class I18n {
     constructor() {
@@ -268,6 +251,23 @@ class I18n {
         // Update HTML lang attribute to 'en' for English calendar
         document.documentElement.lang = 'en';
         document.documentElement.setAttribute('lang', 'en');
+    }
+    
+    // Helper function to get locale for date formatting (always English)
+    getLocale() {
+        return 'en-US';
+    }
+
+    // Helper function to format date with current locale
+    formatDate(date, options = {}) {
+        const defaultOptions = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        return new Date(date).toLocaleString(this.getLocale(), { ...defaultOptions, ...options });
     }
     
     init() {
