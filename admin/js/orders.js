@@ -521,12 +521,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Filtering orders by userId:', userId);
             
             // Показываем баннер с информацией о фильтре
-            // Ищем заголовок страницы в main content
-            const mainContent = document.querySelector('main');
-            const pageHeader = mainContent ? mainContent.querySelector('h2') : null;
-            if (pageHeader && pageHeader.textContent.trim() === 'Заказы') {
+            // Ищем таблицу заказов и вставляем баннер перед ней
+            const ordersTable = document.querySelector('.bg-white.rounded-lg.shadow.overflow-hidden');
+            if (ordersTable) {
                 const filterBanner = document.createElement('div');
-                filterBanner.className = 'mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between';
+                filterBanner.className = 'mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between';
                 filterBanner.id = 'userFilterBanner';
                 filterBanner.innerHTML = `
                     <div class="flex items-center gap-3">
@@ -542,11 +541,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         Очистить фильтр
                     </button>
                 `;
-                // Вставляем баннер после header block, а не после h2
-                const headerBlock = pageHeader.closest('.mb-8');
-                if (headerBlock && headerBlock.parentNode) {
-                    headerBlock.parentNode.insertBefore(filterBanner, headerBlock.nextSibling);
-                }
+                // Вставляем баннер перед таблицей заказов
+                ordersTable.parentNode.insertBefore(filterBanner, ordersTable);
             }
         }
         
