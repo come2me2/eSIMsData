@@ -7,6 +7,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const auth = require('./auth');
+const DEFAULT_CONTENT = require('../_lib/default-content');
 
 const CONTENT_DIR = path.join(__dirname, '..', '..', 'data', 'content');
 
@@ -30,8 +31,8 @@ async function loadContent(section) {
         return content;
     } catch (error) {
         if (error.code === 'ENOENT') {
-            // File doesn't exist, return empty content
-            return '';
+            // File doesn't exist, return default content
+            return DEFAULT_CONTENT[section] || '';
         }
         console.error(`Error loading ${section} content:`, error);
         throw error;
