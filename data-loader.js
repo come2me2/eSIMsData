@@ -121,13 +121,16 @@
     
     /**
      * Загрузка свежих данных
+     * Оптимизированная загрузка: короткий таймаут для статики, быстрый переход на API
      */
     async function loadFreshData(cacheKey, staticPath, apiPath, timeout = 10000) {
-        // Сначала пробуем статический файл
+        const staticTimeout = 2000; // Короткий таймаут для статических файлов (2 сек)
+        
+        // Сначала пробуем статический файл с коротким таймаутом
         try {
             console.log(`📁 Loading static: ${staticPath}`);
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            const timeoutId = setTimeout(() => controller.abort(), staticTimeout);
             
             const response = await fetch(staticPath, { 
                 signal: controller.signal,
@@ -145,10 +148,14 @@
                 }
             }
         } catch (e) {
-            console.warn(`⚠️ Static file not available: ${staticPath}`, e.message);
+            if (e.name === 'AbortError') {
+                console.log(`⏱️ Static file timeout, switching to API`);
+            } else {
+                console.warn(`⚠️ Static file not available: ${staticPath}`, e.message);
+            }
         }
         
-        // Fallback на API
+        // Fallback на API (быстрый переход, если статический файл не загрузился за 2 сек)
         try {
             console.log(`🔄 Loading API: ${apiPath}`);
             const controller = new AbortController();

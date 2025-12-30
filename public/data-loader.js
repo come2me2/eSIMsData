@@ -8,7 +8,8 @@
     'use strict';
     
     const CACHE_PREFIX = 'esim_cache_';
-    const CACHE_VERSION = 'v1';
+    // Bump this to force-reset localStorage cache for all users
+    const CACHE_VERSION = 'v4';
     const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 часа (данные обновляются ночью)
     
     /**
@@ -120,13 +121,16 @@
     
     /**
      * Загрузка свежих данных
+     * Оптимизированная загрузка: короткий таймаут для статики, быстрый переход на API
      */
     async function loadFreshData(cacheKey, staticPath, apiPath, timeout = 10000) {
-        // Сначала пробуем статический файл
+        const staticTimeout = 2000; // Короткий таймаут для статических файлов (2 сек)
+        
+        // Сначала пробуем статический файл с коротким таймаутом
         try {
             console.log(`📁 Loading static: ${staticPath}`);
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            const timeoutId = setTimeout(() => controller.abort(), staticTimeout);
             
             const response = await fetch(staticPath, { 
                 signal: controller.signal,
@@ -144,10 +148,14 @@
                 }
             }
         } catch (e) {
-            console.warn(`⚠️ Static file not available: ${staticPath}`, e.message);
+            if (e.name === 'AbortError') {
+                console.log(`⏱️ Static file timeout, switching to API`);
+            } else {
+                console.warn(`⚠️ Static file not available: ${staticPath}`, e.message);
+            }
         }
         
-        // Fallback на API
+        // Fallback на API (быстрый переход, если статический файл не загрузился за 2 сек)
         try {
             console.log(`🔄 Loading API: ${apiPath}`);
             const controller = new AbortController();
@@ -298,13 +306,19 @@
         getCacheStats
     };
     
-    // Предзагрузка при idle
+    // Предзагрузка при idle (Safari не поддерживает requestIdleCallback)
+    const schedulePreload = () => {
+        if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(preloadAll);
+        } else {
+            setTimeout(preloadAll, 100);
+        }
+    };
+    
     if (document.readyState === 'complete') {
-        requestIdleCallback ? requestIdleCallback(preloadAll) : setTimeout(preloadAll, 100);
+        schedulePreload();
     } else {
-        window.addEventListener('load', () => {
-            requestIdleCallback ? requestIdleCallback(preloadAll) : setTimeout(preloadAll, 100);
-        });
+        window.addEventListener('load', schedulePreload);
     }
     
 })();
