@@ -79,16 +79,37 @@ async function loadGlobalPlans() {
         
         // Пробуем загрузить через DataLoader
         if (window.DataLoader && typeof window.DataLoader.loadGlobalPlans === 'function') {
-            data = await window.DataLoader.loadGlobalPlans();
+            try {
+                console.log('⚡ Trying DataLoader.loadGlobalPlans...');
+                data = await window.DataLoader.loadGlobalPlans();
+                if (data) {
+                    console.log('✅ Data loaded via DataLoader');
+                }
+            } catch (e) {
+                console.warn('⚠️ DataLoader failed:', e.message);
+            }
+        } else {
+            console.log('⚠️ DataLoader not available');
         }
         
         // Fallback: direct API
         if (!data) {
-            const apiUrl = '/api/esimgo/plans?category=global';
-            const response = await fetch(apiUrl);
-            const result = await response.json();
-            if (result.success && result.data) {
-                data = result.data;
+            try {
+                console.log('🔄 Trying direct API...');
+                const apiUrl = '/api/esimgo/plans?category=global';
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`API returned ${response.status}: ${response.statusText}`);
+                }
+                const result = await response.json();
+                if (result.success && result.data) {
+                    data = result.data;
+                    console.log('✅ Data loaded via API');
+                } else {
+                    console.warn('⚠️ API response unsuccessful:', result);
+                }
+            } catch (e) {
+                console.error('❌ API fetch failed:', e.message);
             }
         }
         
@@ -122,17 +143,25 @@ async function loadGlobalPlans() {
             console.log('✅ Global plans loaded:', {
                 standard: standardPlans.length,
                 unlimited: unlimitedPlans.length,
-                firstPlan: standardPlans[0] || unlimitedPlans[0]
+                selectedPlanId: selectedPlanId
             });
             
             // Обновляем отображение
             renderPlans();
             updateInfoBox();
         } else {
-            console.warn('⚠️ No global plans data received');
+            console.error('❌ No global plans data received from any source');
+            const plansList = document.getElementById('plansList');
+            if (plansList) {
+                plansList.innerHTML = '<div class="no-plans">Failed to load plans. Please refresh the page.</div>';
+            }
         }
     } catch (error) {
         console.error('❌ Error loading global plans:', error);
+        const plansList = document.getElementById('plansList');
+        if (plansList) {
+            plansList.innerHTML = '<div class="no-plans">Error loading plans. Please refresh the page.</div>';
+        }
     }
 }
 
@@ -175,12 +204,8 @@ function setupNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     
     navItems.forEach(item => {
-        // Remove existing listeners by cloning
-        const newItem = item.cloneNode(true);
-        item.parentNode.replaceChild(newItem, item);
-        
-        newItem.addEventListener('click', () => {
-            const label = newItem.querySelector('.nav-label').textContent;
+        item.addEventListener('click', () => {
+            const label = item.querySelector('.nav-label').textContent;
             handleNavigationClick(label);
         });
     });
@@ -208,12 +233,8 @@ function setupMainSegmentedControl() {
     const segmentButtons = document.querySelectorAll('.segmented-control:not(.plans-segmented) .segment-btn');
     
     segmentButtons.forEach(btn => {
-        // Remove existing listeners by cloning
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        
-        newBtn.addEventListener('click', () => {
-            const segment = newBtn.dataset.segment;
+        btn.addEventListener('click', () => {
+            const segment = btn.dataset.segment;
             
             if (segment === 'region') {
                 window.location.href = 'index.html?segment=region';
@@ -232,18 +253,13 @@ function setupSegmentedControl() {
     const segmentButtons = document.querySelectorAll('.plans-segmented .segment-btn');
     
     segmentButtons.forEach(btn => {
-        // Remove existing listeners by cloning
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        
-        newBtn.addEventListener('click', () => {
+        btn.addEventListener('click', () => {
             // Remove active class from all buttons
-            const allButtons = document.querySelectorAll('.plans-segmented .segment-btn');
-            allButtons.forEach(b => b.classList.remove('active'));
+            segmentButtons.forEach(b => b.classList.remove('active'));
             // Add active class to clicked button
-            newBtn.classList.add('active');
+            btn.classList.add('active');
             
-            currentPlanType = newBtn.dataset.planType;
+            currentPlanType = btn.dataset.planType;
             
             // Устанавливаем первый план как выбранный по умолчанию
             const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
@@ -391,13 +407,12 @@ function setupCountriesList() {
 // Setup next button
 function setupNextButton() {
     const nextBtn = document.getElementById('nextBtn');
-    if (!nextBtn) return;
+    if (!nextBtn) {
+        console.error('❌ Next button not found');
+        return;
+    }
     
-    // Remove existing event listeners by cloning and replacing
-    const newNextBtn = nextBtn.cloneNode(true);
-    nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-    
-    newNextBtn.addEventListener('click', () => {
+    nextBtn.addEventListener('click', () => {
         if (!selectedPlanId) {
             if (tg) {
                 tg.showAlert('Please select a plan');
