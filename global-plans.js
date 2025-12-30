@@ -175,8 +175,12 @@ function setupNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     
     navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const label = item.querySelector('.nav-label').textContent;
+        // Remove existing listeners by cloning
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        
+        newItem.addEventListener('click', () => {
+            const label = newItem.querySelector('.nav-label').textContent;
             handleNavigationClick(label);
         });
     });
@@ -204,8 +208,12 @@ function setupMainSegmentedControl() {
     const segmentButtons = document.querySelectorAll('.segmented-control:not(.plans-segmented) .segment-btn');
     
     segmentButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const segment = btn.dataset.segment;
+        // Remove existing listeners by cloning
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', () => {
+            const segment = newBtn.dataset.segment;
             
             if (segment === 'region') {
                 window.location.href = 'index.html?segment=region';
@@ -224,13 +232,18 @@ function setupSegmentedControl() {
     const segmentButtons = document.querySelectorAll('.plans-segmented .segment-btn');
     
     segmentButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
+        // Remove existing listeners by cloning
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', () => {
             // Remove active class from all buttons
-            segmentButtons.forEach(b => b.classList.remove('active'));
+            const allButtons = document.querySelectorAll('.plans-segmented .segment-btn');
+            allButtons.forEach(b => b.classList.remove('active'));
             // Add active class to clicked button
-            btn.classList.add('active');
+            newBtn.classList.add('active');
             
-            currentPlanType = btn.dataset.planType;
+            currentPlanType = newBtn.dataset.planType;
             
             // Устанавливаем первый план как выбранный по умолчанию
             const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
@@ -377,7 +390,14 @@ function setupCountriesList() {
 
 // Setup next button
 function setupNextButton() {
-    document.getElementById('nextBtn').addEventListener('click', () => {
+    const nextBtn = document.getElementById('nextBtn');
+    if (!nextBtn) return;
+    
+    // Remove existing event listeners by cloning and replacing
+    const newNextBtn = nextBtn.cloneNode(true);
+    nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+    
+    newNextBtn.addEventListener('click', () => {
         if (!selectedPlanId) {
             if (tg) {
                 tg.showAlert('Please select a plan');
@@ -401,380 +421,3 @@ function setupNextButton() {
         window.location.href = `checkout.html?${params.toString()}`;
     });
 }
-
-// Format price with dollar sign
-function formatPrice(price) {
-    if (!price) return '$ 9.99';
-    
-    // Если цена уже содержит символ $, возвращаем как есть
-    if (typeof price === 'string' && price.includes('$')) {
-        return price;
-    }
-    
-    // Если цена - число или строка с числом, добавляем символ $
-    const priceNum = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : price;
-    if (!isNaN(priceNum)) {
-        return `$ ${priceNum.toFixed(2)}`;
-    }
-    
-    // Fallback
-    return `$ ${price}`;
-}
-
-// Select plan
-function selectPlan(planId) {
-    selectedPlanId = planId;
-    renderPlans();
-    updateInfoBox();
-    
-    if (tg) {
-        tg.HapticFeedback.impactOccurred('light');
-    }
-}
-
-// Update info box visibility
-function updateInfoBox() {
-    const infoBox = document.getElementById('infoBox');
-    if (infoBox) {
-        infoBox.style.display = currentPlanType === 'unlimited' ? 'flex' : 'none';
-    }
-}
-
-// Setup countries list toggle
-function setupCountriesList() {
-    const banner = document.getElementById('globalInfoBanner');
-    const chevron = document.getElementById('globalInfoChevron');
-    const container = document.getElementById('countriesListContainer');
-    const countriesList = document.getElementById('countriesList');
-    let isExpanded = false;
-    
-    if (!banner || !chevron || !container || !countriesList) return;
-    
-    // Render countries list
-    globalCountries.forEach(countryName => {
-        const countryItem = document.createElement('div');
-        countryItem.className = 'country-item-small';
-        countryItem.textContent = countryName;
-        countriesList.appendChild(countryItem);
-    });
-    
-    banner.addEventListener('click', () => {
-        isExpanded = !isExpanded;
-        
-        if (isExpanded) {
-            container.style.display = 'block';
-            chevron.style.transform = 'rotate(180deg)';
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            // Scroll to the banner to show the top of the countries list
-            setTimeout(() => {
-                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-        } else {
-            container.style.display = 'none';
-            chevron.style.transform = 'rotate(0deg)';
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-        }
-    });
-}
-
-// Setup next button
-function setupNextButton() {
-    document.getElementById('nextBtn').addEventListener('click', () => {
-        if (!selectedPlanId) {
-            if (tg) {
-                tg.showAlert('Please select a plan');
-            } else {
-                alert('Please select a plan');
-            }
-            return;
-        }
-        
-        if (tg) {
-            tg.HapticFeedback.impactOccurred('medium');
-        }
-        
-        // Navigate to checkout screen
-        const params = new URLSearchParams({
-            type: 'global',
-            name: 'Global',
-            plan: selectedPlanId,
-            planType: currentPlanType
-        });
-        window.location.href = `checkout.html?${params.toString()}`;
-    });
-}
-
-
-            
-            renderPlans();
-            updateInfoBox();
-        });
-    });
-}
-
-// Render plans list
-function renderPlans() {
-    const plansList = document.getElementById('plansList');
-    if (!plansList) return;
-    
-    plansList.innerHTML = '';
-    
-    const plans = currentPlanType === 'standard' ? standardPlans : unlimitedPlans;
-    
-    if (plans.length === 0) {
-        plansList.innerHTML = '<div class="no-plans">Loading plans...</div>';
-        return;
-    }
-    
-    plans.forEach(plan => {
-        // Определяем ID плана (может быть id или bundle_name)
-        const planId = plan.id || plan.bundle_name;
-        const isSelected = selectedPlanId === planId || selectedPlanId === plan.id || selectedPlanId === plan.bundle_name;
-        
-        const planItem = document.createElement('div');
-        planItem.className = `plan-item ${isSelected ? 'selected' : ''}`;
-        planItem.dataset.planId = planId;
-        
-        // Определяем цену (приоритет: priceValue > price > fallback)
-        const price = plan.priceValue || plan.price || '9.99';
-        
-        planItem.innerHTML = `
-            <div class="plan-info">
-                <div class="plan-data">${plan.data}</div>
-                <div class="plan-duration">${plan.duration}</div>
-            </div>
-            <div class="plan-right">
-                <div class="plan-price">${formatPrice(price)}</div>
-                <div class="radio-button ${isSelected ? 'selected' : ''}">
-                    ${isSelected ? 
-                        '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>' : 
-                        ''
-                    }
-                </div>
-            </div>
-        `;
-        
-        planItem.addEventListener('click', () => {
-            selectPlan(planId);
-        });
-        
-        plansList.appendChild(planItem);
-    });
-}
-
-// Format price with dollar sign
-function formatPrice(price) {
-    if (!price) return '$ 9.99';
-    
-    // Если цена уже содержит символ $, возвращаем как есть
-    if (typeof price === 'string' && price.includes('$')) {
-        return price;
-    }
-    
-    // Если цена - число или строка с числом, добавляем символ $
-    const priceNum = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : price;
-    if (!isNaN(priceNum)) {
-        return `$ ${priceNum.toFixed(2)}`;
-    }
-    
-    // Fallback
-    return `$ ${price}`;
-}
-
-// Select plan
-function selectPlan(planId) {
-    selectedPlanId = planId;
-    renderPlans();
-    updateInfoBox();
-    
-    if (tg) {
-        tg.HapticFeedback.impactOccurred('light');
-    }
-}
-
-// Update info box visibility
-function updateInfoBox() {
-    const infoBox = document.getElementById('infoBox');
-    if (infoBox) {
-        infoBox.style.display = currentPlanType === 'unlimited' ? 'flex' : 'none';
-    }
-}
-
-// Setup countries list toggle
-function setupCountriesList() {
-    const banner = document.getElementById('globalInfoBanner');
-    const chevron = document.getElementById('globalInfoChevron');
-    const container = document.getElementById('countriesListContainer');
-    const countriesList = document.getElementById('countriesList');
-    let isExpanded = false;
-    
-    if (!banner || !chevron || !container || !countriesList) return;
-    
-    // Render countries list
-    globalCountries.forEach(countryName => {
-        const countryItem = document.createElement('div');
-        countryItem.className = 'country-item-small';
-        countryItem.textContent = countryName;
-        countriesList.appendChild(countryItem);
-    });
-    
-    banner.addEventListener('click', () => {
-        isExpanded = !isExpanded;
-        
-        if (isExpanded) {
-            container.style.display = 'block';
-            chevron.style.transform = 'rotate(180deg)';
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            // Scroll to the banner to show the top of the countries list
-            setTimeout(() => {
-                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-        } else {
-            container.style.display = 'none';
-            chevron.style.transform = 'rotate(0deg)';
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-        }
-    });
-}
-
-// Setup next button
-function setupNextButton() {
-    document.getElementById('nextBtn').addEventListener('click', () => {
-        if (!selectedPlanId) {
-            if (tg) {
-                tg.showAlert('Please select a plan');
-            } else {
-                alert('Please select a plan');
-            }
-            return;
-        }
-        
-        if (tg) {
-            tg.HapticFeedback.impactOccurred('medium');
-        }
-        
-        // Navigate to checkout screen
-        const params = new URLSearchParams({
-            type: 'global',
-            name: 'Global',
-            plan: selectedPlanId,
-            planType: currentPlanType
-        });
-        window.location.href = `checkout.html?${params.toString()}`;
-    });
-}
-
-// Format price with dollar sign
-function formatPrice(price) {
-    if (!price) return '$ 9.99';
-    
-    // Если цена уже содержит символ $, возвращаем как есть
-    if (typeof price === 'string' && price.includes('$')) {
-        return price;
-    }
-    
-    // Если цена - число или строка с числом, добавляем символ $
-    const priceNum = typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : price;
-    if (!isNaN(priceNum)) {
-        return `$ ${priceNum.toFixed(2)}`;
-    }
-    
-    // Fallback
-    return `$ ${price}`;
-}
-
-// Select plan
-function selectPlan(planId) {
-    selectedPlanId = planId;
-    renderPlans();
-    updateInfoBox();
-    
-    if (tg) {
-        tg.HapticFeedback.impactOccurred('light');
-    }
-}
-
-// Update info box visibility
-function updateInfoBox() {
-    const infoBox = document.getElementById('infoBox');
-    if (infoBox) {
-        infoBox.style.display = currentPlanType === 'unlimited' ? 'flex' : 'none';
-    }
-}
-
-// Setup countries list toggle
-function setupCountriesList() {
-    const banner = document.getElementById('globalInfoBanner');
-    const chevron = document.getElementById('globalInfoChevron');
-    const container = document.getElementById('countriesListContainer');
-    const countriesList = document.getElementById('countriesList');
-    let isExpanded = false;
-    
-    if (!banner || !chevron || !container || !countriesList) return;
-    
-    // Render countries list
-    globalCountries.forEach(countryName => {
-        const countryItem = document.createElement('div');
-        countryItem.className = 'country-item-small';
-        countryItem.textContent = countryName;
-        countriesList.appendChild(countryItem);
-    });
-    
-    banner.addEventListener('click', () => {
-        isExpanded = !isExpanded;
-        
-        if (isExpanded) {
-            container.style.display = 'block';
-            chevron.style.transform = 'rotate(180deg)';
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            // Scroll to the banner to show the top of the countries list
-            setTimeout(() => {
-                banner.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-        } else {
-            container.style.display = 'none';
-            chevron.style.transform = 'rotate(0deg)';
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-        }
-    });
-}
-
-// Setup next button
-function setupNextButton() {
-    document.getElementById('nextBtn').addEventListener('click', () => {
-        if (!selectedPlanId) {
-            if (tg) {
-                tg.showAlert('Please select a plan');
-            } else {
-                alert('Please select a plan');
-            }
-            return;
-        }
-        
-        if (tg) {
-            tg.HapticFeedback.impactOccurred('medium');
-        }
-        
-        // Navigate to checkout screen
-        const params = new URLSearchParams({
-            type: 'global',
-            name: 'Global',
-            plan: selectedPlanId,
-            planType: currentPlanType
-        });
-        window.location.href = `checkout.html?${params.toString()}`;
-    });
-}
-
