@@ -121,60 +121,72 @@
     
     /**
      * Загрузка свежих данных
-     * Оптимизированная загрузка: короткий таймаут для статики, быстрый переход на API
+     * Оптимизированная загрузка: параллельная загрузка статики и API, выбираем быстрее загрузившийся
      */
     async function loadFreshData(cacheKey, staticPath, apiPath, timeout = 10000) {
-        const staticTimeout = 2000; // Короткий таймаут для статических файлов (2 сек)
+        const staticTimeout = 500; // Очень короткий таймаут для статических файлов (500ms)
         
-        // Сначала пробуем статический файл с коротким таймаутом
-        try {
-            console.log(`📁 Loading static: ${staticPath}`);
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), staticTimeout);
-            
-            const response = await fetch(staticPath, { 
-                signal: controller.signal,
-                cache: 'default' // Используем браузерный кэш
-            });
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data) {
-                    console.log(`✅ Static loaded: ${staticPath}`);
-                    memoryCache.set(cacheKey, result.data);
-                    localCache.set(cacheKey, result.data);
-                    return result.data;
+        // Загружаем статический файл и API параллельно, выбираем быстрее загрузившийся
+        const staticPromise = (async () => {
+            try {
+                console.log(`📁 Loading static: ${staticPath}`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), staticTimeout);
+                
+                const response = await fetch(staticPath, { 
+                    signal: controller.signal,
+                    cache: 'default' // Используем браузерный кэш
+                });
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        console.log(`✅ Static loaded: ${staticPath}`);
+                        return result.data;
+                    }
+                }
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.warn(`⚠️ Static file not available: ${staticPath}`, e.message);
                 }
             }
-        } catch (e) {
-            if (e.name === 'AbortError') {
-                console.log(`⏱️ Static file timeout, switching to API`);
-            } else {
-                console.warn(`⚠️ Static file not available: ${staticPath}`, e.message);
-            }
-        }
+            return null;
+        })();
         
-        // Fallback на API (быстрый переход, если статический файл не загрузился за 2 сек)
-        try {
-            console.log(`🔄 Loading API: ${apiPath}`);
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeout);
-            
-            const response = await fetch(apiPath, { signal: controller.signal });
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success && result.data) {
-                    console.log(`✅ API loaded: ${apiPath}`);
-                    memoryCache.set(cacheKey, result.data);
-                    localCache.set(cacheKey, result.data);
-                    return result.data;
+        const apiPromise = (async () => {
+            try {
+                console.log(`🔄 Loading API: ${apiPath}`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                const response = await fetch(apiPath, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        console.log(`✅ API loaded: ${apiPath}`);
+                        return result.data;
+                    }
                 }
+            } catch (e) {
+                console.error(`❌ API failed: ${apiPath}`, e.message);
             }
-        } catch (e) {
-            console.error(`❌ API failed: ${apiPath}`, e.message);
+            return null;
+        })();
+        
+        // Ждем первый успешный результат (Promise.race не подходит, т.к. нужно проверить успешность)
+        const results = await Promise.allSettled([staticPromise, apiPromise]);
+        
+        // Проверяем результаты в порядке приоритета: статика -> API
+        for (const result of results) {
+            if (result.status === 'fulfilled' && result.value) {
+                const data = result.value;
+                memoryCache.set(cacheKey, data);
+                localCache.set(cacheKey, data);
+                return data;
+            }
         }
         
         throw new Error(`Failed to load data: ${cacheKey}`);
