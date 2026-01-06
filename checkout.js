@@ -1487,12 +1487,27 @@ async function setupPromoCode() {
         const purchaseButtonContainer = document.querySelector('.bottom-button-container');
         const bottomNav = document.querySelector('.bottom-nav');
         
+        // Флаг для предотвращения множественных прокруток одновременно
+        let isScrolling = false;
+        let scrollTimeout = null;
+        
         // Auto-scroll to promo input when focused (to keep it visible above keyboard)
         const scrollToPromoInput = () => {
+            // Предотвращаем множественные прокрутки
+            if (isScrolling) {
+                return;
+            }
+            
+            isScrolling = true;
+            
+            // Очищаем предыдущий таймаут, если есть
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            
             // Используем visualViewport API, если доступен (лучше работает в Telegram WebView)
             const visualViewport = window.visualViewport;
             const viewportHeight = visualViewport ? visualViewport.height : window.innerHeight;
-            const viewportOffsetTop = visualViewport ? visualViewport.offsetTop : 0;
             
             // Получаем позицию поля промокода
             const promoCard = promoInput.closest('.promo-card');
@@ -1513,48 +1528,25 @@ async function setupPromoCode() {
                 
                 // Получаем текущую позицию элемента
                 const rect = targetElement.getBoundingClientRect();
-                const elementTop = rect.top + window.pageYOffset - viewportOffsetTop;
-                const elementHeight = rect.height;
+                const elementTop = rect.top + window.pageYOffset;
                 
                 // Вычисляем позицию для прокрутки
                 // Поле должно быть в верхней части доступной области (с отступом)
                 const scrollOffset = Math.max(100, availableHeight * 0.15); // 15% от доступной высоты или минимум 100px
                 const targetScroll = elementTop - scrollOffset;
                 
-                // Используем scrollIntoView для более надежной прокрутки в Telegram WebView
-                if (targetElement.scrollIntoView) {
-                    targetElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'nearest'
-                    });
-                    
-                    // Дополнительная корректировка через scrollTo для точности
-                    setTimeout(() => {
-                        window.scrollTo({
-                            top: Math.max(0, targetScroll),
-                            behavior: 'smooth'
-                        });
-                    }, 100);
-                } else {
-                    // Fallback для старых браузеров
-                    window.scrollTo({
-                        top: Math.max(0, targetScroll),
-                        behavior: 'smooth'
-                    });
-                }
-                
-                console.log('[Promo Scroll]', {
-                    viewportHeight,
-                    viewportOffsetTop,
-                    estimatedKeyboardHeight,
-                    totalBottomElementsHeight,
-                    availableHeight,
-                    elementTop,
-                    targetScroll,
-                    scrollOffset,
-                    usingVisualViewport: !!visualViewport
+                // Используем только scrollTo для избежания конфликтов
+                window.scrollTo({
+                    top: Math.max(0, targetScroll),
+                    behavior: 'smooth'
                 });
+                
+                // Разрешаем следующую прокрутку через 500ms
+                scrollTimeout = setTimeout(() => {
+                    isScrolling = false;
+                }, 500);
+            } else {
+                isScrolling = false;
             }
         };
         
@@ -1582,17 +1574,11 @@ async function setupPromoCode() {
             // Скрываем элементы снизу
             hideBottomElements();
             
-            // Используем несколько задержек для учета появления клавиатуры
+            // Прокручиваем один раз с задержкой для учета появления клавиатуры
             requestAnimationFrame(() => {
                 setTimeout(() => {
                     scrollToPromoInput();
-                }, 100); // Первая попытка
-                setTimeout(() => {
-                    scrollToPromoInput();
-                }, 300); // Вторая попытка (когда клавиатура уже появилась)
-                setTimeout(() => {
-                    scrollToPromoInput();
-                }, 500); // Третья попытка (на случай медленной клавиатуры)
+                }, 300); // Задержка для появления клавиатуры
             });
         });
         
@@ -1610,11 +1596,9 @@ async function setupPromoCode() {
         });
         
         // Также обрабатываем событие touchstart для мобильных устройств (предварительная прокрутка)
+        // НЕ прокручиваем здесь, чтобы избежать конфликтов - прокрутка произойдет при focus
         promoInput.addEventListener('touchstart', () => {
             hideBottomElements();
-            requestAnimationFrame(() => {
-                scrollToPromoInput();
-            });
         }, { passive: true });
         
         // Обработчик изменения размера viewport (когда клавиатура появляется/исчезает)
@@ -2351,12 +2335,27 @@ async function setupPromoCode() {
         const purchaseButtonContainer = document.querySelector('.bottom-button-container');
         const bottomNav = document.querySelector('.bottom-nav');
         
+        // Флаг для предотвращения множественных прокруток одновременно
+        let isScrolling = false;
+        let scrollTimeout = null;
+        
         // Auto-scroll to promo input when focused (to keep it visible above keyboard)
         const scrollToPromoInput = () => {
+            // Предотвращаем множественные прокрутки
+            if (isScrolling) {
+                return;
+            }
+            
+            isScrolling = true;
+            
+            // Очищаем предыдущий таймаут, если есть
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            
             // Используем visualViewport API, если доступен (лучше работает в Telegram WebView)
             const visualViewport = window.visualViewport;
             const viewportHeight = visualViewport ? visualViewport.height : window.innerHeight;
-            const viewportOffsetTop = visualViewport ? visualViewport.offsetTop : 0;
             
             // Получаем позицию поля промокода
             const promoCard = promoInput.closest('.promo-card');
@@ -2377,48 +2376,25 @@ async function setupPromoCode() {
                 
                 // Получаем текущую позицию элемента
                 const rect = targetElement.getBoundingClientRect();
-                const elementTop = rect.top + window.pageYOffset - viewportOffsetTop;
-                const elementHeight = rect.height;
+                const elementTop = rect.top + window.pageYOffset;
                 
                 // Вычисляем позицию для прокрутки
                 // Поле должно быть в верхней части доступной области (с отступом)
                 const scrollOffset = Math.max(100, availableHeight * 0.15); // 15% от доступной высоты или минимум 100px
                 const targetScroll = elementTop - scrollOffset;
                 
-                // Используем scrollIntoView для более надежной прокрутки в Telegram WebView
-                if (targetElement.scrollIntoView) {
-                    targetElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'nearest'
-                    });
-                    
-                    // Дополнительная корректировка через scrollTo для точности
-                    setTimeout(() => {
-                        window.scrollTo({
-                            top: Math.max(0, targetScroll),
-                            behavior: 'smooth'
-                        });
-                    }, 100);
-                } else {
-                    // Fallback для старых браузеров
-                    window.scrollTo({
-                        top: Math.max(0, targetScroll),
-                        behavior: 'smooth'
-                    });
-                }
-                
-                console.log('[Promo Scroll]', {
-                    viewportHeight,
-                    viewportOffsetTop,
-                    estimatedKeyboardHeight,
-                    totalBottomElementsHeight,
-                    availableHeight,
-                    elementTop,
-                    targetScroll,
-                    scrollOffset,
-                    usingVisualViewport: !!visualViewport
+                // Используем только scrollTo для избежания конфликтов
+                window.scrollTo({
+                    top: Math.max(0, targetScroll),
+                    behavior: 'smooth'
                 });
+                
+                // Разрешаем следующую прокрутку через 500ms
+                scrollTimeout = setTimeout(() => {
+                    isScrolling = false;
+                }, 500);
+            } else {
+                isScrolling = false;
             }
         };
         
@@ -2446,17 +2422,11 @@ async function setupPromoCode() {
             // Скрываем элементы снизу
             hideBottomElements();
             
-            // Используем несколько задержек для учета появления клавиатуры
+            // Прокручиваем один раз с задержкой для учета появления клавиатуры
             requestAnimationFrame(() => {
                 setTimeout(() => {
                     scrollToPromoInput();
-                }, 100); // Первая попытка
-                setTimeout(() => {
-                    scrollToPromoInput();
-                }, 300); // Вторая попытка (когда клавиатура уже появилась)
-                setTimeout(() => {
-                    scrollToPromoInput();
-                }, 500); // Третья попытка (на случай медленной клавиатуры)
+                }, 300); // Задержка для появления клавиатуры
             });
         });
         
@@ -2474,11 +2444,9 @@ async function setupPromoCode() {
         });
         
         // Также обрабатываем событие touchstart для мобильных устройств (предварительная прокрутка)
+        // НЕ прокручиваем здесь, чтобы избежать конфликтов - прокрутка произойдет при focus
         promoInput.addEventListener('touchstart', () => {
             hideBottomElements();
-            requestAnimationFrame(() => {
-                scrollToPromoInput();
-            });
         }, { passive: true });
         
         // Обработчик изменения размера viewport (когда клавиатура появляется/исчезает)
