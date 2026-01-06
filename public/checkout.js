@@ -1197,6 +1197,11 @@ function setupPromoCode() {
         
         // Auto-scroll to promo input when focused (to keep it visible above keyboard)
         const scrollToPromoInput = () => {
+            // Используем visualViewport API, если доступен (лучше работает в Telegram WebView)
+            const visualViewport = window.visualViewport;
+            const viewportHeight = visualViewport ? visualViewport.height : window.innerHeight;
+            const viewportOffsetTop = visualViewport ? visualViewport.offsetTop : 0;
+            
             // Получаем позицию поля промокода
             const promoCard = promoInput.closest('.promo-card');
             const targetElement = promoCard || promoInput;
@@ -1208,36 +1213,55 @@ function setupPromoCode() {
                 const totalBottomElementsHeight = purchaseButtonHeight + bottomNavHeight;
                 
                 // Вычисляем видимую высоту экрана (с учетом клавиатуры)
-                const viewportHeight = window.innerHeight;
-                const estimatedKeyboardHeight = Math.min(viewportHeight * 0.4, 300); // Примерно 40% экрана или 300px
+                // В Telegram WebView клавиатура может занимать до 50% экрана
+                const estimatedKeyboardHeight = Math.min(viewportHeight * 0.5, 350);
                 
                 // Доступная высота = высота экрана - клавиатура - элементы снизу
                 const availableHeight = viewportHeight - estimatedKeyboardHeight - totalBottomElementsHeight;
                 
                 // Получаем текущую позицию элемента
                 const rect = targetElement.getBoundingClientRect();
-                const elementTop = rect.top + window.pageYOffset;
+                const elementTop = rect.top + window.pageYOffset - viewportOffsetTop;
                 const elementHeight = rect.height;
                 
                 // Вычисляем позицию для прокрутки
                 // Поле должно быть в верхней части доступной области (с отступом)
-                const scrollOffset = Math.max(120, availableHeight * 0.2); // 20% от доступной высоты или минимум 120px
+                const scrollOffset = Math.max(100, availableHeight * 0.15); // 15% от доступной высоты или минимум 100px
                 const targetScroll = elementTop - scrollOffset;
                 
-                // Плавная прокрутка
-                window.scrollTo({
-                    top: Math.max(0, targetScroll),
-                    behavior: 'smooth'
-                });
+                // Используем scrollIntoView для более надежной прокрутки в Telegram WebView
+                if (targetElement.scrollIntoView) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'nearest'
+                    });
+                    
+                    // Дополнительная корректировка через scrollTo для точности
+                    setTimeout(() => {
+                        window.scrollTo({
+                            top: Math.max(0, targetScroll),
+                            behavior: 'smooth'
+                        });
+                    }, 100);
+                } else {
+                    // Fallback для старых браузеров
+                    window.scrollTo({
+                        top: Math.max(0, targetScroll),
+                        behavior: 'smooth'
+                    });
+                }
                 
                 console.log('[Promo Scroll]', {
                     viewportHeight,
+                    viewportOffsetTop,
                     estimatedKeyboardHeight,
                     totalBottomElementsHeight,
                     availableHeight,
                     elementTop,
                     targetScroll,
-                    scrollOffset
+                    scrollOffset,
+                    usingVisualViewport: !!visualViewport
                 });
             }
         };
@@ -1303,7 +1327,7 @@ function setupPromoCode() {
         
         // Обработчик изменения размера viewport (когда клавиатура появляется/исчезает)
         let resizeTimeout;
-        window.addEventListener('resize', () => {
+        const handleViewportResize = () => {
             // Если поле в фокусе, прокручиваем снова
             if (document.activeElement === promoInput) {
                 clearTimeout(resizeTimeout);
@@ -1311,7 +1335,16 @@ function setupPromoCode() {
                     scrollToPromoInput();
                 }, 100);
             }
-        });
+        };
+        
+        // Обрабатываем обычный resize
+        window.addEventListener('resize', handleViewportResize);
+        
+        // Обрабатываем visualViewport resize (лучше работает в Telegram WebView)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleViewportResize);
+            window.visualViewport.addEventListener('scroll', handleViewportResize);
+        }
     }
 }
 

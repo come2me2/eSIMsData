@@ -100,6 +100,7 @@ const apiRoutes = {
     '/api/validate-telegram': require('./api/validate-telegram'),
     '/api/webhook': require('./api/webhook'),
     '/api/cache/refresh': require('./api/cache/refresh'),
+    '/api/cache/prefill': require('./api/cache/prefill'),
     '/api/telegram/stars/create-invoice': require('./api/telegram/stars/create-invoice'),
     '/api/telegram/stars/webhook': require('./api/telegram/stars/webhook'),
     '/api/orders': require('./api/orders'),

@@ -434,6 +434,65 @@ class TelegramAuth {
     }
 }
 
+/**
+ * Hard Reload утилита для Telegram Mini App
+ * Очищает весь кэш и перезагружает приложение
+ * 
+ * Использование:
+ * - В консоли браузера: hardReload()
+ * - В коде: window.hardReload()
+ * 
+ * @param {Object} options - Опции для hard reload
+ * @param {boolean} options.clearLocalStorage - Очистить весь localStorage (по умолчанию false, очищает только кэш)
+ * @param {boolean} options.clearDataLoader - Очистить кэш DataLoader (по умолчанию true)
+ */
+function hardReload(options = {}) {
+    const {
+        clearLocalStorage = false,
+        clearDataLoader = true
+    } = options;
+    
+    console.log('🔄 Hard reload started...');
+    
+    // Очищаем кэш DataLoader
+    if (clearDataLoader && window.DataLoader && typeof window.DataLoader.clearCache === 'function') {
+        console.log('🗑️ Clearing DataLoader cache...');
+        window.DataLoader.clearCache();
+    }
+    
+    // Очищаем весь localStorage (опционально)
+    if (clearLocalStorage) {
+        console.log('🗑️ Clearing all localStorage...');
+        localStorage.clear();
+    }
+    
+    // Очищаем sessionStorage
+    if (sessionStorage) {
+        console.log('🗑️ Clearing sessionStorage...');
+        sessionStorage.clear();
+    }
+    
+    // Haptic feedback (если доступен)
+    const tg = window.Telegram?.WebApp;
+    if (tg && tg.HapticFeedback) {
+        try {
+            tg.HapticFeedback.impactOccurred('medium');
+        } catch (e) {
+            // Игнорируем ошибки
+        }
+    }
+    
+    // Перезагружаем страницу с параметром для обхода кэша
+    const url = new URL(window.location.href);
+    url.searchParams.set('_reload', Date.now().toString());
+    
+    console.log('🔄 Reloading page...');
+    window.location.href = url.toString();
+}
+
+// Экспортируем hardReload глобально
+window.hardReload = hardReload;
+
 // Создаем глобальный экземпляр
 window.telegramAuth = new TelegramAuth();
 

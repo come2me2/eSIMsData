@@ -9,7 +9,7 @@
     
     const CACHE_PREFIX = 'esim_cache_';
     // Bump this to force-reset localStorage cache for all users
-    const CACHE_VERSION = 'v6';
+    const CACHE_VERSION = 'v7';
     const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 часа (данные обновляются ночью)
     
     /**
