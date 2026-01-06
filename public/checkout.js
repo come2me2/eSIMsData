@@ -1239,35 +1239,34 @@ function setupPromoCode() {
             // Используем уже вычисленные значения (visualViewport, viewportHeight, estimatedKeyboardHeight, rect)
             const elementTop = rect.top + window.pageYOffset;
             const elementHeight = rect.height;
+            
+            // Вычисляем позицию для прокрутки
+            // Поле должно быть в верхней части видимой области (с учетом клавиатуры)
+            const scrollOffset = Math.max(150, estimatedKeyboardHeight * 0.3); // Отступ сверху
+            const targetScroll = elementTop - scrollOffset;
+            
+            // Используем scrollIntoView для более надежной прокрутки в Telegram WebView
+            // Это более надежный способ, который учитывает видимую область
+            if (targetElement.scrollIntoView) {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                    inline: 'nearest'
+                });
                 
-                // Вычисляем позицию для прокрутки
-                // Поле должно быть в верхней части видимой области (с учетом клавиатуры)
-                const scrollOffset = Math.max(150, estimatedKeyboardHeight * 0.3); // Отступ сверху
-                const targetScroll = elementTop - scrollOffset;
-                
-                // Используем scrollIntoView для более надежной прокрутки в Telegram WebView
-                // Это более надежный способ, который учитывает видимую область
-                if (targetElement.scrollIntoView) {
-                    targetElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start',
-                        inline: 'nearest'
-                    });
-                    
-                    // Дополнительная корректировка через scrollTo для точности
-                    scrollTimeout = setTimeout(() => {
-                        window.scrollTo({
-                            top: Math.max(0, targetScroll),
-                            behavior: 'smooth'
-                        });
-                    }, 100);
-                } else {
-                    // Fallback для старых браузеров
+                // Дополнительная корректировка через scrollTo для точности
+                scrollTimeout = setTimeout(() => {
                     window.scrollTo({
                         top: Math.max(0, targetScroll),
                         behavior: 'smooth'
                     });
-                }
+                }, 100);
+            } else {
+                // Fallback для старых браузеров
+                window.scrollTo({
+                    top: Math.max(0, targetScroll),
+                    behavior: 'smooth'
+                });
             }
         };
         
