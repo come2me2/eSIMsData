@@ -9,7 +9,7 @@
     
     const CACHE_PREFIX = 'esim_cache_';
     // Bump this to force-reset localStorage cache for all users
-    const CACHE_VERSION = 'v4';
+    const CACHE_VERSION = 'v5';
     const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 часа (данные обновляются ночью)
     
     /**
@@ -331,6 +331,36 @@
         schedulePreload();
     } else {
         window.addEventListener('load', schedulePreload);
+    }
+    
+    // Автоматическая очистка старого кэша при загрузке (если версия изменилась)
+    // Это гарантирует, что все пользователи получат свежие данные
+    if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+            const oldVersionKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(CACHE_PREFIX)) {
+                    try {
+                        const item = JSON.parse(localStorage.getItem(key));
+                        if (item.version && item.version !== CACHE_VERSION) {
+                            oldVersionKeys.push(key);
+                        }
+                    } catch (e) {
+                        // Если не удалось распарсить, удаляем
+                        oldVersionKeys.push(key);
+                    }
+                }
+            }
+            if (oldVersionKeys.length > 0) {
+                console.log(`🔄 Clearing ${oldVersionKeys.length} old cache entries (version mismatch)`);
+                oldVersionKeys.forEach(key => localStorage.removeItem(key));
+                // Также очищаем memory cache
+                memoryCache.clear();
+            }
+        } catch (e) {
+            console.warn('Cache cleanup error:', e);
+        }
     }
     
 })();
