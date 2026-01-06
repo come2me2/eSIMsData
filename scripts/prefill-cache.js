@@ -82,7 +82,8 @@ async function prefillCountriesCache() {
 async function prefillGlobalPlansCache() {
     log('🔄 Prefilling global plans cache...');
     try {
-        const req = createMockReq({ category: 'global' });
+        // Используем forceRefresh=true для принудительного обновления кэша
+        const req = createMockReq({ category: 'global', forceRefresh: 'true' });
         const res = createMockRes();
         
         await plansHandler(req, res);
@@ -117,7 +118,8 @@ async function prefillRegionPlansCache() {
     for (const region of regions) {
         try {
             log(`🔄 Prefilling ${region} plans cache...`);
-            const req = createMockReq({ region: region });
+            // Используем forceRefresh=true для принудительного обновления кэша
+            const req = createMockReq({ region: region, forceRefresh: 'true' });
             const res = createMockRes();
             
             await regionPlansHandler(req, res);
@@ -199,7 +201,8 @@ async function prefillLocalPlansCache() {
         
         const batchPromises = batch.map(async (countryCode) => {
             try {
-                const req = createMockReq({ country: countryCode, category: 'local' });
+                // Используем forceRefresh=true для принудительного обновления кэша
+                const req = createMockReq({ country: countryCode, category: 'local', forceRefresh: 'true' });
                 const res = createMockRes();
                 
                 await plansHandler(req, res);
