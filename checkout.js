@@ -1338,6 +1338,10 @@ async function setupPromoCode() {
     
     if (promoBtn && promoInput && promoError && promoSuccess) {
         promoBtn.addEventListener('click', async () => {
+            // Убираем фокус с поля ввода и сразу показываем элементы обратно
+            promoInput.blur();
+            showBottomElements(); // Показываем элементы сразу при нажатии на OK
+            
             const promoCode = promoInput.value.trim().toUpperCase();
             
             if (!promoCode) {
@@ -1409,6 +1413,9 @@ async function setupPromoCode() {
                     // Update price with discount
                     updateTotalPrice();
                     
+                    // Показываем элементы обратно после успешной валидации
+                    showBottomElements();
+                    
                     if (tg) {
                         tg.HapticFeedback.notificationOccurred('success');
                     }
@@ -1428,6 +1435,9 @@ async function setupPromoCode() {
                     // Reset price to original
                     updateTotalPrice();
                     
+                    // Показываем элементы обратно после ошибки
+                    showBottomElements();
+                    
                     if (tg) {
                         tg.HapticFeedback.notificationOccurred('error');
                     }
@@ -1445,6 +1455,9 @@ async function setupPromoCode() {
                 promoInput.style.borderColor = '#FF3B30';
                 
                 updateTotalPrice();
+                
+                // Показываем элементы обратно после ошибки
+                showBottomElements();
                 
                 if (tg) {
                     tg.HapticFeedback.notificationOccurred('error');
@@ -1470,6 +1483,10 @@ async function setupPromoCode() {
             }
         });
         
+        // Получаем элементы, которые могут перекрывать поле промокода
+        const purchaseButtonContainer = document.querySelector('.bottom-button-container');
+        const bottomNav = document.querySelector('.bottom-nav');
+        
         // Auto-scroll to promo input when focused (to keep it visible above keyboard)
         const scrollToPromoInput = () => {
             // Получаем позицию поля промокода
@@ -1477,17 +1494,26 @@ async function setupPromoCode() {
             const targetElement = promoCard || promoInput;
             
             if (targetElement) {
-                // Получаем текущую позицию элемента
-                const rect = targetElement.getBoundingClientRect();
-                const elementTop = rect.top + window.pageYOffset;
+                // Вычисляем высоту элементов, которые могут перекрывать поле
+                const purchaseButtonHeight = purchaseButtonContainer ? purchaseButtonContainer.offsetHeight : 0;
+                const bottomNavHeight = bottomNav ? bottomNav.offsetHeight : 0;
+                const totalBottomElementsHeight = purchaseButtonHeight + bottomNavHeight;
                 
                 // Вычисляем видимую высоту экрана (с учетом клавиатуры)
                 const viewportHeight = window.innerHeight;
                 const estimatedKeyboardHeight = Math.min(viewportHeight * 0.4, 300); // Примерно 40% экрана или 300px
-                const availableHeight = viewportHeight - estimatedKeyboardHeight;
                 
-                // Вычисляем позицию для прокрутки (центрируем в видимой области над клавиатурой)
-                const scrollOffset = Math.max(100, availableHeight / 3); // Минимум 100px отступ
+                // Доступная высота = высота экрана - клавиатура - элементы снизу
+                const availableHeight = viewportHeight - estimatedKeyboardHeight - totalBottomElementsHeight;
+                
+                // Получаем текущую позицию элемента
+                const rect = targetElement.getBoundingClientRect();
+                const elementTop = rect.top + window.pageYOffset;
+                const elementHeight = rect.height;
+                
+                // Вычисляем позицию для прокрутки
+                // Поле должно быть в верхней части доступной области (с отступом)
+                const scrollOffset = Math.max(120, availableHeight * 0.2); // 20% от доступной высоты или минимум 120px
                 const targetScroll = elementTop - scrollOffset;
                 
                 // Плавная прокрутка
@@ -1496,29 +1522,72 @@ async function setupPromoCode() {
                     behavior: 'smooth'
                 });
                 
-                // Альтернативный метод для лучшей совместимости (резервный)
-                setTimeout(() => {
-                    targetElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'nearest'
-                    });
-                }, 100);
+                console.log('[Promo Scroll]', {
+                    viewportHeight,
+                    estimatedKeyboardHeight,
+                    totalBottomElementsHeight,
+                    availableHeight,
+                    elementTop,
+                    targetScroll,
+                    scrollOffset
+                });
+            }
+        };
+        
+        // Временно скрываем кнопку Purchase и нижнее меню при фокусе на поле промокода
+        const hideBottomElements = () => {
+            if (purchaseButtonContainer) {
+                purchaseButtonContainer.style.display = 'none';
+            }
+            if (bottomNav) {
+                bottomNav.style.display = 'none';
+            }
+        };
+        
+        const showBottomElements = () => {
+            if (purchaseButtonContainer) {
+                purchaseButtonContainer.style.display = '';
+            }
+            if (bottomNav) {
+                bottomNav.style.display = '';
             }
         };
         
         // Обработчик focus - основное событие
         promoInput.addEventListener('focus', () => {
+            // Скрываем элементы снизу
+            hideBottomElements();
+            
             // Используем несколько задержек для учета появления клавиатуры
             requestAnimationFrame(() => {
-                setTimeout(scrollToPromoInput, 100); // Первая попытка
-                setTimeout(scrollToPromoInput, 300); // Вторая попытка (когда клавиатура уже появилась)
-                setTimeout(scrollToPromoInput, 500); // Третья попытка (на случай медленной клавиатуры)
+                setTimeout(() => {
+                    scrollToPromoInput();
+                }, 100); // Первая попытка
+                setTimeout(() => {
+                    scrollToPromoInput();
+                }, 300); // Вторая попытка (когда клавиатура уже появилась)
+                setTimeout(() => {
+                    scrollToPromoInput();
+                }, 500); // Третья попытка (на случай медленной клавиатуры)
             });
+        });
+        
+        // Показываем элементы обратно при потере фокуса
+        promoInput.addEventListener('blur', () => {
+            // Небольшая задержка, чтобы пользователь мог нажать кнопку OK
+            setTimeout(() => {
+                // Проверяем, что фокус действительно ушел (не перешел на другую кнопку)
+                if (document.activeElement !== promoInput && 
+                    document.activeElement !== promoBtn &&
+                    document.activeElement !== purchaseButtonContainer?.querySelector('#purchaseBtn')) {
+                    showBottomElements();
+                }
+            }, 200);
         });
         
         // Также обрабатываем событие touchstart для мобильных устройств (предварительная прокрутка)
         promoInput.addEventListener('touchstart', () => {
+            hideBottomElements();
             requestAnimationFrame(() => {
                 scrollToPromoInput();
             });
@@ -2100,6 +2169,10 @@ async function setupPromoCode() {
     
     if (promoBtn && promoInput && promoError && promoSuccess) {
         promoBtn.addEventListener('click', async () => {
+            // Убираем фокус с поля ввода и сразу показываем элементы обратно
+            promoInput.blur();
+            showBottomElements(); // Показываем элементы сразу при нажатии на OK
+            
             const promoCode = promoInput.value.trim().toUpperCase();
             
             if (!promoCode) {
@@ -2171,6 +2244,9 @@ async function setupPromoCode() {
                     // Update price with discount
                     updateTotalPrice();
                     
+                    // Показываем элементы обратно после успешной валидации
+                    showBottomElements();
+                    
                     if (tg) {
                         tg.HapticFeedback.notificationOccurred('success');
                     }
@@ -2190,6 +2266,9 @@ async function setupPromoCode() {
                     // Reset price to original
                     updateTotalPrice();
                     
+                    // Показываем элементы обратно после ошибки
+                    showBottomElements();
+                    
                     if (tg) {
                         tg.HapticFeedback.notificationOccurred('error');
                     }
@@ -2207,6 +2286,9 @@ async function setupPromoCode() {
                 promoInput.style.borderColor = '#FF3B30';
                 
                 updateTotalPrice();
+                
+                // Показываем элементы обратно после ошибки
+                showBottomElements();
                 
                 if (tg) {
                     tg.HapticFeedback.notificationOccurred('error');
@@ -2232,6 +2314,10 @@ async function setupPromoCode() {
             }
         });
         
+        // Получаем элементы, которые могут перекрывать поле промокода
+        const purchaseButtonContainer = document.querySelector('.bottom-button-container');
+        const bottomNav = document.querySelector('.bottom-nav');
+        
         // Auto-scroll to promo input when focused (to keep it visible above keyboard)
         const scrollToPromoInput = () => {
             // Получаем позицию поля промокода
@@ -2239,17 +2325,26 @@ async function setupPromoCode() {
             const targetElement = promoCard || promoInput;
             
             if (targetElement) {
-                // Получаем текущую позицию элемента
-                const rect = targetElement.getBoundingClientRect();
-                const elementTop = rect.top + window.pageYOffset;
+                // Вычисляем высоту элементов, которые могут перекрывать поле
+                const purchaseButtonHeight = purchaseButtonContainer ? purchaseButtonContainer.offsetHeight : 0;
+                const bottomNavHeight = bottomNav ? bottomNav.offsetHeight : 0;
+                const totalBottomElementsHeight = purchaseButtonHeight + bottomNavHeight;
                 
                 // Вычисляем видимую высоту экрана (с учетом клавиатуры)
                 const viewportHeight = window.innerHeight;
                 const estimatedKeyboardHeight = Math.min(viewportHeight * 0.4, 300); // Примерно 40% экрана или 300px
-                const availableHeight = viewportHeight - estimatedKeyboardHeight;
                 
-                // Вычисляем позицию для прокрутки (центрируем в видимой области над клавиатурой)
-                const scrollOffset = Math.max(100, availableHeight / 3); // Минимум 100px отступ
+                // Доступная высота = высота экрана - клавиатура - элементы снизу
+                const availableHeight = viewportHeight - estimatedKeyboardHeight - totalBottomElementsHeight;
+                
+                // Получаем текущую позицию элемента
+                const rect = targetElement.getBoundingClientRect();
+                const elementTop = rect.top + window.pageYOffset;
+                const elementHeight = rect.height;
+                
+                // Вычисляем позицию для прокрутки
+                // Поле должно быть в верхней части доступной области (с отступом)
+                const scrollOffset = Math.max(120, availableHeight * 0.2); // 20% от доступной высоты или минимум 120px
                 const targetScroll = elementTop - scrollOffset;
                 
                 // Плавная прокрутка
@@ -2258,29 +2353,72 @@ async function setupPromoCode() {
                     behavior: 'smooth'
                 });
                 
-                // Альтернативный метод для лучшей совместимости (резервный)
-                setTimeout(() => {
-                    targetElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'nearest'
-                    });
-                }, 100);
+                console.log('[Promo Scroll]', {
+                    viewportHeight,
+                    estimatedKeyboardHeight,
+                    totalBottomElementsHeight,
+                    availableHeight,
+                    elementTop,
+                    targetScroll,
+                    scrollOffset
+                });
+            }
+        };
+        
+        // Временно скрываем кнопку Purchase и нижнее меню при фокусе на поле промокода
+        const hideBottomElements = () => {
+            if (purchaseButtonContainer) {
+                purchaseButtonContainer.style.display = 'none';
+            }
+            if (bottomNav) {
+                bottomNav.style.display = 'none';
+            }
+        };
+        
+        const showBottomElements = () => {
+            if (purchaseButtonContainer) {
+                purchaseButtonContainer.style.display = '';
+            }
+            if (bottomNav) {
+                bottomNav.style.display = '';
             }
         };
         
         // Обработчик focus - основное событие
         promoInput.addEventListener('focus', () => {
+            // Скрываем элементы снизу
+            hideBottomElements();
+            
             // Используем несколько задержек для учета появления клавиатуры
             requestAnimationFrame(() => {
-                setTimeout(scrollToPromoInput, 100); // Первая попытка
-                setTimeout(scrollToPromoInput, 300); // Вторая попытка (когда клавиатура уже появилась)
-                setTimeout(scrollToPromoInput, 500); // Третья попытка (на случай медленной клавиатуры)
+                setTimeout(() => {
+                    scrollToPromoInput();
+                }, 100); // Первая попытка
+                setTimeout(() => {
+                    scrollToPromoInput();
+                }, 300); // Вторая попытка (когда клавиатура уже появилась)
+                setTimeout(() => {
+                    scrollToPromoInput();
+                }, 500); // Третья попытка (на случай медленной клавиатуры)
             });
+        });
+        
+        // Показываем элементы обратно при потере фокуса
+        promoInput.addEventListener('blur', () => {
+            // Небольшая задержка, чтобы пользователь мог нажать кнопку OK
+            setTimeout(() => {
+                // Проверяем, что фокус действительно ушел (не перешел на другую кнопку)
+                if (document.activeElement !== promoInput && 
+                    document.activeElement !== promoBtn &&
+                    document.activeElement !== purchaseButtonContainer?.querySelector('#purchaseBtn')) {
+                    showBottomElements();
+                }
+            }, 200);
         });
         
         // Также обрабатываем событие touchstart для мобильных устройств (предварительная прокрутка)
         promoInput.addEventListener('touchstart', () => {
+            hideBottomElements();
             requestAnimationFrame(() => {
                 scrollToPromoInput();
             });
