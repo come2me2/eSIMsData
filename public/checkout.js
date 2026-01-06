@@ -1236,19 +1236,9 @@ function setupPromoCode() {
                 clearTimeout(scrollTimeout);
             }
             
-            // Используем visualViewport API, если доступен (лучше работает в Telegram WebView)
-            const visualViewport = window.visualViewport;
-            const viewportHeight = visualViewport ? visualViewport.height : window.innerHeight;
-            
-            if (targetElement) {
-                // Вычисляем видимую высоту экрана (с учетом клавиатуры)
-                // В Telegram WebView клавиатура может занимать до 50% экрана
-                const estimatedKeyboardHeight = Math.min(viewportHeight * 0.5, 350);
-                
-                // Получаем текущую позицию элемента
-                const rect = targetElement.getBoundingClientRect();
-                const elementTop = rect.top + window.pageYOffset;
-                const elementHeight = rect.height;
+            // Используем уже вычисленные значения (visualViewport, viewportHeight, estimatedKeyboardHeight, rect)
+            const elementTop = rect.top + window.pageYOffset;
+            const elementHeight = rect.height;
                 
                 // Вычисляем позицию для прокрутки
                 // Поле должно быть в верхней части видимой области (с учетом клавиатуры)
