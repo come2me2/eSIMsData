@@ -1204,11 +1204,31 @@ function setupPromoCode() {
         const scrollToPromoInput = () => {
             const now = Date.now();
             
-            // Debounce: предотвращаем слишком частые прокрутки
-            if (now - lastScrollTime < SCROLL_DEBOUNCE) {
+            // Получаем позицию поля промокода для проверки видимости
+            const promoCard = promoInput.closest('.promo-card');
+            const targetElement = promoCard || promoInput;
+            
+            if (!targetElement) {
                 return;
             }
             
+            // Проверяем, видно ли поле в видимой области
+            const rect = targetElement.getBoundingClientRect();
+            const visualViewport = window.visualViewport;
+            const viewportHeight = visualViewport ? visualViewport.height : window.innerHeight;
+            const estimatedKeyboardHeight = Math.min(viewportHeight * 0.5, 350);
+            const visibleTop = 0;
+            const visibleBottom = viewportHeight - estimatedKeyboardHeight;
+            
+            // Если поле видно в видимой области, не прокручиваем (debounce)
+            const isVisible = rect.top >= visibleTop && rect.top <= visibleBottom;
+            
+            // Debounce: предотвращаем слишком частые прокрутки, НО только если поле уже видно
+            if (isVisible && now - lastScrollTime < SCROLL_DEBOUNCE) {
+                return;
+            }
+            
+            // Если поле не видно или прошло достаточно времени, прокручиваем
             lastScrollTime = now;
             
             // Очищаем предыдущий таймаут, если есть
@@ -1219,10 +1239,6 @@ function setupPromoCode() {
             // Используем visualViewport API, если доступен (лучше работает в Telegram WebView)
             const visualViewport = window.visualViewport;
             const viewportHeight = visualViewport ? visualViewport.height : window.innerHeight;
-            
-            // Получаем позицию поля промокода
-            const promoCard = promoInput.closest('.promo-card');
-            const targetElement = promoCard || promoInput;
             
             if (targetElement) {
                 // Вычисляем видимую высоту экрана (с учетом клавиатуры)
@@ -1306,6 +1322,9 @@ function setupPromoCode() {
         
         // Показываем элементы обратно при потере фокуса
         promoInput.addEventListener('blur', () => {
+            // Сбрасываем lastScrollTime при потере фокуса, чтобы следующее фокусирование работало
+            lastScrollTime = 0;
+            
             // Небольшая задержка, чтобы пользователь мог нажать кнопку OK
             setTimeout(() => {
                 // Проверяем, что фокус действительно ушел (не перешел на другую кнопку)
