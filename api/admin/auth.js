@@ -3,16 +3,43 @@
  * Endpoint: POST /api/admin/auth/login
  */
 
-// Простая аутентификация (в продакшене использовать JWT + bcrypt)
-const ADMIN_CREDENTIALS = {
+const fs = require('fs').promises;
+const path = require('path');
+const bcrypt = require('bcryptjs');
+
+const CREDENTIALS_FILE = path.join(__dirname, '..', '..', 'data', 'admin-credentials.json');
+
+// Default credentials (same as in change-password.js)
+const DEFAULT_CREDENTIALS = {
     username: process.env.ADMIN_USERNAME || 'admin',
     password: process.env.ADMIN_PASSWORD || 'admin123'
 };
 
+// Load admin credentials
+async function loadCredentials() {
+    try {
+        // Check if file exists
+        await fs.access(CREDENTIALS_FILE);
+        const data = await fs.readFile(CREDENTIALS_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            // File doesn't exist, return default credentials
+            return {
+                username: DEFAULT_CREDENTIALS.username,
+                password: DEFAULT_CREDENTIALS.password, // Plain text for default
+                createdAt: new Date().toISOString()
+            };
+        }
+        console.error('Error loading credentials:', error);
+        return null;
+    }
+}
+
 // Простой JWT токен (в продакшене использовать библиотеку jsonwebtoken)
-function generateToken() {
+function generateToken(username) {
     const payload = {
-        username: ADMIN_CREDENTIALS.username,
+        username: username || DEFAULT_CREDENTIALS.username,
         timestamp: Date.now(),
         exp: Date.now() + (24 * 60 * 60 * 1000) // 24 часа
     };
@@ -60,21 +87,50 @@ module.exports = async function handler(req, res) {
                 });
             }
             
-            // Проверяем credentials
-            if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-                const token = generateToken();
-                
-                return res.status(200).json({
-                    success: true,
-                    token,
-                    username: ADMIN_CREDENTIALS.username
+            // Load credentials from file
+            const credentials = await loadCredentials();
+            if (!credentials) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to load credentials'
                 });
-            } else {
+            }
+            
+            // Check username
+            if (username !== credentials.username && username !== DEFAULT_CREDENTIALS.username) {
                 return res.status(401).json({
                     success: false,
                     error: 'Invalid credentials'
                 });
             }
+            
+            // Verify password
+            // Check if password is hashed (starts with $2a$ or $2b$)
+            let isValidPassword = false;
+            if (credentials.password && (credentials.password.startsWith('$2a$') || credentials.password.startsWith('$2b$'))) {
+                // Password is hashed, use bcrypt.compare
+                isValidPassword = await bcrypt.compare(password, credentials.password);
+            } else {
+                // Password is plain text (fallback for default credentials or migration)
+                isValidPassword = password === credentials.password || password === DEFAULT_CREDENTIALS.password;
+            }
+            
+            if (!isValidPassword) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Invalid credentials'
+                });
+            }
+            
+            // Generate token
+            const currentUsername = credentials.username || DEFAULT_CREDENTIALS.username;
+            const token = generateToken(currentUsername);
+            
+            return res.status(200).json({
+                success: true,
+                token,
+                username: currentUsername
+            });
         } catch (error) {
             console.error('Login error:', error);
             return res.status(500).json({
