@@ -7,17 +7,49 @@ if (tg) {
     tg.expand();
     
     // Set theme colors
-    tg.setHeaderColor('#FFFFFF');
-    tg.setBackgroundColor('#F2F2F7');
-    
-    // Показываем кнопку "назад" в Telegram
-    if (tg.BackButton) {
-        tg.BackButton.show();
-        tg.BackButton.onClick(() => {
-            tg.HapticFeedback.impactOccurred('light');
-            window.history.back();
-        });
+    try {
+        if (tg.setHeaderColor) tg.setHeaderColor('#FFFFFF');
+        if (tg.setBackgroundColor) tg.setBackgroundColor('#F2F2F7');
+    } catch (e) {
+        console.warn('Theme colors not supported:', e);
     }
+    
+    // Показываем кнопку "назад" в Telegram (вместо Close)
+    // Используем правильную инициализацию без мерцания
+    const initBackButton = () => {
+        if (tg && tg.BackButton) {
+            try {
+                // Удаляем предыдущий обработчик, если метод доступен
+                if (typeof tg.BackButton.offClick === 'function') {
+                    try {
+                        tg.BackButton.offClick();
+                    } catch (e) {}
+                }
+                
+                // Показываем кнопку
+                tg.BackButton.show();
+                
+                // Устанавливаем обработчик
+                tg.BackButton.onClick(() => {
+                    if (tg && tg.HapticFeedback) {
+                        try {
+                            tg.HapticFeedback.impactOccurred('light');
+                        } catch (e) {}
+                    }
+                    // Возвращаемся на предыдущий экран (Account)
+                    window.location.href = 'account.html';
+                });
+                console.log('✅ BackButton показана на Terms of Use');
+            } catch (e) {
+                console.error('❌ Ошибка при показе BackButton:', e);
+            }
+        }
+    };
+    
+    // Используем requestAnimationFrame для плавной инициализации без мерцания
+    requestAnimationFrame(() => {
+        initBackButton();
+    });
 }
 
 // Initialize app

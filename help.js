@@ -15,28 +15,45 @@ if (tg) {
     }
     
     // Показываем кнопку "назад" в Telegram (вместо Close)
-    // Упрощенная инициализация - вызываем сразу после ready()
-    if (tg && tg.BackButton) {
-        try {
-            tg.BackButton.show();
-            tg.BackButton.onClick(() => {
-                if (tg && tg.HapticFeedback) {
+    // Используем правильную инициализацию без мерцания
+    const initBackButton = () => {
+        if (tg && tg.BackButton) {
+            try {
+                // Удаляем предыдущий обработчик, если метод доступен
+                if (typeof tg.BackButton.offClick === 'function') {
                     try {
-                        tg.HapticFeedback.impactOccurred('light');
+                        tg.BackButton.offClick();
                     } catch (e) {}
                 }
-                // Возвращаемся на предыдущий экран
-                if (window.history.length > 1) {
-                    window.history.back();
-                } else {
-                    window.location.href = 'index.html';
-                }
-            });
-            console.log('✅ BackButton показана на Help');
-        } catch (e) {
-            console.error('❌ Ошибка при показе BackButton:', e);
+                
+                // Показываем кнопку
+                tg.BackButton.show();
+                
+                // Устанавливаем обработчик
+                tg.BackButton.onClick(() => {
+                    if (tg && tg.HapticFeedback) {
+                        try {
+                            tg.HapticFeedback.impactOccurred('light');
+                        } catch (e) {}
+                    }
+                    // Возвращаемся на предыдущий экран
+                    if (window.history.length > 1) {
+                        window.history.back();
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                });
+                console.log('✅ BackButton показана на Help');
+            } catch (e) {
+                console.error('❌ Ошибка при показе BackButton:', e);
+            }
         }
-    }
+    };
+    
+    // Используем requestAnimationFrame для плавной инициализации без мерцания
+    requestAnimationFrame(() => {
+        initBackButton();
+    });
 }
 
 // Initialize app
