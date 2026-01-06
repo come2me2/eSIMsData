@@ -457,7 +457,9 @@ const Payments = {
             if (editMode) {
                 // Editing
                 const editCodeValue = document.getElementById('promocodeEditCode').value;
-                response = await Auth.authenticatedFetch(`/api/admin/settings/promocodes/${editCodeValue}`, {
+                // Кодируем код промокода для безопасной передачи в URL (особенно для символов типа #)
+                const encodedCode = encodeURIComponent(editCodeValue);
+                response = await Auth.authenticatedFetch(`/api/admin/settings/promocodes/${encodedCode}`, {
                     method: 'PUT',
                     body: JSON.stringify(promocodeData)
                 });
@@ -517,7 +519,9 @@ const Payments = {
         if (!confirm(`Delete promocode ${code}?`)) return;
         
         try {
-            const response = await Auth.authenticatedFetch(`/api/admin/settings/promocodes/${code}`, {
+            // Кодируем код промокода для безопасной передачи в URL (особенно для символов типа #)
+            const encodedCode = encodeURIComponent(code);
+            const response = await Auth.authenticatedFetch(`/api/admin/settings/promocodes/${encodedCode}`, {
                 method: 'DELETE'
             });
             

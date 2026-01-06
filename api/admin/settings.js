@@ -100,7 +100,8 @@ async function handler(req, res) {
     try {
         const urlParts = req.path.split('/').filter(Boolean);
         const section = urlParts[0]; // markup, paymentMethods, promocodes
-        const resourceId = urlParts[1]; // код промокода для DELETE/PUT
+        // Декодируем resourceId из URL (на случай, если код промокода содержит специальные символы типа #)
+        const resourceId = urlParts[1] ? decodeURIComponent(urlParts[1]) : null; // код промокода для DELETE/PUT
         
         // GET /api/admin/settings - получить все настройки
         if (req.method === 'GET' && !section) {
