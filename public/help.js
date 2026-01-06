@@ -10,9 +10,16 @@ if (tg) {
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
     
-    // Help - это главная вкладка, скрываем кнопку "назад"
+    // Показываем кнопку "назад" в Telegram (вместо Close)
     if (tg.BackButton) {
-        tg.BackButton.hide();
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            // Возвращаемся на предыдущий экран
+            window.history.back();
+        });
     }
 }
 

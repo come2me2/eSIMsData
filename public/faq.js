@@ -10,12 +10,15 @@ if (tg) {
     tg.setHeaderColor('#FFFFFF');
     tg.setBackgroundColor('#F2F2F7');
     
-    // Показываем кнопку "назад" в Telegram
+    // Показываем кнопку "назад" в Telegram (вместо Close)
     if (tg.BackButton) {
         tg.BackButton.show();
         tg.BackButton.onClick(() => {
-            tg.HapticFeedback.impactOccurred('light');
-            window.history.back();
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            // Возвращаемся на экран Help
+            window.location.href = 'help.html';
         });
     }
 }
