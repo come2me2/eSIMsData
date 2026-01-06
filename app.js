@@ -729,18 +729,61 @@ function setupSearch() {
 // Setup bottom navigation
 function setupNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
+    console.log(`[Navigation] Found ${navItems.length} navigation items`);
     
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
+    navItems.forEach((item, index) => {
+        const label = item.querySelector('.nav-label')?.textContent;
+        console.log(`[Navigation] Setting up item ${index}: ${label}`);
+        
+        // Обработчик для обычных кликов
+        const handleClick = (e) => {
+            console.log(`[Navigation] Click event on: ${label}`, e);
+            e.preventDefault();
+            e.stopPropagation();
+            
             // Remove active class from all items
             navItems.forEach(i => i.classList.remove('active'));
             // Add active class to clicked item
             item.classList.add('active');
             
-            const label = item.querySelector('.nav-label').textContent;
-            handleNavigationClick(label);
-        });
+            if (label) {
+                handleNavigationClick(label);
+            }
+        };
+        
+        // Обработчик для touch событий (важно для Telegram Mini App)
+        const handleTouch = (e) => {
+            console.log(`[Navigation] Touch event on: ${label}`, e);
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Remove active class from all items
+            navItems.forEach(i => i.classList.remove('active'));
+            // Add active class to clicked item
+            item.classList.add('active');
+            
+            if (label) {
+                handleNavigationClick(label);
+            }
+        };
+        
+        // Добавляем обработчики для разных типов событий
+        item.addEventListener('click', handleClick, true); // capture phase для надежности
+        item.addEventListener('touchend', handleTouch, { passive: false, capture: true });
+        item.addEventListener('touchstart', (e) => {
+            // Предотвращаем скролл при тапе на кнопку
+            e.stopPropagation();
+        }, { passive: false });
+        
+        // Дополнительный обработчик onclick для максимальной совместимости
+        item.onclick = handleClick;
+        
+        // Убеждаемся, что элемент кликабелен
+        item.style.pointerEvents = 'auto';
+        item.style.cursor = 'pointer';
     });
+    
+    console.log('[Navigation] Navigation setup complete');
 }
 
 // Handle region click
@@ -783,21 +826,33 @@ function handleCountryClick(country) {
 
 // Handle navigation click
 function handleNavigationClick(section) {
-    if (tg) {
-        tg.HapticFeedback.impactOccurred('light');
+    console.log(`[Navigation] Navigating to: ${section}`);
+    
+    if (tg && tg.HapticFeedback) {
+        try {
+            tg.HapticFeedback.impactOccurred('light');
+        } catch (e) {
+            console.warn('[Navigation] Haptic feedback failed:', e);
+        }
     }
     
     // Use optimized navigation if available
-    const navigate = window.optimizedNavigate || ((url) => { window.location.href = url; });
+    const navigate = window.optimizedNavigate || ((url) => { 
+        console.log(`[Navigation] Navigating to: ${url}`);
+        window.location.href = url; 
+    });
     
     // Navigate to different sections
     if (section === 'Account') {
         navigate('account.html');
     } else if (section === 'Buy eSIM') {
         // Already on Buy eSIM page
+        console.log('[Navigation] Already on Buy eSIM page');
         return;
     } else if (section === 'Help') {
         navigate('help.html');
+    } else {
+        console.warn(`[Navigation] Unknown section: ${section}`);
     }
 }
 
