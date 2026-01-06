@@ -11,39 +11,24 @@ if (tg) {
     tg.setBackgroundColor('#F2F2F7');
     
     // Показываем кнопку "назад" в Telegram (вместо Close)
-    // Важно: вызываем после ready() и с небольшой задержкой для надежности
-    const showBackButton = () => {
-        if (tg && tg.BackButton) {
-            try {
-                // Сначала скрываем, чтобы сбросить состояние
-                tg.BackButton.hide();
-                
-                // Затем показываем
-                setTimeout(() => {
-                    if (tg && tg.BackButton) {
-                        tg.BackButton.show();
-                        tg.BackButton.onClick(() => {
-                            if (tg && tg.HapticFeedback) {
-                                try {
-                                    tg.HapticFeedback.impactOccurred('light');
-                                } catch (e) {}
-                            }
-                            // Возвращаемся на экран Help
-                            window.location.href = 'help.html';
-                        });
-                        console.log('✅ BackButton показана на FAQ');
-                    }
-                }, 50);
-            } catch (e) {
-                console.error('❌ Ошибка при показе BackButton:', e);
-            }
+    // Упрощенная инициализация - вызываем сразу после ready()
+    if (tg && tg.BackButton) {
+        try {
+            tg.BackButton.show();
+            tg.BackButton.onClick(() => {
+                if (tg && tg.HapticFeedback) {
+                    try {
+                        tg.HapticFeedback.impactOccurred('light');
+                    } catch (e) {}
+                }
+                // Возвращаемся на экран Help
+                window.location.href = 'help.html';
+            });
+            console.log('✅ BackButton показана на FAQ');
+        } catch (e) {
+            console.error('❌ Ошибка при показе BackButton:', e);
         }
-    };
-    
-    // Пробуем несколько раз для надежности
-    showBackButton();
-    setTimeout(showBackButton, 100);
-    setTimeout(showBackButton, 300);
+    }
 }
 
 // Initialize app
