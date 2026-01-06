@@ -1196,17 +1196,20 @@ function setupPromoCode() {
         const bottomNav = document.querySelector('.bottom-nav');
         
         // Флаг для предотвращения множественных прокруток одновременно
-        let isScrolling = false;
         let scrollTimeout = null;
+        let lastScrollTime = 0;
+        const SCROLL_DEBOUNCE = 300; // Минимальный интервал между прокрутками (мс)
         
         // Auto-scroll to promo input when focused (to keep it visible above keyboard)
         const scrollToPromoInput = () => {
-            // Предотвращаем множественные прокрутки
-            if (isScrolling) {
+            const now = Date.now();
+            
+            // Debounce: предотвращаем слишком частые прокрутки
+            if (now - lastScrollTime < SCROLL_DEBOUNCE) {
                 return;
             }
             
-            isScrolling = true;
+            lastScrollTime = now;
             
             // Очищаем предыдущий таймаут, если есть
             if (scrollTimeout) {
@@ -1222,39 +1225,43 @@ function setupPromoCode() {
             const targetElement = promoCard || promoInput;
             
             if (targetElement) {
-                // Вычисляем высоту элементов, которые могут перекрывать поле
-                const purchaseButtonHeight = purchaseButtonContainer ? purchaseButtonContainer.offsetHeight : 0;
-                const bottomNavHeight = bottomNav ? bottomNav.offsetHeight : 0;
-                const totalBottomElementsHeight = purchaseButtonHeight + bottomNavHeight;
-                
                 // Вычисляем видимую высоту экрана (с учетом клавиатуры)
                 // В Telegram WebView клавиатура может занимать до 50% экрана
                 const estimatedKeyboardHeight = Math.min(viewportHeight * 0.5, 350);
                 
-                // Доступная высота = высота экрана - клавиатура - элементы снизу
-                const availableHeight = viewportHeight - estimatedKeyboardHeight - totalBottomElementsHeight;
-                
                 // Получаем текущую позицию элемента
                 const rect = targetElement.getBoundingClientRect();
                 const elementTop = rect.top + window.pageYOffset;
+                const elementHeight = rect.height;
                 
                 // Вычисляем позицию для прокрутки
-                // Поле должно быть в верхней части доступной области (с отступом)
-                const scrollOffset = Math.max(100, availableHeight * 0.15); // 15% от доступной высоты или минимум 100px
+                // Поле должно быть в верхней части видимой области (с учетом клавиатуры)
+                const scrollOffset = Math.max(150, estimatedKeyboardHeight * 0.3); // Отступ сверху
                 const targetScroll = elementTop - scrollOffset;
                 
-                // Используем только scrollTo для избежания конфликтов
-                window.scrollTo({
-                    top: Math.max(0, targetScroll),
-                    behavior: 'smooth'
-                });
-                
-                // Разрешаем следующую прокрутку через 500ms
-                scrollTimeout = setTimeout(() => {
-                    isScrolling = false;
-                }, 500);
-            } else {
-                isScrolling = false;
+                // Используем scrollIntoView для более надежной прокрутки в Telegram WebView
+                // Это более надежный способ, который учитывает видимую область
+                if (targetElement.scrollIntoView) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                        inline: 'nearest'
+                    });
+                    
+                    // Дополнительная корректировка через scrollTo для точности
+                    scrollTimeout = setTimeout(() => {
+                        window.scrollTo({
+                            top: Math.max(0, targetScroll),
+                            behavior: 'smooth'
+                        });
+                    }, 100);
+                } else {
+                    // Fallback для старых браузеров
+                    window.scrollTo({
+                        top: Math.max(0, targetScroll),
+                        behavior: 'smooth'
+                    });
+                }
             }
         };
         
@@ -1279,15 +1286,22 @@ function setupPromoCode() {
         
         // Обработчик focus - основное событие
         promoInput.addEventListener('focus', () => {
-            // Скрываем элементы снизу
+            // Скрываем элементы снизу СРАЗУ
             hideBottomElements();
             
-            // Прокручиваем один раз с задержкой для учета появления клавиатуры
-            requestAnimationFrame(() => {
-                setTimeout(() => {
-                    scrollToPromoInput();
-                }, 300); // Задержка для появления клавиатуры
-            });
+            // Прокручиваем с несколькими попытками для учета появления клавиатуры
+            // Первая попытка - сразу (на случай, если клавиатура уже появилась)
+            scrollToPromoInput();
+            
+            // Вторая попытка - через 200ms (когда клавиатура начинает появляться)
+            setTimeout(() => {
+                scrollToPromoInput();
+            }, 200);
+            
+            // Третья попытка - через 400ms (когда клавиатура уже появилась)
+            setTimeout(() => {
+                scrollToPromoInput();
+            }, 400);
         });
         
         // Показываем элементы обратно при потере фокуса
@@ -1304,9 +1318,13 @@ function setupPromoCode() {
         });
         
         // Также обрабатываем событие touchstart для мобильных устройств (предварительная прокрутка)
-        // НЕ прокручиваем здесь, чтобы избежать конфликтов - прокрутка произойдет при focus
         promoInput.addEventListener('touchstart', () => {
+            // Скрываем элементы сразу при касании
             hideBottomElements();
+            // Прокручиваем сразу (до появления клавиатуры)
+            requestAnimationFrame(() => {
+                scrollToPromoInput();
+            });
         }, { passive: true });
         
         // Обработчик изменения размера viewport (когда клавиатура появляется/исчезает)
@@ -1317,16 +1335,17 @@ function setupPromoCode() {
                 clearTimeout(resizeTimeout);
                 resizeTimeout = setTimeout(() => {
                     scrollToPromoInput();
-                }, 200); // Увеличена задержка для debounce
+                }, 150); // Debounce для resize
             }
         };
         
-        // Обрабатываем только visualViewport resize (лучше работает в Telegram WebView)
-        // НЕ обрабатываем обычный resize, чтобы избежать конфликтов
+        // Обрабатываем visualViewport resize (лучше работает в Telegram WebView)
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', handleViewportResize);
-            // НЕ обрабатываем scroll, чтобы избежать конфликтов
         }
+        
+        // Также обрабатываем обычный resize как fallback
+        window.addEventListener('resize', handleViewportResize);
     }
 }
 
