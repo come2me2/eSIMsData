@@ -7,20 +7,51 @@ if (tg) {
     tg.expand();
     
     // Set theme colors
-    tg.setHeaderColor('#FFFFFF');
-    tg.setBackgroundColor('#F2F2F7');
+    try {
+        if (tg.setHeaderColor) tg.setHeaderColor('#FFFFFF');
+        if (tg.setBackgroundColor) tg.setBackgroundColor('#F2F2F7');
+    } catch (e) {
+        console.warn('Theme colors not supported:', e);
+    }
     
     // Показываем кнопку "назад" в Telegram (вместо Close)
-    if (tg.BackButton) {
-        tg.BackButton.show();
-        tg.BackButton.onClick(() => {
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('light');
+    // Важно: вызываем после ready() и с небольшой задержкой для надежности
+    const showBackButton = () => {
+        if (tg && tg.BackButton) {
+            try {
+                // Сначала скрываем, чтобы сбросить состояние
+                tg.BackButton.hide();
+                
+                // Затем показываем
+                setTimeout(() => {
+                    if (tg && tg.BackButton) {
+                        tg.BackButton.show();
+                        tg.BackButton.onClick(() => {
+                            if (tg && tg.HapticFeedback) {
+                                try {
+                                    tg.HapticFeedback.impactOccurred('light');
+                                } catch (e) {}
+                            }
+                            // Возвращаемся на предыдущий экран
+                            if (window.history.length > 1) {
+                                window.history.back();
+                            } else {
+                                window.location.href = 'index.html';
+                            }
+                        });
+                        console.log('✅ BackButton показана на Help');
+                    }
+                }, 50);
+            } catch (e) {
+                console.error('❌ Ошибка при показе BackButton:', e);
             }
-            // Возвращаемся на предыдущий экран
-            window.history.back();
-        });
-    }
+        }
+    };
+    
+    // Пробуем несколько раз для надежности
+    showBackButton();
+    setTimeout(showBackButton, 100);
+    setTimeout(showBackButton, 300);
 }
 
 // Initialize app
@@ -55,44 +86,57 @@ function setupHelpItems() {
 
 // Setup bottom navigation
 function setupNavigation() {
-    // Account button
-    const accountNavBtn = Array.from(document.querySelectorAll('.nav-item')).find(item => 
-        item.querySelector('.nav-label')?.textContent === 'Account'
-    );
-    if (accountNavBtn) {
-        accountNavBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            window.location.href = 'account.html';
-        });
-    }
+    const navItems = document.querySelectorAll('.nav-item');
+    console.log(`[Help Navigation] Found ${navItems.length} navigation items`);
     
-    // Buy eSIM button
-    const buyESimNavBtn = Array.from(document.querySelectorAll('.nav-item')).find(item => 
-        item.querySelector('.nav-label')?.textContent === 'Buy eSIM'
-    );
-    if (buyESimNavBtn) {
-        buyESimNavBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
+    navItems.forEach((item, index) => {
+        const label = item.querySelector('.nav-label')?.textContent;
+        console.log(`[Help Navigation] Setting up item ${index}: ${label}`);
+        
+        // Обработчик для обычных кликов и touch событий
+        const handleAction = (e) => {
+            console.log(`[Help Navigation] Action on: ${label}`, e);
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Haptic feedback
+            if (tg && tg.HapticFeedback) {
+                try {
+                    tg.HapticFeedback.impactOccurred('light');
+                } catch (e) {}
             }
-            window.location.href = 'index.html';
-        });
-    }
+            
+            // Remove active class from all items
+            navItems.forEach(i => i.classList.remove('active'));
+            // Add active class to clicked item
+            item.classList.add('active');
+            
+            // Navigate
+            if (label === 'Account') {
+                window.location.href = 'account.html';
+            } else if (label === 'Buy eSIM') {
+                window.location.href = 'index.html';
+            } else if (label === 'Help') {
+                // Already on Help page
+                return;
+            }
+        };
+        
+        // Добавляем обработчики для разных типов событий
+        item.addEventListener('click', handleAction, true); // capture phase
+        item.addEventListener('touchend', handleAction, { passive: false, capture: true });
+        item.addEventListener('touchstart', (e) => {
+            e.stopPropagation();
+        }, { passive: false });
+        
+        // Дополнительный обработчик onclick
+        item.onclick = handleAction;
+        
+        // Убеждаемся, что элемент кликабелен
+        item.style.pointerEvents = 'auto';
+        item.style.cursor = 'pointer';
+    });
     
-    // Help button - already on Help page
-    const helpNavBtn = Array.from(document.querySelectorAll('.nav-item')).find(item => 
-        item.querySelector('.nav-label')?.textContent === 'Help'
-    );
-    if (helpNavBtn) {
-        helpNavBtn.addEventListener('click', () => {
-            if (tg) {
-                tg.HapticFeedback.impactOccurred('light');
-            }
-            // Already on Help page
-            return;
-        });
-    }
+    console.log('[Help Navigation] Navigation setup complete');
 }
 
