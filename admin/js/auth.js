@@ -86,18 +86,28 @@ const Auth = {
 };
 
 // Auto-protect pages (except login.html)
-// Выполняем после загрузки DOM, чтобы избежать проблем с путями
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        if (!window.location.pathname.includes('login.html') && !window.location.pathname.endsWith('/login.html')) {
+// Контент уже скрыт через inline скрипт в <head>
+const isLoginPage = window.location.pathname.includes('login.html') || window.location.pathname.endsWith('/login.html');
+
+// Функция для проверки и показа контента
+function checkAuthAndShowContent() {
+    if (!isLoginPage) {
+        if (Auth.isAuthenticated()) {
+            // Показываем контент только если авторизован
+            document.body.style.display = '';
+        } else {
+            // Перенаправляем на страницу входа
             Auth.protectPage();
         }
-    });
+    }
+}
+
+// Выполняем проверку как можно раньше
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkAuthAndShowContent);
 } else {
     // DOM уже загружен
-    if (!window.location.pathname.includes('login.html') && !window.location.pathname.endsWith('/login.html')) {
-        Auth.protectPage();
-    }
+    checkAuthAndShowContent();
 }
 
 // Logout button handler

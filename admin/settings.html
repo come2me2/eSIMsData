@@ -6,6 +6,12 @@
     <title>Settings - eSIMsData Admin</title>
     <link rel="stylesheet" href="css/tailwind.css">
     <link rel="stylesheet" href="css/admin.css">
+    <script>
+        // Скрываем контент сразу, до загрузки скриптов
+        if (!window.location.pathname.includes('login.html') && !window.location.pathname.endsWith('/login.html')) {
+            document.write('<style>body { display: none !important; }</style>');
+        }
+    </script>
 </head>
 <body class="bg-gray-100">
     <!-- Mobile Menu Button -->
@@ -117,9 +123,9 @@
         </div>
     </main>
 
+    <script src="js/auth.js?v=20260106_1347"></script>
     <script src="js/i18n.js"></script>
     <script src="js/sidebar.js"></script>
-    <script src="js/auth.js?v=20260106_1347"></script>
     <script src="js/settings.js?v=20260106_1347"></script>
     <script src="js/mobile-menu.js?v=20260106_1347"></script>
 </body>
