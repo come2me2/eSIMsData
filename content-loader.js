@@ -36,6 +36,72 @@ function formatTextContent(text) {
 }
 
 /**
+ * Format policy content (Privacy, Terms, Refund) with proper paragraph structure
+ */
+function formatPolicyContent(text, section) {
+    // Extract title if present (first line before double newline)
+    let content = text.trim();
+    let title = '';
+    const titleMatch = content.match(/^([^\n]+)\n\s*\n/);
+    if (titleMatch) {
+        title = titleMatch[1].trim();
+        content = content.substring(titleMatch[0].length).trim();
+    }
+    
+    // Split by double newlines to get paragraphs
+    const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim());
+    
+    let html = '';
+    
+    // Add title if exists
+    if (title) {
+        const sectionTitles = {
+            'privacy': 'Privacy Policy',
+            'terms': 'Terms of Use',
+            'refund': 'Refund Policy'
+        };
+        html += `<h2 class="policy-title">${sectionTitles[section] || title}</h2>`;
+    }
+    
+    // Format each paragraph
+    html += '<div class="policy-text">';
+    paragraphs.forEach(paragraph => {
+        const trimmed = paragraph.trim();
+        if (!trimmed) return;
+        
+        // Check if paragraph starts with a heading-like line (ends with : or is short and uppercase)
+        const lines = trimmed.split('\n');
+        const firstLine = lines[0].trim();
+        const isHeading = firstLine.length < 100 && (
+            firstLine.endsWith(':') || 
+            firstLine === firstLine.toUpperCase() ||
+            /^[A-Z][a-z]+(\s+[A-Z][a-z]+)*:?$/.test(firstLine)
+        );
+        
+        if (isHeading && lines.length > 1) {
+            // This is a heading followed by content
+            const heading = formatTextContent(firstLine);
+            const content = lines.slice(1).join('\n').trim();
+            
+            html += `<h3 class="policy-section-title">${heading}</h3>`;
+            
+            // Format content with line breaks
+            const formattedContent = formatTextContent(content);
+            const withBreaks = formattedContent.replace(/\n/g, '<br>');
+            html += `<p class="policy-paragraph">${withBreaks}</p>`;
+        } else {
+            // Regular paragraph - format with line breaks
+            const formatted = formatTextContent(trimmed);
+            const withBreaks = formatted.replace(/\n/g, '<br>');
+            html += `<p class="policy-paragraph">${withBreaks}</p>`;
+        }
+    });
+    html += '</div>';
+    
+    return html;
+}
+
+/**
  * Format FAQ content as question-answer pairs
  */
 function formatFAQContent(text) {
@@ -164,8 +230,8 @@ async function loadPageContent() {
                 // Format FAQ with title and structured Q&A
                 formattedContent = titleHTML + formatFAQContent(data.content);
             } else {
-                // Format other content as plain text
-                formattedContent = formatTextContent(data.content).replace(/\n/g, '<br>');
+                // Format policy content with proper paragraph structure
+                formattedContent = formatPolicyContent(data.content, section);
             }
             
             // Wrap text content in a div to preserve line breaks
