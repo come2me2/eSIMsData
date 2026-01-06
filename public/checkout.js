@@ -1176,6 +1176,72 @@ function setupPromoCode() {
                 }
             }
         });
+        
+        // Auto-scroll to promo input when focused (to keep it visible above keyboard)
+        const scrollToPromoInput = () => {
+            // Получаем позицию поля промокода
+            const promoCard = promoInput.closest('.promo-card');
+            const targetElement = promoCard || promoInput;
+            
+            if (targetElement) {
+                // Получаем текущую позицию элемента
+                const rect = targetElement.getBoundingClientRect();
+                const elementTop = rect.top + window.pageYOffset;
+                
+                // Вычисляем видимую высоту экрана (с учетом клавиатуры)
+                const viewportHeight = window.innerHeight;
+                const estimatedKeyboardHeight = Math.min(viewportHeight * 0.4, 300); // Примерно 40% экрана или 300px
+                const availableHeight = viewportHeight - estimatedKeyboardHeight;
+                
+                // Вычисляем позицию для прокрутки (центрируем в видимой области над клавиатурой)
+                const scrollOffset = Math.max(100, availableHeight / 3); // Минимум 100px отступ
+                const targetScroll = elementTop - scrollOffset;
+                
+                // Плавная прокрутка
+                window.scrollTo({
+                    top: Math.max(0, targetScroll),
+                    behavior: 'smooth'
+                });
+                
+                // Альтернативный метод для лучшей совместимости (резервный)
+                setTimeout(() => {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'nearest'
+                    });
+                }, 100);
+            }
+        };
+        
+        // Обработчик focus - основное событие
+        promoInput.addEventListener('focus', () => {
+            // Используем несколько задержек для учета появления клавиатуры
+            requestAnimationFrame(() => {
+                setTimeout(scrollToPromoInput, 100); // Первая попытка
+                setTimeout(scrollToPromoInput, 300); // Вторая попытка (когда клавиатура уже появилась)
+                setTimeout(scrollToPromoInput, 500); // Третья попытка (на случай медленной клавиатуры)
+            });
+        });
+        
+        // Также обрабатываем событие touchstart для мобильных устройств (предварительная прокрутка)
+        promoInput.addEventListener('touchstart', () => {
+            requestAnimationFrame(() => {
+                scrollToPromoInput();
+            });
+        }, { passive: true });
+        
+        // Обработчик изменения размера viewport (когда клавиатура появляется/исчезает)
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            // Если поле в фокусе, прокручиваем снова
+            if (document.activeElement === promoInput) {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    scrollToPromoInput();
+                }, 100);
+            }
+        });
     }
 }
 
