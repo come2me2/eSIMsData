@@ -1,19 +1,40 @@
 // Telegram Web App initialization
 let tg = window.Telegram.WebApp;
 
+// Функция для гарантированного скрытия BackButton (чтобы Telegram показывал Close)
+function hideBackButtonOnRootPage(pageName) {
+    if (!tg || !tg.BackButton) return;
+    try {
+        tg.BackButton.hide();
+        console.log(`🔙 BackButton скрыта на странице ${pageName} (должна быть кнопка Close)`);
+    } catch (e) {
+        console.warn(`⚠️ Не удалось скрыть BackButton на странице ${pageName}:`, e);
+    }
+}
+
 // Initialize Telegram Web App
 if (tg) {
     tg.ready();
     tg.expand();
     
     // Set theme colors
-    tg.setHeaderColor('#FFFFFF');
-    tg.setBackgroundColor('#F2F2F7');
-    
-    // Account - это главная вкладка, скрываем кнопку "назад"
-    if (tg.BackButton) {
-        tg.BackButton.hide();
+    try {
+        if (tg.setHeaderColor) tg.setHeaderColor('#FFFFFF');
+        if (tg.setBackgroundColor) tg.setBackgroundColor('#F2F2F7');
+    } catch (e) {
+        console.warn('Theme colors not supported on Account page:', e);
     }
+    
+    // Account - это главная вкладка, всегда скрываем BackButton (должна быть кнопка Close)
+    hideBackButtonOnRootPage('Account');
+    
+    // Дополнительно скрываем BackButton при показе/возврате на страницу
+    window.addEventListener('pageshow', () => hideBackButtonOnRootPage('Account (pageshow)'));
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            hideBackButtonOnRootPage('Account (visibilitychange)');
+        }
+    });
 }
 
 // Optimized navigation helper

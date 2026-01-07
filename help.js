@@ -1,6 +1,17 @@
 // Telegram Web App initialization
 let tg = window.Telegram.WebApp;
 
+// Функция для гарантированного скрытия BackButton (чтобы Telegram показывал Close)
+function hideBackButtonOnRootHelp(pageName) {
+    if (!tg || !tg.BackButton) return;
+    try {
+        tg.BackButton.hide();
+        console.log(`🔙 BackButton скрыта на странице ${pageName} (Help — должна быть кнопка Close)`);
+    } catch (e) {
+        console.warn(`⚠️ Не удалось скрыть BackButton на Help (${pageName}):`, e);
+    }
+}
+
 // Initialize Telegram Web App
 if (tg) {
     tg.ready();
@@ -11,48 +22,18 @@ if (tg) {
         if (tg.setHeaderColor) tg.setHeaderColor('#FFFFFF');
         if (tg.setBackgroundColor) tg.setBackgroundColor('#F2F2F7');
     } catch (e) {
-        console.warn('Theme colors not supported:', e);
+        console.warn('Theme colors not supported on Help page:', e);
     }
     
-    // Показываем кнопку "назад" в Telegram (вместо Close)
-    // Используем правильную инициализацию без мерцания
-    const initBackButton = () => {
-        if (tg && tg.BackButton) {
-            try {
-                // Удаляем предыдущий обработчик, если метод доступен
-                if (typeof tg.BackButton.offClick === 'function') {
-                    try {
-                        tg.BackButton.offClick();
-                    } catch (e) {}
-                }
-                
-                // Показываем кнопку
-                tg.BackButton.show();
-                
-                // Устанавливаем обработчик
-                tg.BackButton.onClick(() => {
-                    if (tg && tg.HapticFeedback) {
-                        try {
-                            tg.HapticFeedback.impactOccurred('light');
-                        } catch (e) {}
-                    }
-                    // Возвращаемся на предыдущий экран
-                    if (window.history.length > 1) {
-                        window.history.back();
-                    } else {
-                        window.location.href = 'index.html';
-                    }
-                });
-                console.log('✅ BackButton показана на Help');
-            } catch (e) {
-                console.error('❌ Ошибка при показе BackButton:', e);
-            }
-        }
-    };
+    // На корневой странице Help всегда должна быть кнопка Close (BackButton скрыт)
+    hideBackButtonOnRootHelp('Help');
     
-    // Используем requestAnimationFrame для плавной инициализации без мерцания
-    requestAnimationFrame(() => {
-        initBackButton();
+    // Дополнительно скрываем BackButton при показе/возврате на страницу
+    window.addEventListener('pageshow', () => hideBackButtonOnRootHelp('Help (pageshow)'));
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            hideBackButtonOnRootHelp('Help (visibilitychange)');
+        }
     });
 }
 
