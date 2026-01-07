@@ -540,8 +540,9 @@ const Orders = {
         const messageId = `addOrderMessage_${timestamp}`;
         
         const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center';
         modal.id = 'addOrderModal';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;';
         modal.innerHTML = `
             <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">Add Order from eSIMgo</h3>
