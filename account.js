@@ -3,10 +3,23 @@ let tg = window.Telegram.WebApp;
 
 // Немедленно скрываем BackButton при загрузке скрипта (до инициализации)
 // Это важно, так как предыдущая страница могла показать BackButton
-if (tg && tg.BackButton) {
-    tg.BackButton.hide();
-    console.log('🔙 BackButton скрыта немедленно при загрузке скрипта (Account)');
-}
+(function() {
+    const tg = window.Telegram?.WebApp;
+    if (tg && tg.BackButton) {
+        try {
+            // Удаляем все обработчики перед скрытием
+            if (typeof tg.BackButton.offClick === 'function') {
+                try {
+                    tg.BackButton.offClick();
+                } catch (e) {}
+            }
+            tg.BackButton.hide();
+            console.log('🔙 BackButton скрыта немедленно при загрузке скрипта (Account)');
+        } catch (e) {
+            console.warn('⚠️ Ошибка при немедленном скрытии BackButton:', e);
+        }
+    }
+})();
 
 // Функция для гарантированного скрытия BackButton (чтобы Telegram показывал Close)
 function hideBackButtonOnRootPage(pageName) {
