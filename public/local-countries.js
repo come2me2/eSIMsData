@@ -463,7 +463,14 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(hideBackButton, 50);
     
     initializeApp();
-    setupNavigation();
+    
+    // Настраиваем навигацию с задержкой для надежности
+    setTimeout(() => {
+        setupNavigation();
+    }, 0);
+    setTimeout(() => {
+        setupNavigation();
+    }, 100);
     
     // Принудительно скрываем BackButton после инициализации (чтобы показать Close)
     hideBackButton();
@@ -481,6 +488,10 @@ document.addEventListener('DOMContentLoaded', () => {
         bottomNav.style.position = 'fixed';
         bottomNav.style.bottom = '0';
         bottomNav.style.zIndex = '10000';
+        
+        // Убеждаемся, что навигация не блокируется
+        bottomNav.style.pointerEvents = 'auto';
+        bottomNav.style.touchAction = 'manipulation';
     } else {
         console.error('❌ Bottom nav not found in DOM');
     }
@@ -548,26 +559,44 @@ function setupNavigation() {
         };
         
         // Добавляем обработчики для разных типов событий с максимальным приоритетом
+        // Используем capture phase и не используем passive для возможности preventDefault
         cleanItem.addEventListener('click', handleAction, { capture: true, passive: false });
         cleanItem.addEventListener('touchend', handleAction, { capture: true, passive: false });
         cleanItem.addEventListener('touchstart', (e) => {
+            // Не вызываем handleAction здесь, только останавливаем всплытие
             e.stopPropagation();
             e.stopImmediatePropagation();
         }, { capture: true, passive: false });
         
         // Дополнительный обработчик onclick (для максимальной совместимости)
-        cleanItem.onclick = handleAction;
+        // Это важно для Telegram WebView
+        cleanItem.onclick = function(e) {
+            handleAction(e || window.event);
+        };
         
         // Также добавляем обработчик на mousedown для надежности
         cleanItem.addEventListener('mousedown', (e) => {
-            e.preventDefault();
+            // Не вызываем handleAction здесь, только останавливаем всплытие
             e.stopPropagation();
         }, { capture: true, passive: false });
         
         // Добавляем обработчик pointerdown (для современных браузеров)
         cleanItem.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
+            // Не вызываем handleAction здесь, только останавливаем всплытие
             e.stopPropagation();
+        }, { capture: true, passive: false });
+        
+        // Дополнительно: добавляем обработчик на уровне документа для перехвата
+        document.addEventListener('click', function(e) {
+            if (cleanItem.contains(e.target)) {
+                handleAction(e);
+            }
+        }, { capture: true, passive: false });
+        
+        document.addEventListener('touchend', function(e) {
+            if (cleanItem.contains(e.target)) {
+                handleAction(e);
+            }
         }, { capture: true, passive: false });
         
         console.log(`[Local Navigation] Handlers added for: ${label}`);
