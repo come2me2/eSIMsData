@@ -15,55 +15,67 @@
     <script src="preload.js?v=20260106_1347"></script>
     <script src="https://telegram.org/js/telegram-web-app.js?v=20260106_1347"></script>
     <script>
-        // Немедленно скрываем BackButton при загрузке страницы (до основного скрипта)
-        // Это критично для случаев восстановления из bfcache
-        (function hideBackButtonImmediately() {
-            // Функция для скрытия BackButton
-            function hide() {
-                if (window.Telegram && window.Telegram.WebApp) {
-                    const tg = window.Telegram.WebApp;
-                    if (tg && tg.BackButton) {
+        // КРИТИЧНО: Переопределяем BackButton.show() ДО загрузки любых других скриптов
+        // Это предотвращает показ BackButton на странице Account
+        (function overrideBackButtonShow() {
+            // Ждем загрузки Telegram WebApp
+            function setupOverride() {
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.BackButton) {
+                    const BackButton = window.Telegram.WebApp.BackButton;
+                    const originalShow = BackButton.show;
+                    
+                    // Переопределяем метод show() - всегда скрываем BackButton на Account
+                    BackButton.show = function() {
+                        console.log('⚠️ [Account] Попытка показать BackButton - блокируем и скрываем');
+                        // Вместо показа - скрываем
                         try {
-                            if (typeof tg.BackButton.offClick === 'function') {
-                                tg.BackButton.offClick();
+                            if (typeof this.offClick === 'function') {
+                                this.offClick();
                             }
-                            tg.BackButton.hide();
-                            console.log('🔙 BackButton скрыта inline скриптом (Account)');
+                            this.hide();
                         } catch (e) {
-                            console.warn('⚠️ Ошибка при inline скрытии BackButton:', e);
+                            console.warn('⚠️ Ошибка при блокировке BackButton.show():', e);
                         }
+                    };
+                    
+                    // Немедленно скрываем BackButton
+                    try {
+                        if (typeof BackButton.offClick === 'function') {
+                            BackButton.offClick();
+                        }
+                        BackButton.hide();
+                        console.log('🔙 [Account] BackButton переопределена и скрыта');
+                    } catch (e) {
+                        console.warn('⚠️ Ошибка при скрытии BackButton:', e);
                     }
                 }
             }
             
-            // Пытаемся скрыть сразу
-            hide();
+            // Пытаемся сразу
+            setupOverride();
             
-            // Множественные попытки для надежности
-            setTimeout(hide, 0);
-            setTimeout(hide, 10);
-            setTimeout(hide, 50);
-            setTimeout(hide, 100);
-            
-            // Обработка случая, когда Telegram WebApp загружается позже
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
-                    setTimeout(hide, 0);
-                    setTimeout(hide, 10);
-                    setTimeout(hide, 50);
-                    setTimeout(hide, 100);
-                });
+            // Если Telegram WebApp еще не загружен, ждем
+            if (!window.Telegram || !window.Telegram.WebApp) {
+                const checkInterval = setInterval(function() {
+                    if (window.Telegram && window.Telegram.WebApp) {
+                        clearInterval(checkInterval);
+                        setupOverride();
+                    }
+                }, 10);
+                
+                // Останавливаем проверку через 5 секунд
+                setTimeout(function() {
+                    clearInterval(checkInterval);
+                }, 5000);
             }
             
-            // Обработка pageshow (включая bfcache)
+            // Также обрабатываем pageshow (bfcache)
             window.addEventListener('pageshow', function(event) {
-                console.log('🔙 pageshow в inline скрипте', { persisted: event.persisted });
-                hide();
-                setTimeout(hide, 0);
-                setTimeout(hide, 10);
-                setTimeout(hide, 50);
-                setTimeout(hide, 100);
-                setTimeout(hide, 200);
+                console.log('🔙 [Account] pageshow в inline скрипте', { persisted: event.persisted });
+                setupOverride();
+                setTimeout(setupOverride, 0);
+                setTimeout(setupOverride, 50);
+                setTimeout(setupOverride, 100);
             });
         })();
     </script>

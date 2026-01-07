@@ -491,37 +491,14 @@ function setupNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     console.log(`[Local Navigation] Found ${navItems.length} navigation items`);
     
+    if (navItems.length === 0) {
+        console.error('❌ [Local Navigation] No navigation items found!');
+        return;
+    }
+    
     navItems.forEach((item, index) => {
         const label = item.querySelector('.nav-label')?.textContent;
         console.log(`[Local Navigation] Setting up item ${index}: ${label}`);
-        
-        // Обработчик для обычных кликов и touch событий
-        const handleAction = (e) => {
-            console.log(`[Local Navigation] Action on: ${label}`, e);
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Haptic feedback
-            if (tg && tg.HapticFeedback) {
-                try {
-                    tg.HapticFeedback.impactOccurred('light');
-                } catch (e) {}
-            }
-            
-            // Remove active class from all items
-            navItems.forEach(i => i.classList.remove('active'));
-            // Add active class to clicked item
-            item.classList.add('active');
-            
-            // Navigate
-            if (label === 'Account') {
-                window.location.href = 'account.html';
-            } else if (label === 'Buy eSIM') {
-                window.location.href = 'index.html';
-            } else if (label === 'Help') {
-                window.location.href = 'help.html';
-            }
-        };
         
         // Удаляем все предыдущие обработчики для чистоты
         const newItem = item.cloneNode(true);
@@ -535,10 +512,12 @@ function setupNavigation() {
         cleanItem.style.webkitTapHighlightColor = 'transparent';
         cleanItem.style.userSelect = 'none';
         cleanItem.style.webkitUserSelect = 'none';
+        cleanItem.style.position = 'relative';
+        cleanItem.style.zIndex = '10001';
         
         // Обработчик для обычных кликов и touch событий
         const handleAction = (e) => {
-            console.log(`[Local Navigation] Action on: ${label}`, e);
+            console.log(`[Local Navigation] Action on: ${label}`, e.type, e);
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -557,29 +536,41 @@ function setupNavigation() {
             
             // Navigate
             if (label === 'Account') {
+                console.log('[Local Navigation] Navigating to account.html');
                 window.location.href = 'account.html';
             } else if (label === 'Buy eSIM') {
+                console.log('[Local Navigation] Navigating to index.html');
                 window.location.href = 'index.html';
             } else if (label === 'Help') {
+                console.log('[Local Navigation] Navigating to help.html');
                 window.location.href = 'help.html';
             }
         };
         
-        // Добавляем обработчики для разных типов событий
-        cleanItem.addEventListener('click', handleAction, true); // capture phase
-        cleanItem.addEventListener('touchend', handleAction, { passive: false, capture: true });
+        // Добавляем обработчики для разных типов событий с максимальным приоритетом
+        cleanItem.addEventListener('click', handleAction, { capture: true, passive: false });
+        cleanItem.addEventListener('touchend', handleAction, { capture: true, passive: false });
         cleanItem.addEventListener('touchstart', (e) => {
             e.stopPropagation();
-        }, { passive: false });
+            e.stopImmediatePropagation();
+        }, { capture: true, passive: false });
         
-        // Дополнительный обработчик onclick
+        // Дополнительный обработчик onclick (для максимальной совместимости)
         cleanItem.onclick = handleAction;
         
         // Также добавляем обработчик на mousedown для надежности
         cleanItem.addEventListener('mousedown', (e) => {
             e.preventDefault();
             e.stopPropagation();
-        }, { passive: false });
+        }, { capture: true, passive: false });
+        
+        // Добавляем обработчик pointerdown (для современных браузеров)
+        cleanItem.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, { capture: true, passive: false });
+        
+        console.log(`[Local Navigation] Handlers added for: ${label}`);
     });
     
     console.log('[Local Navigation] Navigation setup complete');
