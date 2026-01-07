@@ -17,55 +17,22 @@ const CACHE_REFRESH_SECRET = process.env.CACHE_REFRESH_SECRET || 'change-me-in-p
 
 /**
  * Обновить кэш для списка стран
+ *
+ * ВАЖНО:
+ * Здесь мы ТОЛЬКО очищаем кэш, а не пересобираем список стран.
+ * Пересборка выполняется через официальный endpoint `/api/esimgo/countries`,
+ * где уже реализована полная фильтрация (исключаются регионы ASIA, CENAM, LATAM, CIS и т.п.).
+ * Это гарантирует, что в кэше `countries:all` всегда будут только реальные страны.
  */
 async function refreshCountriesCache() {
-    console.log('🔄 Refreshing countries cache...');
+    console.log('🔄 Refreshing countries cache (clear only, will be rebuilt by /api/esimgo/countries)...');
     try {
-        // Очищаем старый кэш
+        // Просто очищаем кэш; следующий запрос к /api/esimgo/countries пересоберёт список корректно
         cache.clear('countries:all');
-        
-        // Загружаем данные из API
-        const catalogue = await esimgoClient.getCatalogue(null, {
-            perPage: 1000,
-            page: 1
-        });
-        
-        const bundles = Array.isArray(catalogue) 
-            ? catalogue 
-            : (catalogue?.bundles || catalogue?.data || []);
-        
-        // Извлекаем уникальные страны
-        const countriesMap = new Map();
-        bundles.forEach(bundle => {
-            const countries = bundle.countries || [];
-            countries.forEach(country => {
-                let countryCode = null;
-                if (typeof country === 'string') {
-                    countryCode = country.toUpperCase();
-                } else if (typeof country === 'object' && country !== null) {
-                    countryCode = (country.iso || country.ISO || country.code || '').toUpperCase();
-                }
-                
-                if (countryCode && countryCode.length >= 2 && countryCode.length <= 5) {
-                    if (!countriesMap.has(countryCode)) {
-                        countriesMap.set(countryCode, {
-                            code: countryCode,
-                            name: typeof country === 'string' ? country : (country.name || country.Name || countryCode)
-                        });
-                    }
-                }
-            });
-        });
-        
-        const countries = Array.from(countriesMap.values());
-        
-        // Сохраняем в кэш
-        cache.set('countries:all', countries);
-        
-        console.log(`✅ Countries cache refreshed: ${countries.length} countries`);
-        return { success: true, count: countries.length };
+        console.log('✅ Countries cache cleared (will be rebuilt lazily)');
+        return { success: true, cleared: true };
     } catch (error) {
-        console.error('❌ Error refreshing countries cache:', error);
+        console.error('❌ Error clearing countries cache:', error);
         return { success: false, error: error.message };
     }
 }
