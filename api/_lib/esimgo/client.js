@@ -109,15 +109,21 @@ async function makeRequest(endpoint, options = {}) {
             throw new Error(errorMessage);
         }
         
-        // Проверяем Content-Type перед парсингом JSON
+        // Проверяем Content-Type перед парсингом
         const contentType = response.headers.get('content-type') || '';
+        
+        // Читаем текст ответа один раз (response.text() можно вызвать только один раз)
+        const textContent = await response.text();
         let data;
         
-        // Сначала проверяем CSV, так как assignments API может возвращать CSV
-        if (contentType.includes('text/csv') || endpoint.includes('/assignments')) {
+        // Определяем формат по Content-Type и содержимому
+        const isCSV = contentType.includes('text/csv') || 
+                     endpoint.includes('/assignments') ||
+                     (textContent.trim().startsWith('ICCID') && textContent.includes(','));
+        
+        if (isCSV) {
             // Парсим CSV ответ для assignments
-            const csvText = await response.text();
-            const lines = csvText.trim().split('\n');
+            const lines = textContent.trim().split('\n');
             if (lines.length < 2) {
                 throw new Error('Invalid CSV response: not enough lines');
             }
@@ -145,16 +151,27 @@ async function makeRequest(endpoint, options = {}) {
                 hasSmdpAddress: !!csvData.smdpAddress
             });
             
-            return csvData;
+            data = csvData;
+        } else if (contentType.includes('application/json') || textContent.trim().startsWith('{') || textContent.trim().startsWith('[')) {
+            // Парсим JSON ответ
+            try {
+                data = JSON.parse(textContent);
+            } catch (jsonError) {
+                console.error('Failed to parse JSON response:', {
+                    endpoint,
+                    contentType,
+                    textPreview: textContent.substring(0, 200)
+                });
+                throw new Error(`Invalid JSON response: ${textContent.substring(0, 100)}`);
+            }
         } else {
-            // Если ответ не JSON и не CSV, читаем как текст
-            const text = await response.text();
-            console.error('Non-JSON response:', {
+            // Если ответ не JSON и не CSV, выбрасываем ошибку
+            console.error('Non-JSON/CSV response:', {
                 endpoint,
                 contentType,
-                textPreview: text.substring(0, 200)
+                textPreview: textContent.substring(0, 200)
             });
-            throw new Error(`Expected JSON but got ${contentType}: ${text.substring(0, 100)}`);
+            throw new Error(`Expected JSON or CSV but got ${contentType}: ${textContent.substring(0, 100)}`);
         }
         
         console.log('eSIM Go API success:', {
