@@ -666,6 +666,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Refresh button
+        // Add Order button
+        const addOrderBtn = document.getElementById('addOrderBtn');
+        if (addOrderBtn) {
+            addOrderBtn.addEventListener('click', () => {
+                this.showAddOrderModal();
+            });
+        }
+        
         const refreshBtn = document.getElementById('refreshBtn');
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => {

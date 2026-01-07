@@ -438,6 +438,126 @@ module.exports = async function handler(req, res) {
             }
         }
         
+        // POST /api/admin/orders/add-from-esimgo - добавление заказа из eSIMgo по orderReference
+        if (req.method === 'POST' && urlParts.length > 0 && urlParts[0] === 'add-from-esimgo') {
+            const { orderReference, telegram_user_id } = req.body || {};
+            
+            if (!orderReference) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'orderReference is required'
+                });
+            }
+            
+            if (!telegram_user_id) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'telegram_user_id is required'
+                });
+            }
+            
+            try {
+                const esimgoClient = require('../_lib/esimgo/client');
+                
+                // Получаем полный статус заказа из eSIMgo
+                console.log(`[Admin Orders] Fetching order ${orderReference} from eSIMgo...`);
+                const orderData = await esimgoClient.getOrderStatus(orderReference);
+                
+                // Получаем assignments
+                let assignments = null;
+                if (orderData.status === 'completed') {
+                    try {
+                        assignments = await esimgoClient.getESIMAssignments(orderReference);
+                    } catch (assignError) {
+                        console.warn('Failed to get assignments:', assignError.message);
+                    }
+                }
+                
+                // Извлекаем данные
+                const bundleName = orderData.order?.[0]?.item || null;
+                const esimData = orderData.order?.[0]?.esims?.[0] || null;
+                
+                // Формируем данные для сохранения
+                const orderToSave = {
+                    telegram_user_id: telegram_user_id,
+                    orderReference: orderReference,
+                    iccid: assignments?.iccid || esimData?.iccid || null,
+                    matchingId: assignments?.matchingId || null,
+                    smdpAddress: assignments?.smdpAddress || null,
+                    country_code: null,
+                    country_name: null,
+                    plan_id: null,
+                    plan_type: null,
+                    bundle_name: bundleName,
+                    price: orderData.total || null,
+                    currency: orderData.currency || 'USD',
+                    status: orderData.status || 'completed',
+                    createdAt: orderData.date || orderData.createdAt || new Date().toISOString(),
+                    source: 'telegram_mini_app',
+                    customer: telegram_user_id,
+                    provider_product_id: bundleName || null,
+                    provider_base_price_usd: orderData.basePrice || null,
+                    payment_method: 'telegram_stars'
+                };
+                
+                // Сохраняем через API orders
+                const ordersHandler = require('../orders');
+                const saveReq = createMockReq(orderToSave);
+                const saveRes = createMockRes();
+                
+                await ordersHandler(saveReq, saveRes);
+                
+                if (saveRes.statusCode === 200) {
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Order added successfully',
+                        order: saveRes.data?.data || orderToSave
+                    });
+                } else {
+                    return res.status(500).json({
+                        success: false,
+                        error: saveRes.data?.error || 'Failed to save order'
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Error adding order from eSIMgo:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message || 'Failed to add order from eSIMgo'
+                });
+            }
+        }
+        
+        // Helper functions для mock request/response
+        function createMockReq(body = {}) {
+            return {
+                method: 'POST',
+                body,
+                headers: {},
+                query: {}
+            };
+        }
+        
+        function createMockRes() {
+            let statusCode = 200;
+            let responseData = null;
+            
+            return {
+                status: (code) => {
+                    statusCode = code;
+                    return {
+                        json: (data) => {
+                            responseData = data;
+                        }
+                    };
+                },
+                setHeader: () => {},
+                get statusCode() { return statusCode; },
+                get data() { return responseData; }
+            };
+        }
+        
         return res.status(405).json({
             success: false,
             error: 'Method not allowed'
