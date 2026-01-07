@@ -117,9 +117,11 @@ async function makeRequest(endpoint, options = {}) {
         let data;
         
         // Определяем формат по Content-Type и содержимому
-        const isCSV = contentType.includes('text/csv') || 
-                     endpoint.includes('/assignments') ||
-                     (textContent.trim().startsWith('ICCID') && textContent.includes(','));
+        // Проверяем сначала по endpoint, потом по Content-Type, потом по содержимому
+        const isAssignmentsEndpoint = endpoint.includes('/assignments');
+        const isCSVContentType = contentType.includes('text/csv');
+        const isCSVContent = textContent.trim().startsWith('ICCID') && textContent.includes(',') && !textContent.trim().startsWith('{');
+        const isCSV = isAssignmentsEndpoint || isCSVContentType || isCSVContent;
         
         if (isCSV) {
             // Парсим CSV ответ для assignments
