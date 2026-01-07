@@ -11,6 +11,20 @@ const path = require('path');
 
 const ORDERS_FILE = path.join(__dirname, '..', 'data', 'orders.json');
 
+/**
+ * Генерирует URL QR кода для eSIM в формате LPA
+ * Формат: LPA:1$smdpAddress$matchingId
+ */
+function generateQRCode(matchingId, smdpAddress) {
+    if (!matchingId || !smdpAddress) {
+        return null;
+    }
+    // Формат LPA для eSIM активации
+    const lpaString = `LPA:1$${smdpAddress}$${matchingId}`;
+    // Используем внешний сервис для генерации QR кода
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(lpaString)}`;
+}
+
 // Создаем директорию data если её нет
 async function ensureDataDir() {
     const dataDir = path.dirname(ORDERS_FILE);
