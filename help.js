@@ -151,8 +151,54 @@ function setupHelpItems() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            // TODO: Navigate to Contact page
-            console.log('Navigate to Contact');
+            // Открываем Telegram бота для связи
+            if (tg && tg.openTelegramLink) {
+                tg.openTelegramLink('https://t.me/esimsdata_bot');
+            } else {
+                window.open('https://t.me/esimsdata_bot', '_blank');
+            }
+        });
+    }
+    
+    const refreshAppBtn = document.getElementById('refreshAppBtn');
+    if (refreshAppBtn) {
+        refreshAppBtn.addEventListener('click', () => {
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+            
+            // Показываем уведомление пользователю
+            if (tg && tg.showAlert) {
+                tg.showAlert('Очистка кэша и обновление приложения...');
+            }
+            
+            // Вызываем hardReload для очистки кэша и перезагрузки
+            if (typeof window.hardReload === 'function') {
+                window.hardReload({ clearDataLoader: true });
+            } else {
+                // Если hardReload недоступен, делаем простую перезагрузку с очисткой кэша
+                console.log('🔄 Hard reload not available, using fallback...');
+                
+                // Очищаем localStorage кэш
+                try {
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && (key.startsWith('esimsdata_') || key.startsWith('dataloader_'))) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    keysToRemove.forEach(key => localStorage.removeItem(key));
+                    console.log(`🗑️ Cleared ${keysToRemove.length} cache entries`);
+                } catch (e) {
+                    console.warn('Error clearing cache:', e);
+                }
+                
+                // Перезагружаем страницу с параметром для обхода кэша
+                const url = new URL(window.location.href);
+                url.searchParams.set('_reload', Date.now().toString());
+                window.location.href = url.toString();
+            }
         });
     }
 }
