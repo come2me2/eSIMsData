@@ -2,7 +2,7 @@
 let tg = window.Telegram.WebApp;
 
 // 🔧 Флаг режима разработки - деактивирует кнопку Purchase
-const DEV_MODE = true; // Установите false для активации покупок
+const DEV_MODE = false; // Установите false для активации покупок
 const ENABLE_STARS = true; // Включает оплату через Telegram Stars
 const STARS_RATE_DISPLAY = parseFloat('100'); // Примерный курс Stars для отображения
 
