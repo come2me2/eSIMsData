@@ -1,5 +1,17 @@
 // Telegram Web App initialization
-let tg = window.Telegram.WebApp;
+let tg = window.Telegram?.WebApp;
+
+// Агрессивное скрытие BackButton - переопределяем любые попытки показать её
+(function() {
+    const originalShow = window.Telegram?.WebApp?.BackButton?.show;
+    if (originalShow) {
+        window.Telegram.WebApp.BackButton.show = function() {
+            console.log('⚠️ Попытка показать BackButton на Account - блокируем');
+            // Не показываем BackButton на Account - всегда должна быть Close
+            this.hide();
+        };
+    }
+})();
 
 // Немедленно скрываем BackButton при загрузке скрипта (до инициализации)
 // Это важно, так как предыдущая страница могла показать BackButton

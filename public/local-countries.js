@@ -523,19 +523,63 @@ function setupNavigation() {
             }
         };
         
+        // Удаляем все предыдущие обработчики для чистоты
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        const cleanItem = newItem;
+        
+        // Убеждаемся, что элемент кликабелен ДО добавления обработчиков
+        cleanItem.style.pointerEvents = 'auto';
+        cleanItem.style.cursor = 'pointer';
+        cleanItem.style.touchAction = 'manipulation';
+        cleanItem.style.webkitTapHighlightColor = 'transparent';
+        cleanItem.style.userSelect = 'none';
+        cleanItem.style.webkitUserSelect = 'none';
+        
+        // Обработчик для обычных кликов и touch событий
+        const handleAction = (e) => {
+            console.log(`[Local Navigation] Action on: ${label}`, e);
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            // Haptic feedback
+            if (tg && tg.HapticFeedback) {
+                try {
+                    tg.HapticFeedback.impactOccurred('light');
+                } catch (e) {}
+            }
+            
+            // Remove active class from all items
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            // Add active class to clicked item
+            cleanItem.classList.add('active');
+            
+            // Navigate
+            if (label === 'Account') {
+                window.location.href = 'account.html';
+            } else if (label === 'Buy eSIM') {
+                window.location.href = 'index.html';
+            } else if (label === 'Help') {
+                window.location.href = 'help.html';
+            }
+        };
+        
         // Добавляем обработчики для разных типов событий
-        item.addEventListener('click', handleAction, true); // capture phase
-        item.addEventListener('touchend', handleAction, { passive: false, capture: true });
-        item.addEventListener('touchstart', (e) => {
+        cleanItem.addEventListener('click', handleAction, true); // capture phase
+        cleanItem.addEventListener('touchend', handleAction, { passive: false, capture: true });
+        cleanItem.addEventListener('touchstart', (e) => {
             e.stopPropagation();
         }, { passive: false });
         
         // Дополнительный обработчик onclick
-        item.onclick = handleAction;
+        cleanItem.onclick = handleAction;
         
-        // Убеждаемся, что элемент кликабелен
-        item.style.pointerEvents = 'auto';
-        item.style.cursor = 'pointer';
+        // Также добавляем обработчик на mousedown для надежности
+        cleanItem.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false });
     });
     
     console.log('[Local Navigation] Navigation setup complete');
