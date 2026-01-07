@@ -126,8 +126,40 @@ async function makeRequest(endpoint, options = {}) {
                 });
                 throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
             }
+        } else if (contentType.includes('text/csv')) {
+            // Парсим CSV ответ для assignments
+            const csvText = await response.text();
+            const lines = csvText.trim().split('\n');
+            if (lines.length < 2) {
+                throw new Error('Invalid CSV response: not enough lines');
+            }
+            
+            // Парсим заголовки
+            const headers = lines[0].split(',').map(h => h.trim());
+            const dataLine = lines[1].split(',').map(d => d.trim());
+            
+            // Создаем объект из CSV
+            const csvData = {};
+            headers.forEach((header, index) => {
+                const value = dataLine[index] || '';
+                // Преобразуем названия колонок в camelCase
+                if (header === 'ICCID') csvData.iccid = value;
+                else if (header === 'Matching ID') csvData.matchingId = value;
+                else if (header === 'RSP URL') csvData.smdpAddress = value;
+                else if (header === 'Bundle') csvData.bundle = value;
+                else if (header === 'Reference') csvData.reference = value;
+                else csvData[header.toLowerCase().replace(/\s+/g, '')] = value;
+            });
+            
+            console.log('✅ CSV assignments parsed:', {
+                hasIccid: !!csvData.iccid,
+                hasMatchingId: !!csvData.matchingId,
+                hasSmdpAddress: !!csvData.smdpAddress
+            });
+            
+            return csvData;
         } else {
-            // Если ответ не JSON, читаем как текст
+            // Если ответ не JSON и не CSV, читаем как текст
             const text = await response.text();
             console.error('Non-JSON response:', {
                 endpoint,
