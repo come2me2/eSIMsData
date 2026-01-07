@@ -174,22 +174,39 @@ module.exports = async function handler(req, res) {
         const markup = settings.markup || {};
         const paymentMethods = settings.paymentMethods || {};
         
+        // Если наценка отключена, используем цену без наценки
+        if (!markup.enabled) {
+            console.log('[Stars] Markup is disabled, using cost price without markup');
+        }
+        
         // Получаем базовую маржу (например, 1.29 = +29%)
         const baseMarkup = markup.enabled ? (markup.base || markup.defaultMultiplier || 1.0) : 1.0;
+        
+        // Проверяем наценку по стране
+        let countryMarkup = 1.0;
+        if (country_code && markup.countryMarkups && markup.countryMarkups[country_code]) {
+            // Наценка по стране в процентах, конвертируем в множитель
+            const countryPercent = markup.countryMarkups[country_code];
+            countryMarkup = 1 + (countryPercent / 100);
+            console.log(`[Stars] Country markup found for ${country_code}: ${countryPercent}% (multiplier: ${countryMarkup})`);
+        }
         
         // Получаем маржу для Telegram Stars (например, 1.05 = +5%)
         const starsMethod = paymentMethods.telegramStars || {};
         const starsMarkup = starsMethod.enabled ? (starsMethod.markupMultiplier || starsMethod.markup || 1.0) : 1.0;
         
-        // ✅ Рассчитываем финальную цену с обеими наценками
-        // finalPrice = себестоимость × базовая маржа × маржа Stars
-        const finalPrice = costPrice * baseMarkup * starsMarkup;
+        // ✅ Рассчитываем финальную цену со всеми наценками
+        // finalPrice = себестоимость × базовая маржа × наценка по стране × маржа Stars
+        const finalPrice = costPrice * baseMarkup * countryMarkup * starsMarkup;
         
         console.log('[Stars] Price calculation:', {
             cost: costPrice,
             baseMarkup: baseMarkup,
+            countryMarkup: countryMarkup,
+            countryCode: country_code,
             starsMarkup: starsMarkup,
-            finalPrice: finalPrice
+            finalPrice: finalPrice.toFixed(2),
+            formula: `${costPrice} × ${baseMarkup} × ${countryMarkup} × ${starsMarkup} = ${finalPrice.toFixed(2)}`
         });
 
         // ✅ НОВАЯ ФОРМУЛА: Stars = finalPrice / (1 - telegram_fee) / stars_rate
@@ -210,6 +227,8 @@ module.exports = async function handler(req, res) {
         console.log(`💰 Stars calculation:`, {
             cost: costPrice,
             baseMarkup: baseMarkup,
+            countryMarkup: countryMarkup,
+            countryCode: country_code,
             starsMarkup: starsMarkup,
             finalPrice: finalPrice.toFixed(2),
             telegramFee: STARS_TELEGRAM_FEE,
