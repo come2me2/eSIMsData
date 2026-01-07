@@ -57,10 +57,25 @@ if (tg) {
         setTimeout(() => hideBackButtonOnRootHelp('Help (pageshow timeout)'), 100);
     });
     
+    // Обработка возврата на страницу через history.back()
     window.addEventListener('popstate', () => {
+        console.log('🔙 popstate event на Help - скрываем BackButton');
         hideBackButtonOnRootHelp('Help (popstate)');
-        setTimeout(() => hideBackButtonOnRootHelp('Help (popstate timeout)'), 100);
+        // Множественные попытки скрытия для надежности
+        setTimeout(() => hideBackButtonOnRootHelp('Help (popstate timeout 0)'), 0);
+        setTimeout(() => hideBackButtonOnRootHelp('Help (popstate timeout 50)'), 50);
+        setTimeout(() => hideBackButtonOnRootHelp('Help (popstate timeout 100)'), 100);
+        setTimeout(() => hideBackButtonOnRootHelp('Help (popstate timeout 200)'), 200);
+        setTimeout(() => hideBackButtonOnRootHelp('Help (popstate timeout 300)'), 300);
     });
+    
+    // Также перехватываем событие до того, как страница загрузится (если возможно)
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            hideBackButtonOnRootHelp('Help (DOMContentLoaded)');
+            setTimeout(() => hideBackButtonOnRootHelp('Help (DOMContentLoaded timeout)'), 100);
+        });
+    }
     
     window.addEventListener('focus', () => {
         hideBackButtonOnRootHelp('Help (focus)');
@@ -74,12 +89,24 @@ if (tg) {
         }
     });
     
-    // Периодическая проверка для гарантированного скрытия (каждые 500ms)
+    // Периодическая проверка для гарантированного скрытия (каждые 200ms для более быстрой реакции)
     const hideInterval = setInterval(() => {
-        if (tg && tg.BackButton && tg.BackButton.isVisible) {
-            hideBackButtonOnRootHelp('Help (interval check)');
+        tg = window.Telegram?.WebApp;
+        if (tg && tg.BackButton) {
+            // Всегда скрываем, даже если isVisible недоступен
+            try {
+                if (tg.BackButton.isVisible === true) {
+                    hideBackButtonOnRootHelp('Help (interval check - visible)');
+                } else {
+                    // Скрываем в любом случае для надежности
+                    hideBackButtonOnRootHelp('Help (interval check - always hide)');
+                }
+            } catch (e) {
+                // Если isVisible недоступен, просто скрываем
+                hideBackButtonOnRootHelp('Help (interval check - fallback)');
+            }
         }
-    }, 500);
+    }, 200);
     
     // Останавливаем интервал при уходе со страницы
     window.addEventListener('beforeunload', () => {
