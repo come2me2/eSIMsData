@@ -15,7 +15,15 @@ if (tg) {
         tg.BackButton.show();
         tg.BackButton.onClick(() => {
             tg.HapticFeedback.impactOccurred('light');
-            window.history.back();
+            // Скрываем BackButton перед переходом, чтобы на account.html она не была видна
+            try {
+                if (typeof tg.BackButton.offClick === 'function') {
+                    tg.BackButton.offClick();
+                }
+                tg.BackButton.hide();
+            } catch (e) {}
+            // Используем прямой переход вместо history.back() для гарантированной перезагрузки
+            window.location.href = 'account.html';
         });
     }
 }
