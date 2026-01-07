@@ -42,7 +42,8 @@ const Auth = {
     // Logout
     logout() {
         localStorage.removeItem('admin_token');
-        window.location.href = 'login.html';
+        // Используем replace вместо href для предотвращения возврата назад
+        window.location.replace('login.html');
     },
 
     // Make authenticated request
@@ -80,10 +81,13 @@ const Auth = {
     // Protect page - redirect to login if not authenticated
     protectPage() {
         if (!this.isAuthenticated()) {
-            window.location.href = 'login.html';
+            window.location.replace('login.html');
         }
     }
 };
+
+// Делаем Auth доступным глобально для использования в других скриптах
+window.Auth = Auth;
 
 // Auto-protect pages (except login.html)
 // Контент уже скрыт через inline скрипт в <head>
@@ -117,15 +121,21 @@ if (document.readyState === 'loading') {
     checkAuthAndShowContent();
 }
 
-// Logout button handler
+// Logout button handler - используем capture phase для раннего перехвата
 document.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
+        // Удаляем все существующие обработчики и добавляем наш
+        const newLogoutBtn = logoutBtn.cloneNode(true);
+        logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+        
+        newLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (confirm('Вы уверены, что хотите выйти?')) {
                 Auth.logout();
             }
-        });
+        }, true); // Используем capture phase
     }
 });
 

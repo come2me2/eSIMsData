@@ -58,12 +58,23 @@ function initializeSidebar() {
     
     sidebar.innerHTML = sidebarHTML;
     
-    // Initialize logout button
+    // Initialize logout button - используем Auth.logout() если доступен
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('adminToken');
-            window.location.href = 'login.html';
+        // Удаляем старые обработчики, если они есть
+        const newLogoutBtn = logoutBtn.cloneNode(true);
+        logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+        
+        newLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.Auth && typeof window.Auth.logout === 'function') {
+                window.Auth.logout();
+            } else {
+                // Fallback если Auth еще не загружен
+                localStorage.removeItem('admin_token');
+                window.location.href = 'login.html';
+            }
         });
     }
 }
