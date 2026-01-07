@@ -19,12 +19,20 @@ if (!process.env.TELEGRAM_BOT_TOKEN && !process.env.BOT_TOKEN) {
 // Загружаем переменные окружения с проверкой
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
+// Разрешить тестовые платежи (для разработки/тестирования)
+const ALLOW_TEST_PAYMENTS = process.env.ALLOW_TEST_PAYMENTS === 'true';
 
 // Проверяем при загрузке модуля
 if (!BOT_TOKEN) {
     console.error('❌ TELEGRAM_BOT_TOKEN not found in webhook.js');
 } else {
     console.log('✅ TELEGRAM_BOT_TOKEN available in webhook.js');
+}
+
+if (ALLOW_TEST_PAYMENTS) {
+    console.warn('⚠️ ALLOW_TEST_PAYMENTS is enabled - test payments will be processed');
+} else {
+    console.log('✅ Test payments are blocked (use ALLOW_TEST_PAYMENTS=true to enable)');
 }
 
 // Простейшая идемпотентность на время жизни процесса
@@ -175,12 +183,65 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ ok: true });
         }
 
+        // 🔍 Проверка на тестовый платеж
         const paymentId =
             payment.provider_payment_charge_id ||
             payment.telegram_payment_charge_id ||
             payment.invoice_payload;
+        
+        const isTestPayment = 
+            (paymentId && (
+                String(paymentId).toLowerCase().includes('test') ||
+                String(paymentId).startsWith('test_')
+            )) ||
+            (payment.telegram_payment_charge_id && 
+                String(payment.telegram_payment_charge_id).toLowerCase().includes('test')) ||
+            (payment.provider_payment_charge_id && 
+                String(payment.provider_payment_charge_id).toLowerCase().includes('test')) ||
+            (payment.total_amount && Number(payment.total_amount) === 0);
+
+        // 📊 Логируем все данные платежа для диагностики
+        console.log('💰 Payment received:', {
+            paymentId,
+            telegram_payment_charge_id: payment.telegram_payment_charge_id,
+            provider_payment_charge_id: payment.provider_payment_charge_id,
+            total_amount: payment.total_amount,
+            currency: payment.currency,
+            isTestPayment,
+            invoice_payload: payment.invoice_payload,
+            user_id: message.from?.id,
+            username: message.from?.username
+        });
+
+        // ⚠️ Блокируем тестовые платежи в продакшене (если не разрешено)
+        if (isTestPayment && !ALLOW_TEST_PAYMENTS) {
+            console.warn('⚠️ TEST PAYMENT DETECTED - Order creation blocked:', {
+                paymentId,
+                user_id: message.from?.id,
+                bundle: payloadObj.bn,
+                reason: 'Test payment detected and ALLOW_TEST_PAYMENTS is disabled'
+            });
+            
+            await sendStatusMessage(message.chat.id, [
+                '⚠️ <b>Тестовый платеж обнаружен</b>',
+                'Заказ не был создан, так как это тестовый платеж.',
+                'Для реальных покупок используйте реальные Telegram Stars.',
+                `Платёж ID: <code>${paymentId}</code>`
+            ].join('\n'));
+            
+            return res.status(200).json({ ok: true });
+        }
+        
+        if (isTestPayment && ALLOW_TEST_PAYMENTS) {
+            console.warn('⚠️ TEST PAYMENT DETECTED - Processing anyway (ALLOW_TEST_PAYMENTS=true):', {
+                paymentId,
+                user_id: message.from?.id,
+                bundle: payloadObj.bn
+            });
+        }
 
         if (processedPayments.has(paymentId)) {
+            console.log('⚠️ Duplicate payment detected:', paymentId);
             return res.status(200).json({ ok: true });
         }
 
