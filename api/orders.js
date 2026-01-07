@@ -188,6 +188,9 @@ module.exports = async function handler(req, res) {
                 iccid: iccid || null,
                 matchingId: matchingId || null,
                 smdpAddress: smdpAddress || null,
+                // QR код: используем переданный или генерируем из данных eSIM
+                qrCode: qrCode || (matchingId && smdpAddress ? generateQRCode(matchingId, smdpAddress) : null),
+                qr_code: qrCode || (matchingId && smdpAddress ? generateQRCode(matchingId, smdpAddress) : null), // Для обратной совместимости
                 
                 // Географические данные
                 country_code: country_code || null,
