@@ -540,6 +540,18 @@ async function processPurchase(orderWithUser, auth, tg) {
             })
         });
         
+        // Проверяем статус ответа перед парсингом
+        if (!orderResponse.ok) {
+            const errorText = await orderResponse.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                throw new Error(errorText || `Server error: ${orderResponse.status}`);
+            }
+            throw new Error(errorData.error || errorData.message || `Server error: ${orderResponse.status}`);
+        }
+        
         const orderResult = await orderResponse.json();
         
         if (!orderResult.success) {
@@ -611,6 +623,19 @@ async function processPurchase(orderWithUser, auth, tg) {
 async function getAndShowAssignments(orderReference, tg) {
     try {
         const response = await fetch(`/api/esimgo/assignments?reference=${orderReference}`);
+        
+        // Проверяем статус ответа перед парсингом
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                throw new Error(errorText || `Server error: ${response.status}`);
+            }
+            throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         if (!data.success) {

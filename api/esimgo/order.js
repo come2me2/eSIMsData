@@ -125,6 +125,8 @@ module.exports = async function handler(req, res) {
             } catch (assignError) {
                 console.warn('Failed to get assignments immediately:', assignError.message);
                 // Не критично, можно получить позже через /api/esimgo/assignments
+                // Не пробрасываем ошибку дальше, чтобы не блокировать создание заказа
+                assignments = null;
             }
         }
         
