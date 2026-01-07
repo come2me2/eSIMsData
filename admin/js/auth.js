@@ -94,7 +94,14 @@ function checkAuthAndShowContent() {
     if (!isLoginPage) {
         if (Auth.isAuthenticated()) {
             // Показываем контент только если авторизован
+            // Удаляем стиль скрытия
+            const hideStyle = document.getElementById('auth-hide-style');
+            if (hideStyle) {
+                hideStyle.remove();
+            }
+            // Убеждаемся, что body виден
             document.body.style.display = '';
+            document.body.style.visibility = '';
         } else {
             // Перенаправляем на страницу входа
             Auth.protectPage();
@@ -102,7 +109,7 @@ function checkAuthAndShowContent() {
     }
 }
 
-// Выполняем проверку как можно раньше
+// Выполняем проверку немедленно и после загрузки DOM
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', checkAuthAndShowContent);
 } else {
