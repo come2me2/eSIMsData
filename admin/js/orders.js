@@ -844,28 +844,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Add Order button
-        const addOrderBtn = document.getElementById('addOrderBtn');
-        console.log('Add Order button found:', addOrderBtn);
-        if (addOrderBtn) {
-            addOrderBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('Add Order button clicked');
-                try {
-                    if (typeof Orders.showAddOrderModal === 'function') {
-                        Orders.showAddOrderModal();
-                    } else {
-                        console.error('Orders.showAddOrderModal is not a function');
-                    }
-                } catch (error) {
-                    console.error('Error calling showAddOrderModal:', error);
-                }
-            });
-        } else {
-            console.error('Add Order button not found in DOM');
-        }
-        
         // Refresh button
         
         const refreshBtn = document.getElementById('refreshBtn');
