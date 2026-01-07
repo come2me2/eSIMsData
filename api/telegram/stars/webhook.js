@@ -209,7 +209,46 @@ module.exports = async function handler(req, res) {
             if (success) {
                 const orderData = orderRes.data.data;
                 const orderRef = orderData.orderReference || orderData.reference || 'order created';
-                const assignments = orderData.assignments || null;
+                let assignments = orderData.assignments || null;
+                
+                // Получаем полные данные заказа из eSIMgo API для получения всех параметров
+                let fullOrderData = null;
+                if (orderRef) {
+                    try {
+                        const esimgoClient = require('../../_lib/esimgo/client');
+                        // Ждем немного, чтобы заказ был полностью обработан
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        // Получаем полный статус заказа из eSIMgo
+                        fullOrderData = await esimgoClient.getOrderStatus(orderRef);
+                        console.log('✅ Full order data retrieved from eSIMgo:', {
+                            orderReference: fullOrderData.orderReference,
+                            status: fullOrderData.status,
+                            total: fullOrderData.total,
+                            currency: fullOrderData.currency
+                        });
+                        
+                        // Если assignments не были получены ранее, пытаемся получить их
+                        if (!assignments && fullOrderData.status === 'completed') {
+                            try {
+                                assignments = await esimgoClient.getESIMAssignments(orderRef);
+                                console.log('✅ Assignments retrieved:', {
+                                    hasIccid: !!assignments?.iccid,
+                                    hasMatchingId: !!assignments?.matchingId,
+                                    hasSmdpAddress: !!assignments?.smdpAddress
+                                });
+                            } catch (assignError) {
+                                console.warn('⚠️ Failed to get assignments:', assignError.message);
+                            }
+                        }
+                    } catch (orderStatusError) {
+                        console.warn('⚠️ Failed to get full order data from eSIMgo:', orderStatusError.message);
+                        // Используем данные из orderData как fallback
+                    }
+                }
+                
+                // Используем полные данные из eSIMgo, если они доступны
+                const finalOrderData = fullOrderData || orderData;
                 
                 // Сохраняем заказ через API
                 try {
@@ -217,7 +256,7 @@ module.exports = async function handler(req, res) {
                     const saveOrderReq = {
                         telegram_user_id: telegramUserId,
                         orderReference: orderRef,
-                        iccid: assignments?.iccid || null,
+                        iccid: assignments?.iccid || finalOrderData.order?.[0]?.esims?.[0]?.iccid || null,
                         matchingId: assignments?.matchingId || null,
                         smdpAddress: assignments?.smdpAddress || null,
                         country_code: payloadObj.cc || null,
@@ -225,16 +264,21 @@ module.exports = async function handler(req, res) {
                         plan_id: payloadObj.pid || null,
                         plan_type: payloadObj.pt || null,
                         bundle_name: payloadObj.bn || null,
-                        price: orderData.total || null,
-                        currency: orderData.currency || 'USD',
-                        status: orderData.status || 'completed',
+                        price: finalOrderData.total || orderData.total || null,
+                        currency: finalOrderData.currency || orderData.currency || 'USD',
+                        status: finalOrderData.status || orderData.status || 'completed',
                         createdAt: new Date().toISOString(),
                         // Новые обязательные поля
                         source: 'telegram_mini_app',
                         customer: telegramUserId,
-                        provider_product_id: payloadObj.bn || bundle_name || null,
-                        provider_base_price_usd: payloadObj.bp || orderData.basePrice || null, // bp = base price из payload
-                        payment_method: 'telegram_stars'
+                        provider_product_id: payloadObj.bn || null,
+                        provider_base_price_usd: payloadObj.bp || finalOrderData.basePrice || orderData.basePrice || null,
+                        payment_method: 'telegram_stars',
+                        // Дополнительные данные из eSIMgo
+                        order_status: finalOrderData.status || orderData.status,
+                        order_total: finalOrderData.total || orderData.total,
+                        order_currency: finalOrderData.currency || orderData.currency,
+                        order_date: finalOrderData.date || finalOrderData.createdAt || new Date().toISOString()
                     };
                     
                     // Вызываем API для сохранения заказа
