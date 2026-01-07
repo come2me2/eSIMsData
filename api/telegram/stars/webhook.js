@@ -231,11 +231,13 @@ module.exports = async function handler(req, res) {
                         // Если assignments не были получены ранее, пытаемся получить их
                         if (!assignments && fullOrderData.status === 'completed') {
                             try {
-                                assignments = await esimgoClient.getESIMAssignments(orderRef);
+                                // Получаем assignments с QR кодом
+                                assignments = await esimgoClient.getESIMAssignments(orderRef, 'qrCode');
                                 console.log('✅ Assignments retrieved:', {
                                     hasIccid: !!assignments?.iccid,
                                     hasMatchingId: !!assignments?.matchingId,
-                                    hasSmdpAddress: !!assignments?.smdpAddress
+                                    hasSmdpAddress: !!assignments?.smdpAddress,
+                                    hasQrCode: !!assignments?.qrCode
                                 });
                             } catch (assignError) {
                                 console.warn('⚠️ Failed to get assignments:', assignError.message);
@@ -259,6 +261,7 @@ module.exports = async function handler(req, res) {
                         iccid: assignments?.iccid || finalOrderData.order?.[0]?.esims?.[0]?.iccid || null,
                         matchingId: assignments?.matchingId || null,
                         smdpAddress: assignments?.smdpAddress || null,
+                        qrCode: assignments?.qrCode || assignments?.qr_code || finalOrderData.order?.[0]?.esims?.[0]?.qrCode || null,
                         country_code: payloadObj.cc || null,
                         country_name: payloadObj.cn || null,
                         plan_id: payloadObj.pid || null,

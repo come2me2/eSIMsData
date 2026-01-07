@@ -103,6 +103,7 @@ module.exports = async function handler(req, res) {
                 iccid,
                 matchingId,
                 smdpAddress,
+                qrCode,
                 country_code,
                 country_name,
                 plan_id,

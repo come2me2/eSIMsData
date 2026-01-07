@@ -114,11 +114,13 @@ module.exports = async function handler(req, res) {
                 // Ждем немного, чтобы eSIM был готов
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 
-                assignments = await esimgoClient.getESIMAssignments(order.orderReference);
+                // Получаем assignments с QR кодом
+                assignments = await esimgoClient.getESIMAssignments(order.orderReference, 'qrCode');
                 console.log('Assignments received:', {
                     hasIccid: !!assignments.iccid,
                     hasMatchingId: !!assignments.matchingId,
-                    hasSmdpAddress: !!assignments.smdpAddress
+                    hasSmdpAddress: !!assignments.smdpAddress,
+                    hasQrCode: !!assignments.qrCode
                 });
             } catch (assignError) {
                 console.warn('Failed to get assignments immediately:', assignError.message);
@@ -140,6 +142,7 @@ module.exports = async function handler(req, res) {
                         iccid: assignments?.iccid || null,
                         matchingId: assignments?.matchingId || null,
                         smdpAddress: assignments?.smdpAddress || null,
+                        qrCode: assignments?.qrCode || assignments?.qr_code || null,
                         country_code: country_code || null,
                         country_name: country_name || null,
                         plan_id: plan_id || null,
