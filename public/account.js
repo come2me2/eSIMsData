@@ -1,12 +1,30 @@
 // Telegram Web App initialization
 let tg = window.Telegram.WebApp;
 
+// Немедленно скрываем BackButton при загрузке скрипта (до инициализации)
+// Это важно, так как предыдущая страница могла показать BackButton
+if (tg && tg.BackButton) {
+    tg.BackButton.hide();
+    console.log('🔙 BackButton скрыта немедленно при загрузке скрипта (Account)');
+}
+
 // Функция для гарантированного скрытия BackButton (чтобы Telegram показывал Close)
 function hideBackButtonOnRootPage(pageName) {
+    // Обновляем ссылку на tg, так как она может измениться
+    tg = window.Telegram?.WebApp;
+    
     if (!tg || !tg.BackButton) return;
     try {
+        // Удаляем все обработчики onClick перед скрытием
+        if (typeof tg.BackButton.offClick === 'function') {
+            try {
+                tg.BackButton.offClick();
+            } catch (e) {}
+        }
+        
+        // Скрываем BackButton
         tg.BackButton.hide();
-        console.log(`🔙 BackButton скрыта на странице ${pageName} (должна быть кнопка Close)`);
+        console.log(`🔙 BackButton скрыта на странице ${pageName} (Account — должна быть кнопка Close)`);
     } catch (e) {
         console.warn(`⚠️ Не удалось скрыть BackButton на странице ${pageName}:`, e);
     }
@@ -26,14 +44,46 @@ if (tg) {
     }
     
     // Account - это главная вкладка, всегда скрываем BackButton (должна быть кнопка Close)
+    // Делаем это сразу и несколько раз для надежности
     hideBackButtonOnRootPage('Account');
+    setTimeout(() => hideBackButtonOnRootPage('Account (timeout 0)'), 0);
+    setTimeout(() => hideBackButtonOnRootPage('Account (timeout 50)'), 50);
+    setTimeout(() => hideBackButtonOnRootPage('Account (timeout 100)'), 100);
+    setTimeout(() => hideBackButtonOnRootPage('Account (timeout 200)'), 200);
     
     // Дополнительно скрываем BackButton при показе/возврате на страницу
-    window.addEventListener('pageshow', () => hideBackButtonOnRootPage('Account (pageshow)'));
+    window.addEventListener('pageshow', () => {
+        hideBackButtonOnRootPage('Account (pageshow)');
+        setTimeout(() => hideBackButtonOnRootPage('Account (pageshow timeout)'), 100);
+    });
+    
+    window.addEventListener('popstate', () => {
+        hideBackButtonOnRootPage('Account (popstate)');
+        setTimeout(() => hideBackButtonOnRootPage('Account (popstate timeout)'), 100);
+    });
+    
+    window.addEventListener('focus', () => {
+        hideBackButtonOnRootPage('Account (focus)');
+        setTimeout(() => hideBackButtonOnRootPage('Account (focus timeout)'), 100);
+    });
+    
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
             hideBackButtonOnRootPage('Account (visibilitychange)');
+            setTimeout(() => hideBackButtonOnRootPage('Account (visibilitychange timeout)'), 100);
         }
+    });
+    
+    // Периодическая проверка для гарантированного скрытия (каждые 500ms)
+    const hideInterval = setInterval(() => {
+        if (tg && tg.BackButton && tg.BackButton.isVisible) {
+            hideBackButtonOnRootPage('Account (interval check)');
+        }
+    }, 500);
+    
+    // Останавливаем интервал при уходе со страницы
+    window.addEventListener('beforeunload', () => {
+        clearInterval(hideInterval);
     });
 }
 
