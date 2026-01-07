@@ -17,40 +17,54 @@
     <script>
         // Немедленно скрываем BackButton при загрузке страницы (до основного скрипта)
         // Это критично для случаев восстановления из bfcache
-        (function() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                const tg = window.Telegram.WebApp;
-                if (tg.BackButton) {
-                    try {
-                        if (typeof tg.BackButton.offClick === 'function') {
-                            tg.BackButton.offClick();
+        (function hideBackButtonImmediately() {
+            // Функция для скрытия BackButton
+            function hide() {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const tg = window.Telegram.WebApp;
+                    if (tg && tg.BackButton) {
+                        try {
+                            if (typeof tg.BackButton.offClick === 'function') {
+                                tg.BackButton.offClick();
+                            }
+                            tg.BackButton.hide();
+                            console.log('🔙 BackButton скрыта inline скриптом (Account)');
+                        } catch (e) {
+                            console.warn('⚠️ Ошибка при inline скрытии BackButton:', e);
                         }
-                        tg.BackButton.hide();
-                        console.log('🔙 BackButton скрыта inline скриптом (Account)');
-                    } catch (e) {
-                        console.warn('⚠️ Ошибка при inline скрытии BackButton:', e);
                     }
                 }
             }
-            // Также обрабатываем случай, когда Telegram WebApp загружается позже
+            
+            // Пытаемся скрыть сразу
+            hide();
+            
+            // Множественные попытки для надежности
+            setTimeout(hide, 0);
+            setTimeout(hide, 10);
+            setTimeout(hide, 50);
+            setTimeout(hide, 100);
+            
+            // Обработка случая, когда Telegram WebApp загружается позже
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', function() {
-                    setTimeout(function() {
-                        if (window.Telegram && window.Telegram.WebApp) {
-                            const tg = window.Telegram.WebApp;
-                            if (tg && tg.BackButton) {
-                                try {
-                                    if (typeof tg.BackButton.offClick === 'function') {
-                                        tg.BackButton.offClick();
-                                    }
-                                    tg.BackButton.hide();
-                                    console.log('🔙 BackButton скрыта после DOMContentLoaded (Account)');
-                                } catch (e) {}
-                            }
-                        }
-                    }, 0);
+                    setTimeout(hide, 0);
+                    setTimeout(hide, 10);
+                    setTimeout(hide, 50);
+                    setTimeout(hide, 100);
                 });
             }
+            
+            // Обработка pageshow (включая bfcache)
+            window.addEventListener('pageshow', function(event) {
+                console.log('🔙 pageshow в inline скрипте', { persisted: event.persisted });
+                hide();
+                setTimeout(hide, 0);
+                setTimeout(hide, 10);
+                setTimeout(hide, 50);
+                setTimeout(hide, 100);
+                setTimeout(hide, 200);
+            });
         })();
     </script>
 </head>

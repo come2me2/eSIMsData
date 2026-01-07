@@ -21,9 +21,13 @@ if (tg) {
                     tg.BackButton.offClick();
                 }
                 tg.BackButton.hide();
+                // Дополнительная задержка для гарантии скрытия
+                setTimeout(() => {
+                    tg.BackButton.hide();
+                }, 0);
             } catch (e) {}
-            // Используем прямой переход вместо history.back() для гарантированной перезагрузки
-            window.location.href = 'account.html';
+            // Используем replace вместо href для предотвращения bfcache
+            window.location.replace('account.html');
         });
     }
 }
