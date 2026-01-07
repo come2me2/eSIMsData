@@ -793,14 +793,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Refresh button
         // Add Order button
         const addOrderBtn = document.getElementById('addOrderBtn');
         if (addOrderBtn) {
             addOrderBtn.addEventListener('click', () => {
-                this.showAddOrderModal();
+                Orders.showAddOrderModal();
             });
         }
+        
+        // Refresh button
         
         const refreshBtn = document.getElementById('refreshBtn');
         if (refreshBtn) {
