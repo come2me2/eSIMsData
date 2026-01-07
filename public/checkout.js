@@ -1504,6 +1504,13 @@ function setupPurchaseButton() {
                 }
                 
                 const result = await response.json();
+                console.log('💫 Invoice creation result:', {
+                    success: result.success,
+                    hasInvoiceLink: !!result.invoiceLink,
+                    invoiceLinkLength: result.invoiceLink?.length,
+                    error: result.error
+                });
+                
                 if (!result.success || !result.invoiceLink) {
                     purchaseBtn.textContent = originalText;
                     purchaseBtn.disabled = false;
@@ -1511,21 +1518,54 @@ function setupPurchaseButton() {
                 }
                 
                 const invoiceLink = result.invoiceLink;
-                const slug = invoiceLink.split('/').pop();
+                console.log('💫 Invoice link received (full):', invoiceLink);
+                console.log('💫 Invoice link type:', typeof invoiceLink);
+                
+                // Проверяем формат ссылки и извлекаем правильный ID
+                let invoiceId;
+                if (invoiceLink.startsWith('https://t.me/invoice/')) {
+                    // Извлекаем slug из полного URL
+                    invoiceId = invoiceLink.split('/').pop();
+                } else if (invoiceLink.startsWith('invoice/')) {
+                    // Уже в формате invoice/...
+                    invoiceId = invoiceLink.replace('invoice/', '');
+                } else if (invoiceLink.startsWith('https://')) {
+                    // Другой формат полного URL - пробуем извлечь slug
+                    const urlParts = invoiceLink.split('/');
+                    invoiceId = urlParts[urlParts.length - 1] || invoiceLink;
+                } else {
+                    // Пробуем использовать как есть (возможно, уже slug)
+                    invoiceId = invoiceLink;
+                }
+                
+                console.log('💫 Invoice ID to open:', invoiceId);
                 
                 const cb = (status) => {
-                    console.log('Invoice status:', status);
+                    console.log('💫 Invoice status:', status);
                     purchaseBtn.textContent = originalText;
                     purchaseBtn.disabled = false;
                     if (status === 'paid') {
                         tg.showAlert('Оплата принята. eSIM будет выдана в чат после обработки заказа.');
                     } else if (status === 'cancelled') {
                         tg.showAlert('Оплата отменена.');
+                    } else if (status === 'failed') {
+                        tg.showAlert('Оплата не удалась. Попробуйте снова.');
                     }
                 };
                 
                 // Открываем модальное окно Telegram Stars
-                tg.openInvoice(slug, cb);
+                try {
+                    // Сначала пробуем передать slug
+                    tg.openInvoice(invoiceId, cb);
+                } catch (error) {
+                    console.error('❌ openInvoice error with slug, trying full URL:', error);
+                    // Если не работает со slug, пробуем полный URL
+                    if (invoiceLink.startsWith('https://')) {
+                        tg.openInvoice(invoiceLink, cb);
+                    } else {
+                        throw new Error('Invalid invoice format: ' + invoiceLink);
+                    }
+                }
                 return; // Выходим, не показывая обычное подтверждение
             } catch (starsError) {
                 console.error('❌ Stars payment error:', starsError);
