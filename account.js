@@ -65,9 +65,22 @@ if (tg) {
     setTimeout(() => hideBackButtonOnRootPage('Account (timeout 200)'), 200);
     
     // Дополнительно скрываем BackButton при показе/возврате на страницу
-    window.addEventListener('pageshow', () => {
+    // Особенно важно при восстановлении из bfcache (event.persisted === true)
+    window.addEventListener('pageshow', (event) => {
+        console.log('🔙 pageshow event на Account', { persisted: event.persisted });
         hideBackButtonOnRootPage('Account (pageshow)');
-        setTimeout(() => hideBackButtonOnRootPage('Account (pageshow timeout)'), 100);
+        // Если страница восстановлена из кэша, нужны более агрессивные попытки
+        if (event.persisted) {
+            console.log('⚠️ Страница восстановлена из bfcache - агрессивное скрытие BackButton');
+            setTimeout(() => hideBackButtonOnRootPage('Account (pageshow persisted 0)'), 0);
+            setTimeout(() => hideBackButtonOnRootPage('Account (pageshow persisted 50)'), 50);
+            setTimeout(() => hideBackButtonOnRootPage('Account (pageshow persisted 100)'), 100);
+            setTimeout(() => hideBackButtonOnRootPage('Account (pageshow persisted 200)'), 200);
+            setTimeout(() => hideBackButtonOnRootPage('Account (pageshow persisted 300)'), 300);
+            setTimeout(() => hideBackButtonOnRootPage('Account (pageshow persisted 500)'), 500);
+        } else {
+            setTimeout(() => hideBackButtonOnRootPage('Account (pageshow timeout)'), 100);
+        }
     });
     
     // Обработка возврата на страницу через history.back()
@@ -102,24 +115,25 @@ if (tg) {
         }
     });
     
-    // Периодическая проверка для гарантированного скрытия (каждые 200ms для более быстрой реакции)
+    // Периодическая проверка для гарантированного скрытия (каждые 100ms для более быстрой реакции)
     const hideInterval = setInterval(() => {
         tg = window.Telegram?.WebApp;
         if (tg && tg.BackButton) {
             // Всегда скрываем, даже если isVisible недоступен
             try {
                 if (tg.BackButton.isVisible === true) {
+                    console.log('⚠️ BackButton видна на Account - скрываем немедленно');
                     hideBackButtonOnRootPage('Account (interval check - visible)');
                 } else {
-                    // Скрываем в любом случае для надежности
-                    hideBackButtonOnRootPage('Account (interval check - always hide)');
+                    // Периодически скрываем для надежности (даже если не видна)
+                    // Это помогает при восстановлении из bfcache
                 }
             } catch (e) {
                 // Если isVisible недоступен, просто скрываем
                 hideBackButtonOnRootPage('Account (interval check - fallback)');
             }
         }
-    }, 200);
+    }, 100);
     
     // Останавливаем интервал при уходе со страницы
     window.addEventListener('beforeunload', () => {
