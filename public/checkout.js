@@ -1438,12 +1438,117 @@ function setupPurchaseButton() {
             };
             
             console.log('Purchase order with validated user data:', orderWithUser);
+            console.log('💳 Selected payment method:', selectedPaymentMethod);
+            
+            // Проверяем выбранный метод оплаты
+            if (selectedPaymentMethod === 'stars') {
+                // Если выбран Telegram Stars, обрабатываем Stars payment
+                console.log('💫 Telegram Stars payment selected');
+                
+                if (!tg || !tg.openInvoice) {
+                    throw new Error('Оплата через Stars доступна только внутри Telegram');
+                }
+                
+                const plan = getSelectedPlan();
+                if (!plan) {
+                    throw new Error('План не найден. Обновите страницу.');
+                }
+                
+                const priceValue = getPriceValueFromPlan(plan);
+                const currency = plan.currency || 'USD';
+                const bundleName = plan.bundle_name || plan.id;
+                
+                // ✅ ВАЖНО: Вычисляем себестоимость (cost), разделив цену на базовую маржу
+                const baseMarkup = publicSettings?.markup?.base || publicSettings?.markup?.defaultMultiplier || 1.29;
+                const costPrice = priceValue / baseMarkup;
+                
+                console.log('[Stars] Price calculation:', {
+                    priceWithMarkup: priceValue,
+                    baseMarkup: baseMarkup,
+                    costPrice: costPrice.toFixed(2)
+                });
+                
+                purchaseBtn.textContent = 'Creating invoice...';
+                
+                try {
+                    console.log('[Stars] Creating invoice with data:', {
+                        plan_id: plan.id,
+                        plan_type: orderData.planType,
+                        bundle_name: bundleName,
+                        country_code: orderData.code,
+                        country_name: orderData.name,
+                        price: costPrice,
+                        currency
+                    });
+                    
+                    let response;
+                    try {
+                        response = await fetch('/api/telegram/stars/create-invoice', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                plan_id: plan.id,
+                                plan_type: orderData.planType,
+                                bundle_name: bundleName,
+                                country_code: orderData.code,
+                                country_name: orderData.name,
+                                price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
+                                currency,
+                                telegram_user_id: auth.getUserId(),
+                                telegram_username: auth.getUsername()
+                            })
+                        });
+                    } catch (fetchError) {
+                        console.error('❌ Fetch error:', fetchError);
+                        throw new Error('Network error: ' + fetchError.message);
+                    }
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        let errorData;
+                        try {
+                            errorData = JSON.parse(errorText);
+                        } catch (e) {
+                            throw new Error(errorText || `Server error: ${response.status}`);
+                        }
+                        throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    if (!result.success || !result.invoiceLink) {
+                        throw new Error(result.error || 'Не удалось создать счёт');
+                    }
+                    
+                    const invoiceLink = result.invoiceLink;
+                    const slug = invoiceLink.split('/').pop();
+                    
+                    const cb = (status) => {
+                        console.log('Invoice status:', status);
+                        purchaseBtn.textContent = originalText;
+                        purchaseBtn.disabled = false;
+                        if (status === 'paid') {
+                            tg.showAlert('Оплата принята. eSIM будет выдана в чат после обработки заказа.');
+                        } else if (status === 'cancelled') {
+                            tg.showAlert('Оплата отменена.');
+                        }
+                    };
+                    
+                    // Открываем модальное окно Telegram Stars
+                    tg.openInvoice(slug, cb);
+                    return; // Выходим, не показывая обычное подтверждение
+                } catch (starsError) {
+                    console.error('❌ Stars payment error:', starsError);
+                    purchaseBtn.textContent = originalText;
+                    purchaseBtn.disabled = false;
+                    throw starsError; // Пробрасываем ошибку дальше
+                }
+            }
             
             // Восстанавливаем кнопку
             purchaseBtn.textContent = originalText;
             purchaseBtn.disabled = false;
             
-            // Подтверждение покупки
+            // Для других методов оплаты - обычное подтверждение
             if (tg && tg.showConfirm) {
                 tg.showConfirm('Confirm purchase?', async (confirmed) => {
                     if (confirmed) {
