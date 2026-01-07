@@ -521,11 +521,14 @@ const Orders = {
     
     // Show modal for adding order from eSIMgo
     showAddOrderModal() {
-        // Проверяем, не открыто ли уже модальное окно
-        const existingModal = document.getElementById('addOrderModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
+        console.log('showAddOrderModal called');
+        try {
+            // Проверяем, не открыто ли уже модальное окно
+            const existingModal = document.getElementById('addOrderModal');
+            if (existingModal) {
+                console.log('Removing existing modal');
+                existingModal.remove();
+            }
         
         // Создаем уникальные id с timestamp для избежания конфликтов
         const timestamp = Date.now();
@@ -833,10 +836,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Add Order button
         const addOrderBtn = document.getElementById('addOrderBtn');
+        console.log('Add Order button found:', addOrderBtn);
         if (addOrderBtn) {
-            addOrderBtn.addEventListener('click', () => {
-                Orders.showAddOrderModal();
+            addOrderBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Add Order button clicked');
+                try {
+                    if (typeof Orders.showAddOrderModal === 'function') {
+                        Orders.showAddOrderModal();
+                    } else {
+                        console.error('Orders.showAddOrderModal is not a function');
+                    }
+                } catch (error) {
+                    console.error('Error calling showAddOrderModal:', error);
+                }
             });
+        } else {
+            console.error('Add Order button not found in DOM');
         }
         
         // Refresh button
