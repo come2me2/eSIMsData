@@ -521,6 +521,21 @@ const Orders = {
     
     // Show modal for adding order from eSIMgo
     showAddOrderModal() {
+        // Проверяем, не открыто ли уже модальное окно
+        const existingModal = document.getElementById('addOrderModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Создаем уникальные id с timestamp для избежания конфликтов
+        const timestamp = Date.now();
+        const modalId = `addOrderModal_${timestamp}`;
+        const referenceId = `addOrderReference_${timestamp}`;
+        const userIdId = `addOrderUserId_${timestamp}`;
+        const cancelBtnId = `addOrderCancelBtn_${timestamp}`;
+        const submitBtnId = `addOrderSubmitBtn_${timestamp}`;
+        const messageId = `addOrderMessage_${timestamp}`;
+        
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
         modal.id = 'addOrderModal';
@@ -530,27 +545,33 @@ const Orders = {
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Order Reference (eSIMgo)</label>
-                        <input type="text" id="addOrderReference" class="form-input w-full" placeholder="ORD-123456">
+                        <input type="text" id="${referenceId}" class="form-input w-full" placeholder="ORD-123456" autocomplete="off">
                         <p class="text-xs text-gray-500 mt-1">Enter the order reference from eSIMgo</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Telegram User ID</label>
-                        <input type="text" id="addOrderUserId" class="form-input w-full" placeholder="123456789">
+                        <input type="text" id="${userIdId}" class="form-input w-full" placeholder="123456789" autocomplete="off">
                         <p class="text-xs text-gray-500 mt-1">Enter the Telegram user ID</p>
                     </div>
                 </div>
                 <div class="flex gap-3 mt-6">
-                    <button id="addOrderCancelBtn" class="btn btn-secondary flex-1">Cancel</button>
-                    <button id="addOrderSubmitBtn" class="btn btn-primary flex-1">Add Order</button>
+                    <button id="${cancelBtnId}" class="btn btn-secondary flex-1">Cancel</button>
+                    <button id="${submitBtnId}" class="btn btn-primary flex-1">Add Order</button>
                 </div>
-                <div id="addOrderMessage" class="mt-4 text-sm hidden"></div>
+                <div id="${messageId}" class="mt-4 text-sm hidden"></div>
             </div>
         `;
         
         document.body.appendChild(modal);
         
+        // Сохраняем id для использования в submitAddOrder
+        modal.dataset.referenceId = referenceId;
+        modal.dataset.userIdId = userIdId;
+        modal.dataset.messageId = messageId;
+        modal.dataset.submitBtnId = submitBtnId;
+        
         // Close on cancel
-        document.getElementById('addOrderCancelBtn').addEventListener('click', () => {
+        document.getElementById(cancelBtnId).addEventListener('click', () => {
             modal.remove();
         });
         
@@ -562,29 +583,47 @@ const Orders = {
         });
         
         // Submit
-        document.getElementById('addOrderSubmitBtn').addEventListener('click', async () => {
-            await this.submitAddOrder();
+        document.getElementById(submitBtnId).addEventListener('click', async () => {
+            await Orders.submitAddOrder(modal);
         });
         
         // Submit on Enter
-        document.getElementById('addOrderReference').addEventListener('keypress', (e) => {
+        document.getElementById(referenceId).addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                this.submitAddOrder();
+                Orders.submitAddOrder(modal);
             }
         });
-        document.getElementById('addOrderUserId').addEventListener('keypress', (e) => {
+        document.getElementById(userIdId).addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                this.submitAddOrder();
+                Orders.submitAddOrder(modal);
             }
         });
+        
+        // Фокус на первое поле
+        setTimeout(() => {
+            document.getElementById(referenceId).focus();
+        }, 100);
     },
     
     // Submit add order request
-    async submitAddOrder() {
-        const orderReference = document.getElementById('addOrderReference').value.trim();
-        const telegramUserId = document.getElementById('addOrderUserId').value.trim();
-        const messageDiv = document.getElementById('addOrderMessage');
-        const submitBtn = document.getElementById('addOrderSubmitBtn');
+    async submitAddOrder(modal) {
+        if (!modal) {
+            modal = document.getElementById('addOrderModal');
+        }
+        if (!modal) {
+            console.error('Modal not found');
+            return;
+        }
+        
+        const referenceId = modal.dataset.referenceId || 'addOrderReference';
+        const userIdId = modal.dataset.userIdId || 'addOrderUserId';
+        const messageId = modal.dataset.messageId || 'addOrderMessage';
+        const submitBtnId = modal.dataset.submitBtnId || 'addOrderSubmitBtn';
+        
+        const orderReference = document.getElementById(referenceId)?.value.trim() || '';
+        const telegramUserId = document.getElementById(userIdId)?.value.trim() || '';
+        const messageDiv = document.getElementById(messageId);
+        const submitBtn = document.getElementById(submitBtnId);
         
         if (!orderReference) {
             messageDiv.className = 'mt-4 text-sm text-red-600';
@@ -630,9 +669,8 @@ const Orders = {
                 
                 // Reload orders after 1.5 seconds
                 setTimeout(() => {
-                    const modal = document.getElementById('addOrderModal');
                     if (modal) modal.remove();
-                    this.loadOrders(1);
+                    Orders.loadOrders(1);
                 }, 1500);
             } else {
                 throw new Error(data.error || 'Failed to add order');
