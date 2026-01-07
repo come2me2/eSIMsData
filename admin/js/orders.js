@@ -604,8 +604,17 @@ const Orders = {
         
         // Фокус на первое поле
         setTimeout(() => {
-            document.getElementById(referenceId).focus();
+            const refInput = document.getElementById(referenceId);
+            if (refInput) {
+                refInput.focus();
+            }
         }, 100);
+        
+        console.log('Modal created and added to DOM');
+        } catch (error) {
+            console.error('Error in showAddOrderModal:', error);
+            alert('Error opening modal: ' + error.message);
+        }
     },
     
     // Submit add order request
