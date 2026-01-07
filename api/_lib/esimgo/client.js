@@ -113,20 +113,8 @@ async function makeRequest(endpoint, options = {}) {
         const contentType = response.headers.get('content-type') || '';
         let data;
         
-        if (contentType.includes('application/json')) {
-            try {
-                data = await response.json();
-            } catch (jsonError) {
-                // Если не удалось распарсить JSON, читаем как текст
-                const text = await response.text();
-                console.error('Failed to parse JSON response:', {
-                    endpoint,
-                    contentType,
-                    textPreview: text.substring(0, 200)
-                });
-                throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
-            }
-        } else if (contentType.includes('text/csv')) {
+        // Сначала проверяем CSV, так как assignments API может возвращать CSV
+        if (contentType.includes('text/csv') || endpoint.includes('/assignments')) {
             // Парсим CSV ответ для assignments
             const csvText = await response.text();
             const lines = csvText.trim().split('\n');
