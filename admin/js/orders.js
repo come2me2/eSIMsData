@@ -517,6 +517,134 @@ const Orders = {
         
         // Reload orders without filter
         this.loadOrders(1);
+    },
+    
+    // Show modal for adding order from eSIMgo
+    showAddOrderModal() {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.id = 'addOrderModal';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Add Order from eSIMgo</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Order Reference (eSIMgo)</label>
+                        <input type="text" id="addOrderReference" class="form-input w-full" placeholder="ORD-123456">
+                        <p class="text-xs text-gray-500 mt-1">Enter the order reference from eSIMgo</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Telegram User ID</label>
+                        <input type="text" id="addOrderUserId" class="form-input w-full" placeholder="123456789">
+                        <p class="text-xs text-gray-500 mt-1">Enter the Telegram user ID</p>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button id="addOrderCancelBtn" class="btn btn-secondary flex-1">Cancel</button>
+                    <button id="addOrderSubmitBtn" class="btn btn-primary flex-1">Add Order</button>
+                </div>
+                <div id="addOrderMessage" class="mt-4 text-sm hidden"></div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Close on cancel
+        document.getElementById('addOrderCancelBtn').addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        // Submit
+        document.getElementById('addOrderSubmitBtn').addEventListener('click', async () => {
+            await this.submitAddOrder();
+        });
+        
+        // Submit on Enter
+        document.getElementById('addOrderReference').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.submitAddOrder();
+            }
+        });
+        document.getElementById('addOrderUserId').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.submitAddOrder();
+            }
+        });
+    },
+    
+    // Submit add order request
+    async submitAddOrder() {
+        const orderReference = document.getElementById('addOrderReference').value.trim();
+        const telegramUserId = document.getElementById('addOrderUserId').value.trim();
+        const messageDiv = document.getElementById('addOrderMessage');
+        const submitBtn = document.getElementById('addOrderSubmitBtn');
+        
+        if (!orderReference) {
+            messageDiv.className = 'mt-4 text-sm text-red-600';
+            messageDiv.textContent = 'Order Reference is required';
+            messageDiv.classList.remove('hidden');
+            return;
+        }
+        
+        if (!telegramUserId) {
+            messageDiv.className = 'mt-4 text-sm text-red-600';
+            messageDiv.textContent = 'Telegram User ID is required';
+            messageDiv.classList.remove('hidden');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Adding...';
+        messageDiv.classList.add('hidden');
+        
+        try {
+            const response = await Auth.authenticatedFetch('/api/admin/orders/add-from-esimgo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    orderReference: orderReference,
+                    telegram_user_id: telegramUserId
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to add order');
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                messageDiv.className = 'mt-4 text-sm text-green-600';
+                messageDiv.textContent = '✅ Order added successfully!';
+                messageDiv.classList.remove('hidden');
+                
+                // Reload orders after 1.5 seconds
+                setTimeout(() => {
+                    const modal = document.getElementById('addOrderModal');
+                    if (modal) modal.remove();
+                    this.loadOrders(1);
+                }, 1500);
+            } else {
+                throw new Error(data.error || 'Failed to add order');
+            }
+        } catch (error) {
+            console.error('Error adding order:', error);
+            messageDiv.className = 'mt-4 text-sm text-red-600';
+            messageDiv.textContent = `❌ Error: ${error.message}`;
+            messageDiv.classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Add Order';
+        }
     }
 };
 
