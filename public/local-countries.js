@@ -83,8 +83,7 @@ const staticCountries = [
     { name: 'Burkina Faso', code: 'BF' }, { name: 'Burundi', code: 'BI' }, { name: 'Cabo Verde', code: 'CV' },
     { name: 'Cambodia', code: 'KH' }, { name: 'Cameroon', code: 'CM' }, { name: 'Canada', code: 'CA' },
     { name: 'Canary Islands', code: 'IC' }, { name: 'Cayman Islands', code: 'KY' }, { name: 'Chad', code: 'TD' },
-    { name: 'Chile', code: 'CL' }, { name: 'China', code: 'CN' }, { name: 'Christmas Island', code: 'CX' },
-    { name: 'Cocos Islands', code: 'CC' }, { name: 'Colombia', code: 'CO' }, { name: 'Comoros', code: 'KM' },
+    { name: 'Chile', code: 'CL' }, { name: 'China', code: 'CN' }, { name: 'Colombia', code: 'CO' }, { name: 'Comoros', code: 'KM' },
     { name: 'Congo', code: 'CG' }, { name: 'Congo, Democratic Republic', code: 'CD' }, { name: 'Cook Islands', code: 'CK' },
     { name: 'Costa Rica', code: 'CR' }, { name: 'Côte d\'Ivoire', code: 'CI' }, { name: 'Croatia', code: 'HR' },
     { name: 'Cuba', code: 'CU' }, { name: 'Curaçao', code: 'CW' }, { name: 'Cyprus', code: 'CY' },
@@ -175,13 +174,36 @@ async function loadCountriesFromAPI(useCache = true) {
                     const result = JSON.parse(cachedData);
                     
                     if (result.success && result.data && Array.isArray(result.data)) {
-                        // Преобразуем данные из кэша в нужный формат
-                        countries = result.data.map(country => ({
-                            name: country.name,
-                            code: country.code
-                        }));
+                        // Список региональных названий, которые нужно исключить
+                        const excludedRegions = [
+                            'AFRICA', 'ASIA', 'EU LITE', 'EUROPE LITE', 'EUROPE', 'EU', 'EUL',
+                            'NORTH AMERICA', 'NORTHAMERICA', 'AMERICAS', 'AMERICA', 'LATAM', 'LATIN AMERICA',
+                            'CARIBBEAN', 'CARIB', 'CENAM', 'CENTRAL AMERICA',
+                            'OCEANIA', 'BALKANAS', 'BALKANS', 'CIS', 'CENTRAL EURASIA'
+                        ];
                         
-                        console.log(`✅ Загружено ${countries.length} стран из кэша`);
+                        // Исключаемые коды стран
+                        const excludedCodes = ['CX', 'CC']; // Christmas Island, Cocos Islands
+                        
+                        // Преобразуем данные из кэша в нужный формат и фильтруем
+                        countries = result.data
+                            .map(country => ({
+                                name: country.name,
+                                code: country.code
+                            }))
+                            .filter(country => {
+                                // Исключаем регионы по коду
+                                if (excludedCodes.includes(country.code.toUpperCase())) {
+                                    return false;
+                                }
+                                // Исключаем регионы по названию
+                                if (excludedRegions.includes(country.name.toUpperCase())) {
+                                    return false;
+                                }
+                                return true;
+                            });
+                        
+                        console.log(`✅ Загружено ${countries.length} стран из кэша (после фильтрации)`);
                         
                         // Обновляем UI с кэшированными данными
                         renderCountries(countries);
@@ -229,13 +251,38 @@ async function loadCountriesFromAPI(useCache = true) {
         }
         
         if (result.success && result.data && Array.isArray(result.data)) {
-            // Преобразуем данные из API в нужный формат
-            countries = result.data.map(country => ({
-                name: country.name,
-                code: country.code
-            }));
+            // Список региональных названий, которые нужно исключить
+            const excludedRegions = [
+                'AFRICA', 'ASIA', 'EU LITE', 'EUROPE LITE', 'EUROPE', 'EU', 'EUL',
+                'NORTH AMERICA', 'NORTHAMERICA', 'AMERICAS', 'AMERICA', 'LATAM', 'LATIN AMERICA',
+                'CARIBBEAN', 'CARIB', 'CENAM', 'CENTRAL AMERICA',
+                'OCEANIA', 'BALKANAS', 'BALKANS', 'CIS', 'CENTRAL EURASIA'
+            ];
             
-            console.log(`✅ Загружено ${countries.length} стран из API`);
+            // Исключаемые коды стран
+            const excludedCodes = ['CX', 'CC']; // Christmas Island, Cocos Islands
+            
+            // Преобразуем данные из API в нужный формат и фильтруем
+            countries = result.data
+                .map(country => ({
+                    name: country.name,
+                    code: country.code
+                }))
+                .filter(country => {
+                    // Исключаем регионы по коду
+                    if (excludedCodes.includes(country.code.toUpperCase())) {
+                        console.log(`🚫 Исключена страна по коду: ${country.code}`);
+                        return false;
+                    }
+                    // Исключаем регионы по названию
+                    if (excludedRegions.includes(country.name.toUpperCase())) {
+                        console.log(`🚫 Исключен регион по названию: ${country.name}`);
+                        return false;
+                    }
+                    return true;
+                });
+            
+            console.log(`✅ Загружено ${countries.length} стран из API (после фильтрации)`);
             
             // Возвращаем успешный результат
             return true;

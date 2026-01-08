@@ -8,7 +8,7 @@
 const esimgoClient = require('../_lib/esimgo/client');
 const cache = require('../_lib/cache');
 
-// Маппинг ISO кода страны на название
+        // Маппинг ISO кода страны на название
 const isoToCountryName = {
     'AD': 'Andorra', 'AE': 'United Arab Emirates', 'AF': 'Afghanistan', 'AG': 'Antigua and Barbuda',
     'AI': 'Anguilla', 'AL': 'Albania', 'AM': 'Armenia', 'AN': 'Netherlands Antilles', 'AO': 'Angola', 'AQ': 'Antarctica',
@@ -19,10 +19,10 @@ const isoToCountryName = {
     'BO': 'Bolivia', 'BQ': 'Caribbean Netherlands', 'BR': 'Brazil', 'BS': 'Bahamas', 'BT': 'Bhutan',
     'BV': 'Bouvet Island', 'BW': 'Botswana', 'BY': 'Belarus', 'BZ': 'Belize', 'CA': 'Canada',
     'CYP': 'Northern Cyprus', // Northern Cyprus специальный код
-    'CC': 'Cocos Islands', 'CD': 'Congo, Democratic Republic', 'CF': 'Central African Republic',
+    'CD': 'Congo, Democratic Republic', 'CF': 'Central African Republic',
     'CG': 'Congo', 'CH': 'Switzerland', 'CI': 'Côte d\'Ivoire', 'CK': 'Cook Islands', 'CL': 'Chile',
     'CM': 'Cameroon', 'CN': 'China', 'CO': 'Colombia', 'CR': 'Costa Rica', 'CU': 'Cuba',
-    'CV': 'Cabo Verde', 'CW': 'Curaçao', 'CX': 'Christmas Island', 'CY': 'Cyprus',
+    'CV': 'Cabo Verde', 'CW': 'Curaçao', 'CY': 'Cyprus',
     'CZ': 'Czech Republic', 'DE': 'Germany', 'DJ': 'Djibouti', 'DK': 'Denmark', 'DM': 'Dominica',
     'DO': 'Dominican Republic', 'DZ': 'Algeria', 'EC': 'Ecuador', 'EE': 'Estonia', 'EG': 'Egypt',
     'EH': 'Western Sahara', 'ER': 'Eritrea', 'ES': 'Spain', 'ET': 'Ethiopia', 'FI': 'Finland',
@@ -215,6 +215,27 @@ module.exports = async function handler(req, res) {
                     return; // Пропускаем коды неправильной длины
                 }
                 
+                // Список региональных кодов, которые нужно исключить
+                const regionalCodes = [
+                    'AFRICA', 'ASIA', 'EU LITE', 'EUROPE LITE', 'EUROPE', 'EU', 'EUL',
+                    'NORTH AMERICA', 'NORTHAMERICA', 'AMERICAS', 'AMERICA', 'LATAM', 'LATIN AMERICA',
+                    'CARIBBEAN', 'CARIB', 'CENAM', 'CENTRAL AMERICA',
+                    'OCEANIA', 'BALKANAS', 'BALKANS', 'CIS', 'CENTRAL EURASIA'
+                ];
+                
+                // Исключаем региональные коды
+                const countryCodeUpper = countryCode.toUpperCase();
+                if (regionalCodes.includes(countryCodeUpper)) {
+                    console.log(`Skipping regional code: ${countryCode}`);
+                    return;
+                }
+                
+                // Исключаем Christmas Island (CX) и Cocos Islands (CC) - они не должны быть в local
+                if (countryCodeUpper === 'CX' || countryCodeUpper === 'CC') {
+                    console.log(`Skipping excluded country: ${countryCode}`);
+                    return;
+                }
+                
                 // Проверяем, что код есть в нашем маппинге (валидная страна/регион)
                 if (!isoToCountryName[countryCode]) {
                     console.log(`Skipping invalid country code: ${countryCode}`);
@@ -223,6 +244,13 @@ module.exports = async function handler(req, res) {
                 
                 // Получаем название страны из маппинга по ISO коду
                 const countryName = isoToCountryName[countryCode];
+                
+                // Дополнительная проверка: исключаем регионы по названию
+                const countryNameUpper = countryName.toUpperCase();
+                if (regionalCodes.includes(countryNameUpper)) {
+                    console.log(`Skipping regional name: ${countryName}`);
+                    return;
+                }
                 
                 if (!countriesMap.has(countryCode)) {
                     countriesMap.set(countryCode, {
