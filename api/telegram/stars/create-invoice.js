@@ -171,12 +171,41 @@ module.exports = async function handler(req, res) {
             telegram_username
         } = req.body || {};
 
+        // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Если country_code пустой, генерируем его на сервере
+        let finalCountryCode = (country_code && String(country_code).trim() !== '') ? String(country_code).trim() : null;
+        
+        if (!finalCountryCode && country_name) {
+            const countryName = String(country_name).trim();
+            
+            // Маппинг регионов и Global
+            if (countryName.toLowerCase() === 'global') {
+                finalCountryCode = 'GLOBAL';
+                console.log('[Stars] Generated country_code from country_name (Global):', finalCountryCode);
+            } else {
+                const regionCodeMap = {
+                    'Africa': 'AFRICA',
+                    'Asia': 'ASIA',
+                    'Europe': 'EUROPE',
+                    'Latin America': 'LATAM',
+                    'North America': 'NA',
+                    'Balkanas': 'BALKANAS',
+                    'Central Eurasia': 'CIS',
+                    'Oceania': 'OCEANIA'
+                };
+                finalCountryCode = regionCodeMap[countryName] || countryName.replace(/\s+/g, '').toUpperCase();
+                console.log('[Stars] Generated country_code from country_name (Region):', {
+                    countryName: countryName,
+                    generatedCode: finalCountryCode
+                });
+            }
+        }
+        
         // ✅ ДЕТАЛЬНАЯ ПРОВЕРКА каждого поля с логированием
         const missingFields = [];
         if (!plan_id) missingFields.push('plan_id');
         if (!plan_type) missingFields.push('plan_type');
         if (!bundle_name) missingFields.push('bundle_name');
-        if (!country_code) missingFields.push('country_code');
+        if (!finalCountryCode) missingFields.push('country_code');
         if (!price) missingFields.push('price');
         
         if (missingFields.length > 0) {
@@ -238,13 +267,16 @@ module.exports = async function handler(req, res) {
         // Получаем базовую маржу (например, 1.29 = +29%)
         const baseMarkup = markup.enabled ? (markup.base || markup.defaultMultiplier || 1.0) : 1.0;
         
+        // Используем finalCountryCode вместо country_code
+        const countryCodeForMarkup = finalCountryCode || country_code;
+        
         // Проверяем наценку по стране
         let countryMarkup = 1.0;
-        if (country_code && markup.countryMarkups && markup.countryMarkups[country_code]) {
+        if (countryCodeForMarkup && markup.countryMarkups && markup.countryMarkups[countryCodeForMarkup]) {
             // Наценка по стране в процентах, конвертируем в множитель
-            const countryPercent = markup.countryMarkups[country_code];
+            const countryPercent = markup.countryMarkups[countryCodeForMarkup];
             countryMarkup = 1 + (countryPercent / 100);
-            console.log(`[Stars] Country markup found for ${country_code}: ${countryPercent}% (multiplier: ${countryMarkup})`);
+            console.log(`[Stars] Country markup found for ${countryCodeForMarkup}: ${countryPercent}% (multiplier: ${countryMarkup})`);
         }
         
         // Получаем маржу для Telegram Stars (например, 1.05 = +5%)
@@ -259,7 +291,9 @@ module.exports = async function handler(req, res) {
             cost: costPrice,
             baseMarkup: baseMarkup,
             countryMarkup: countryMarkup,
-            countryCode: country_code,
+            countryCode: finalCountryCode || country_code,
+            originalCountryCode: country_code,
+            generatedCountryCode: finalCountryCode,
             starsMarkup: starsMarkup,
             finalPrice: finalPrice.toFixed(2),
             formula: `${costPrice} × ${baseMarkup} × ${countryMarkup} × ${starsMarkup} = ${finalPrice.toFixed(2)}`
@@ -298,7 +332,7 @@ module.exports = async function handler(req, res) {
             plan_id,
             plan_type,
             bundle_name,
-            country_code,
+            country_code: finalCountryCode || country_code, // Используем сгенерированный код
             country_name,
             telegram_user_id,
             amountStars
