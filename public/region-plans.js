@@ -494,11 +494,29 @@ function setupSegmentedControl() {
             // Устанавливаем выбранный план по умолчанию из реальных загруженных планов
             if (currentPlanType === 'unlimited') {
                 // Используем первый план из unlimitedPlans, если он есть
-                selectedPlanId = unlimitedPlans.length > 0 ? unlimitedPlans[0].id : null;
+                if (unlimitedPlans.length > 0) {
+                    selectedPlanId = unlimitedPlans[0].id || unlimitedPlans[0].bundle_name;
+                    console.log('🔵 Set selectedPlanId for unlimited:', selectedPlanId, 'from plan:', unlimitedPlans[0]);
+                } else {
+                    selectedPlanId = null;
+                    console.warn('⚠️ No unlimited plans available');
+                }
             } else {
                 // Для standard используем первый план из standardPlans
-                selectedPlanId = standardPlans.length > 0 ? standardPlans[0].id : 'plan2';
+                if (standardPlans.length > 0) {
+                    selectedPlanId = standardPlans[0].id || standardPlans[0].bundle_name || 'plan2';
+                    console.log('🔵 Set selectedPlanId for standard:', selectedPlanId, 'from plan:', standardPlans[0]);
+                } else {
+                    selectedPlanId = 'plan2';
+                }
             }
+            
+            console.log('🔵 After switching plan type:', {
+                currentPlanType: currentPlanType,
+                selectedPlanId: selectedPlanId,
+                standardPlansCount: standardPlans.length,
+                unlimitedPlansCount: unlimitedPlans.length
+            });
             
             renderPlans();
             updateInfoBox();
