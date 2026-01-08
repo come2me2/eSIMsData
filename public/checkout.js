@@ -851,7 +851,30 @@ function setupOrderDetails() {
         return; // Выходим, updateOrderDetailsWithRealPlans обновит позже
     }
     
-    const selectedPlan = plans.find(p => p.id === orderData.planId) || plans[0];
+    // Улучшенный поиск плана: ищем по id, bundle_name или по индексу
+    let selectedPlan = plans.find(p => 
+        p.id === orderData.planId || 
+        p.bundle_name === orderData.planId ||
+        (p.id && p.id.toString() === orderData.planId.toString())
+    );
+    
+    // Если не найден и planId содержит индекс (например, "plan2" или "unlimited1")
+    if (!selectedPlan && orderData.planId) {
+        const indexMatch = orderData.planId.match(/(\d+)$/);
+        if (indexMatch) {
+            const index = parseInt(indexMatch[1]) - 1; // plan1 = index 0, plan2 = index 1, etc.
+            if (index >= 0 && index < plans.length) {
+                selectedPlan = plans[index];
+                console.log('[Checkout] Found plan by index:', { planId: orderData.planId, index, foundPlan: selectedPlan });
+            }
+        }
+    }
+    
+    // Fallback на первый план
+    if (!selectedPlan) {
+        selectedPlan = plans[0];
+        console.warn('[Checkout] Plan not found, using first plan:', { planId: orderData.planId, availableIds: plans.slice(0, 3).map(p => ({ id: p.id, bundle_name: p.bundle_name })) });
+    }
     
     if (selectedPlan) {
         planDetailsElement.innerHTML = `
@@ -899,7 +922,31 @@ function updateOrderDetailsWithRealPlans() {
     
     // Находим выбранный план
     const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
-    const selectedPlan = plans.find(p => p.id === orderData.planId) || plans[0];
+    
+    // Улучшенный поиск плана: ищем по id, bundle_name или по индексу
+    let selectedPlan = plans.find(p => 
+        p.id === orderData.planId || 
+        p.bundle_name === orderData.planId ||
+        (p.id && p.id.toString() === orderData.planId.toString())
+    );
+    
+    // Если не найден и planId содержит индекс (например, "plan2" или "unlimited1")
+    if (!selectedPlan && orderData.planId) {
+        const indexMatch = orderData.planId.match(/(\d+)$/);
+        if (indexMatch) {
+            const index = parseInt(indexMatch[1]) - 1; // plan1 = index 0, plan2 = index 1, etc.
+            if (index >= 0 && index < plans.length) {
+                selectedPlan = plans[index];
+                console.log('[Checkout] Found plan by index in updateOrderDetails:', { planId: orderData.planId, index, foundPlan: selectedPlan });
+            }
+        }
+    }
+    
+    // Fallback на первый план
+    if (!selectedPlan && plans.length > 0) {
+        selectedPlan = plans[0];
+        console.warn('[Checkout] Plan not found in updateOrderDetails, using first plan:', { planId: orderData.planId, availableIds: plans.slice(0, 3).map(p => ({ id: p.id, bundle_name: p.bundle_name })) });
+    }
     
     if (selectedPlan) {
         // Обновляем детали плана
