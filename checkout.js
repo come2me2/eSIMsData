@@ -523,6 +523,11 @@ async function initiateStarsPayment(auth) {
             }
         }
         
+        // Валидация bundle_name для Region и Global
+        if (!bundleName || bundleName.trim() === '') {
+            throw new Error(`Bundle name is required. planId=${orderData.planId}, selectedPlan.id=${selectedPlan.id}`);
+        }
+        
         // Получаем себестоимость тарифа
         // ⚠️ ВАЖНО: Для расчета Stars нужна СЕБЕСТОИМОСТЬ (cost), а не финальная цена!
         // 
@@ -598,20 +603,41 @@ async function initiateStarsPayment(auth) {
             countryCode = 'GLOBAL';
         }
         
+        // Валидация всех обязательных полей перед отправкой
+        if (!orderData.planId) {
+            throw new Error('plan_id is required');
+        }
+        if (!orderData.planType) {
+            throw new Error('plan_type is required');
+        }
+        if (!bundleName || bundleName.trim() === '') {
+            throw new Error('bundle_name is required');
+        }
+        if (!countryCode || countryCode.trim() === '') {
+            throw new Error('country_code is required');
+        }
+        if (!costPrice || costPrice <= 0) {
+            throw new Error(`price (cost) is required and must be > 0. Current value: ${costPrice}`);
+        }
+        
+        const requestPayload = {
+            plan_id: orderData.planId,
+            plan_type: orderData.planType,
+            bundle_name: bundleName,
+            country_code: countryCode,
+            country_name: orderData.name || (orderData.type === 'global' ? 'Global' : orderData.name || ''),
+            price: costPrice, // ⚠️ Себестоимость тарифа
+            currency: 'USD',
+            telegram_user_id: auth.getUserId(),
+            telegram_username: auth.getUsername()
+        };
+        
+        console.log('💫 Stars payment request payload:', requestPayload);
+        
         const invoiceResponse = await fetch('/api/telegram/stars/create-invoice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                plan_id: orderData.planId,
-                plan_type: orderData.planType,
-                bundle_name: bundleName,
-                country_code: countryCode,
-                country_name: orderData.name || (orderData.type === 'global' ? 'Global' : orderData.name),
-                price: costPrice, // ⚠️ Себестоимость тарифа
-                currency: 'USD',
-                telegram_user_id: auth.getUserId(),
-                telegram_username: auth.getUsername()
-            })
+            body: JSON.stringify(requestPayload)
         });
         
         const invoiceResult = await invoiceResponse.json();

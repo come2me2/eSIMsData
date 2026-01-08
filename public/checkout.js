@@ -1698,20 +1698,62 @@ function setupStarsButton() {
                 throw new Error(validation.error || 'Validation failed');
             }
             
+            // Для Region и Global используем короткие коды без пробелов
+            let countryCode = orderData.code;
+            if (!countryCode && orderData.type === 'region') {
+                // Маппинг регионов на короткие коды без пробелов для Telegram API
+                const regionCodeMap = {
+                    'Africa': 'AFRICA',
+                    'Asia': 'ASIA',
+                    'Europe': 'EUROPE',
+                    'Latin America': 'LATAM',
+                    'North America': 'NA',
+                    'Balkanas': 'BALKANAS',
+                    'Central Eurasia': 'CIS',
+                    'Oceania': 'OCEANIA'
+                };
+                // Используем маппинг или преобразуем название в код (убираем пробелы, делаем uppercase)
+                countryCode = regionCodeMap[orderData.name] || (orderData.name || 'REGION').replace(/\s+/g, '').toUpperCase();
+            } else if (!countryCode && orderData.type === 'global') {
+                // Для глобальных планов используем "GLOBAL"
+                countryCode = 'GLOBAL';
+            }
+            
+            // Валидация всех обязательных полей перед отправкой
+            if (!plan.id) {
+                throw new Error('plan_id is required');
+            }
+            if (!orderData.planType) {
+                throw new Error('plan_type is required');
+            }
+            if (!bundleName || bundleName.trim() === '') {
+                throw new Error('bundle_name is required');
+            }
+            if (!countryCode || countryCode.trim() === '') {
+                throw new Error('country_code is required');
+            }
+            if (!costPrice || costPrice <= 0) {
+                throw new Error(`price (cost) is required and must be > 0. Current value: ${costPrice}`);
+            }
+            
+            const requestPayload = {
+                plan_id: plan.id,
+                plan_type: orderData.planType,
+                bundle_name: bundleName,
+                country_code: countryCode,
+                country_name: orderData.name || (orderData.type === 'global' ? 'Global' : orderData.name || ''),
+                price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
+                currency,
+                telegram_user_id: auth.getUserId(),
+                telegram_username: auth.getUsername()
+            };
+            
+            console.log('[Stars] Payment request payload:', requestPayload);
+            
             const response = await fetch('/api/telegram/stars/create-invoice', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    plan_id: plan.id,
-                    plan_type: orderData.planType,
-                    bundle_name: bundleName,
-                    country_code: orderData.code,
-                    country_name: orderData.name,
-                    price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
-                    currency,
-                    telegram_user_id: auth.getUserId(),
-                    telegram_username: auth.getUsername()
-                })
+                body: JSON.stringify(requestPayload)
             });
             
             const result = await response.json();
