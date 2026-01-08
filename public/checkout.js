@@ -1855,7 +1855,7 @@ function setupStarsButton() {
             }
             
             const requestPayload = {
-                plan_id: plan.id,
+                plan_id: plan.id || plan.bundle_name || orderData.planId,
                 plan_type: orderData.planType,
                 bundle_name: bundleName,
                 country_code: countryCode,
@@ -1866,7 +1866,31 @@ function setupStarsButton() {
                 telegram_username: auth.getUsername()
             };
             
-            console.log('[Stars] Payment request payload:', requestPayload);
+            // ✅ ФИНАЛЬНАЯ ПРОВЕРКА перед отправкой
+            console.log('[Stars] ========================================');
+            console.log('[Stars] Final payment request payload:', JSON.stringify(requestPayload, null, 2));
+            console.log('[Stars] Plan object:', {
+                id: plan.id,
+                bundle_name: plan.bundle_name,
+                price: plan.price,
+                priceValue: plan.priceValue
+            });
+            console.log('[Stars] orderData:', orderData);
+            console.log('[Stars] ========================================');
+            
+            // Дополнительная проверка всех полей
+            if (!requestPayload.plan_id || requestPayload.plan_id.trim() === '') {
+                throw new Error(`plan_id is empty. Plan: ${JSON.stringify(plan)}, orderData.planId: ${orderData.planId}`);
+            }
+            if (!requestPayload.bundle_name || requestPayload.bundle_name.trim() === '') {
+                throw new Error(`bundle_name is empty. Plan: ${JSON.stringify(plan)}`);
+            }
+            if (!requestPayload.country_code || requestPayload.country_code.trim() === '') {
+                throw new Error(`country_code is empty. orderData: ${JSON.stringify(orderData)}`);
+            }
+            if (!requestPayload.price || requestPayload.price <= 0) {
+                throw new Error(`price is invalid: ${requestPayload.price}. costPrice: ${costPrice}, plan: ${JSON.stringify(plan)}`);
+            }
             
             const response = await fetch('/api/telegram/stars/create-invoice', {
                 method: 'POST',
