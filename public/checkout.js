@@ -1919,11 +1919,52 @@ function setupStarsButton() {
                 throw new Error('country_code is empty before creating request payload');
             }
             
+            // ✅ КРИТИЧЕСКАЯ ПРОВЕРКА: Если countryCode все еще пустой, устанавливаем его принудительно
+            if (!countryCode || countryCode.trim() === '') {
+                console.warn('[Stars] ⚠️ countryCode is empty, forcing generation from orderData:', orderData);
+                
+                // Принудительно формируем countryCode на основе country_name или type
+                if (orderData.name) {
+                    const name = String(orderData.name).trim();
+                    if (name.toLowerCase() === 'global') {
+                        countryCode = 'GLOBAL';
+                    } else {
+                        // Маппинг регионов
+                        const regionCodeMap = {
+                            'Africa': 'AFRICA',
+                            'Asia': 'ASIA',
+                            'Europe': 'EUROPE',
+                            'Latin America': 'LATAM',
+                            'North America': 'NA',
+                            'Balkanas': 'BALKANAS',
+                            'Central Eurasia': 'CIS',
+                            'Oceania': 'OCEANIA'
+                        };
+                        countryCode = regionCodeMap[name] || name.replace(/\s+/g, '').toUpperCase();
+                    }
+                } else if (orderData.type === 'global') {
+                    countryCode = 'GLOBAL';
+                } else if (orderData.type === 'region') {
+                    countryCode = 'REGION';
+                } else {
+                    countryCode = 'UNKNOWN';
+                }
+                
+                console.log('[Stars] Forced countryCode generation:', countryCode);
+            }
+            
+            // ✅ ГАРАНТИРУЕМ, что countryCode не пустой
+            countryCode = String(countryCode || 'UNKNOWN').trim();
+            if (countryCode === '' || countryCode === 'null' || countryCode === 'undefined') {
+                countryCode = orderData.type === 'global' ? 'GLOBAL' : (orderData.type === 'region' ? 'REGION' : 'UNKNOWN');
+                console.warn('[Stars] ⚠️ countryCode was invalid, set to:', countryCode);
+            }
+            
             const requestPayload = {
                 plan_id: plan.id || plan.bundle_name || orderData.planId,
                 plan_type: orderData.planType,
                 bundle_name: bundleName,
-                country_code: String(countryCode).trim(), // ✅ Явное преобразование в строку и trim
+                country_code: countryCode, // ✅ Уже гарантированно не пустой
                 country_name: orderData.name || (orderData.type === 'global' ? 'Global' : orderData.name || ''),
                 price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
                 currency,
@@ -1931,10 +1972,16 @@ function setupStarsButton() {
                 telegram_username: auth.getUsername()
             };
             
-            // ✅ ЕЩЕ ОДНА ПРОВЕРКА после создания payload
-            if (!requestPayload.country_code || requestPayload.country_code.trim() === '') {
-                console.error('[Stars] ❌ country_code is empty in payload!', requestPayload);
-                throw new Error('country_code is empty in request payload');
+            // ✅ ФИНАЛЬНАЯ ПРОВЕРКА после создания payload
+            if (!requestPayload.country_code || requestPayload.country_code.trim() === '' || requestPayload.country_code === 'null') {
+                console.error('[Stars] ❌ country_code is STILL empty in payload!', {
+                    requestPayload: requestPayload,
+                    countryCode: countryCode,
+                    orderData: orderData
+                });
+                // Принудительно устанавливаем значение
+                requestPayload.country_code = orderData.type === 'global' ? 'GLOBAL' : (orderData.type === 'region' ? 'REGION' : 'UNKNOWN');
+                console.warn('[Stars] ⚠️ Forced country_code to:', requestPayload.country_code);
             }
             
             // ✅ ФИНАЛЬНАЯ ПРОВЕРКА перед отправкой
