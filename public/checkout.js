@@ -1834,9 +1834,22 @@ function setupStarsButton() {
             // ✅ ВАЖНО: Проверяем не только на null/undefined, но и на пустую строку
             let countryCode = (orderData.code && orderData.code.trim() !== '') ? orderData.code.trim() : null;
             console.log('[Stars] Initial countryCode from orderData.code:', countryCode, '(raw:', orderData.code, ')');
+            console.log('[Stars] orderData for countryCode generation:', {
+                type: orderData.type,
+                name: orderData.name,
+                code: orderData.code
+            });
             
-            // Если countryCode пустой или отсутствует, формируем его на основе типа заказа
-            if ((!countryCode || countryCode.trim() === '') && orderData.type === 'region') {
+            // ✅ УЛУЧШЕННАЯ ЛОГИКА: Формируем countryCode на основе типа ИЛИ названия
+            // Проверяем сначала по country_name (более надежно), потом по type
+            const countryName = (orderData.name || '').trim();
+            const orderType = (orderData.type || '').toLowerCase();
+            
+            if ((!countryCode || countryCode.trim() === '') && (orderType === 'global' || countryName.toLowerCase() === 'global')) {
+                // Для глобальных планов используем "GLOBAL"
+                countryCode = 'GLOBAL';
+                console.log('[Stars] Set countryCode to GLOBAL for global plan (type:', orderType, ', name:', countryName, ')');
+            } else if ((!countryCode || countryCode.trim() === '') && (orderType === 'region' || countryName)) {
                 // Маппинг регионов на короткие коды без пробелов для Telegram API
                 const regionCodeMap = {
                     'Africa': 'AFRICA',
@@ -1849,16 +1862,13 @@ function setupStarsButton() {
                     'Oceania': 'OCEANIA'
                 };
                 // Используем маппинг или преобразуем название в код (убираем пробелы, делаем uppercase)
-                countryCode = regionCodeMap[orderData.name] || (orderData.name || 'REGION').replace(/\s+/g, '').toUpperCase();
+                countryCode = regionCodeMap[countryName] || (countryName || 'REGION').replace(/\s+/g, '').toUpperCase();
                 console.log('[Stars] Generated countryCode for region:', {
-                    regionName: orderData.name,
-                    mappedCode: regionCodeMap[orderData.name],
+                    regionName: countryName,
+                    orderType: orderType,
+                    mappedCode: regionCodeMap[countryName],
                     finalCode: countryCode
                 });
-            } else if ((!countryCode || countryCode.trim() === '') && orderData.type === 'global') {
-                // Для глобальных планов используем "GLOBAL"
-                countryCode = 'GLOBAL';
-                console.log('[Stars] Set countryCode to GLOBAL for global plan');
             }
             
             // ✅ ФИНАЛЬНАЯ ПРОВЕРКА: countryCode должен быть заполнен
@@ -1867,9 +1877,17 @@ function setupStarsButton() {
                     orderData: orderData,
                     type: orderData.type,
                     name: orderData.name,
-                    code: orderData.code
+                    code: orderData.code,
+                    countryName: countryName,
+                    orderType: orderType
                 });
-                throw new Error(`Failed to generate country_code. Type: ${orderData.type}, Name: ${orderData.name}`);
+                throw new Error(`Failed to generate country_code. Type: ${orderData.type}, Name: ${orderData.name}, Code: ${orderData.code}`);
+            }
+            
+            // ✅ ГАРАНТИРУЕМ, что countryCode не пустой (дополнительная проверка)
+            countryCode = String(countryCode).trim();
+            if (countryCode === '') {
+                throw new Error('country_code cannot be empty after processing');
             }
             
             console.log('[Stars] Final countryCode:', countryCode);
@@ -1891,17 +1909,33 @@ function setupStarsButton() {
                 throw new Error(`price (cost) is required and must be > 0. Current value: ${costPrice}`);
             }
             
+            // ✅ ГАРАНТИРУЕМ, что countryCode не потерялся перед созданием payload
+            if (!countryCode || countryCode.trim() === '') {
+                console.error('[Stars] ❌ countryCode is empty before creating payload!', {
+                    countryCode: countryCode,
+                    orderData: orderData,
+                    plan: plan
+                });
+                throw new Error('country_code is empty before creating request payload');
+            }
+            
             const requestPayload = {
                 plan_id: plan.id || plan.bundle_name || orderData.planId,
                 plan_type: orderData.planType,
                 bundle_name: bundleName,
-                country_code: countryCode,
+                country_code: String(countryCode).trim(), // ✅ Явное преобразование в строку и trim
                 country_name: orderData.name || (orderData.type === 'global' ? 'Global' : orderData.name || ''),
                 price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
                 currency,
                 telegram_user_id: auth.getUserId(),
                 telegram_username: auth.getUsername()
             };
+            
+            // ✅ ЕЩЕ ОДНА ПРОВЕРКА после создания payload
+            if (!requestPayload.country_code || requestPayload.country_code.trim() === '') {
+                console.error('[Stars] ❌ country_code is empty in payload!', requestPayload);
+                throw new Error('country_code is empty in request payload');
+            }
             
             // ✅ ФИНАЛЬНАЯ ПРОВЕРКА перед отправкой
             console.log('[Stars] ========================================');
