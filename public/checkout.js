@@ -980,18 +980,42 @@ function getSelectedPlan() {
         return null;
     }
     
-    // Ищем план по ID или bundle_name
-    let selectedPlan = plans.find(p => 
-        p.id === orderData.planId || 
-        p.bundle_name === orderData.planId ||
-        (p.id && p.id.toString() === orderData.planId.toString())
-    );
+    console.log('[Stars] Searching for plan:', {
+        planId: orderData.planId,
+        planType: orderData.planType,
+        totalPlans: plans.length,
+        firstPlanIds: plans.slice(0, 3).map(p => ({ id: p.id, bundle_name: p.bundle_name }))
+    });
     
-    // Если не найден, используем первый план как fallback
+    // Ищем план по ID или bundle_name (с учетом разных форматов)
+    let selectedPlan = plans.find(p => {
+        const planIdStr = String(p.id || '').toLowerCase().trim();
+        const bundleNameStr = String(p.bundle_name || '').toLowerCase().trim();
+        const searchIdStr = String(orderData.planId || '').toLowerCase().trim();
+        
+        return planIdStr === searchIdStr || 
+               bundleNameStr === searchIdStr ||
+               (planIdStr && planIdStr === searchIdStr) ||
+               (bundleNameStr && bundleNameStr === searchIdStr);
+    });
+    
+    // Если не найден и planId содержит индекс (например, "plan2" или "unlimited1")
+    if (!selectedPlan && orderData.planId) {
+        const indexMatch = orderData.planId.match(/(\d+)$/);
+        if (indexMatch) {
+            const index = parseInt(indexMatch[1]) - 1; // plan1 = index 0, plan2 = index 1, etc.
+            if (index >= 0 && index < plans.length) {
+                selectedPlan = plans[index];
+                console.log('[Stars] Found plan by index:', { planId: orderData.planId, index, foundPlan: selectedPlan });
+            }
+        }
+    }
+    
+    // Если все еще не найден, используем первый план как fallback
     if (!selectedPlan) {
         console.warn('[Stars] Plan not found by ID, using first plan:', {
             planId: orderData.planId,
-            availableIds: plans.slice(0, 3).map(p => p.id),
+            availableIds: plans.slice(0, 5).map(p => ({ id: p.id, bundle_name: p.bundle_name })),
             totalPlans: plans.length
         });
         selectedPlan = plans[0];
