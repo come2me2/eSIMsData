@@ -146,6 +146,19 @@ module.exports = async function handler(req, res) {
     }
 
     try {
+        // ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ для отладки Region/Global планов
+        console.log('[Stars] ========================================');
+        console.log('[Stars] Request received:', {
+            method: req.method,
+            url: req.url,
+            body: req.body,
+            headers: {
+                'content-type': req.headers['content-type'],
+                'user-agent': req.headers['user-agent']
+            }
+        });
+        console.log('[Stars] ========================================');
+        
         const {
             plan_id,
             plan_type,
@@ -158,12 +171,54 @@ module.exports = async function handler(req, res) {
             telegram_username
         } = req.body || {};
 
-        if (!plan_id || !plan_type || !bundle_name || !country_code || !price) {
+        // ✅ ДЕТАЛЬНАЯ ПРОВЕРКА каждого поля с логированием
+        const missingFields = [];
+        if (!plan_id) missingFields.push('plan_id');
+        if (!plan_type) missingFields.push('plan_type');
+        if (!bundle_name) missingFields.push('bundle_name');
+        if (!country_code) missingFields.push('country_code');
+        if (!price) missingFields.push('price');
+        
+        if (missingFields.length > 0) {
+            console.error('[Stars] ❌ Missing required fields:', {
+                missingFields,
+                receivedData: {
+                    plan_id: plan_id || 'MISSING',
+                    plan_type: plan_type || 'MISSING',
+                    bundle_name: bundle_name || 'MISSING',
+                    country_code: country_code || 'MISSING',
+                    country_name: country_name || 'MISSING',
+                    price: price || 'MISSING',
+                    currency: currency || 'MISSING',
+                    telegram_user_id: telegram_user_id || 'MISSING',
+                    telegram_username: telegram_username || 'MISSING'
+                },
+                fullBody: req.body
+            });
+            
             return res.status(400).json({
                 success: false,
-                error: 'plan_id, plan_type, bundle_name, country_code and price are required'
+                error: `Missing required fields: ${missingFields.join(', ')}. Received: ${JSON.stringify({
+                    plan_id: plan_id || null,
+                    plan_type: plan_type || null,
+                    bundle_name: bundle_name || null,
+                    country_code: country_code || null,
+                    price: price || null
+                })}`
             });
         }
+        
+        console.log('[Stars] ✅ All required fields present:', {
+            plan_id,
+            plan_type,
+            bundle_name,
+            country_code,
+            country_name,
+            price,
+            currency,
+            telegram_user_id,
+            telegram_username
+        });
 
         const costPrice = parsePrice(price);
         if (!costPrice) {
