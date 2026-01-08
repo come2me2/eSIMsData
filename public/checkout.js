@@ -927,7 +927,40 @@ function updateOrderDetailsWithRealPlans() {
 
 function getSelectedPlan() {
     const plans = orderData.planType === 'unlimited' ? unlimitedPlans : standardPlans;
-    return plans.find(p => p.id === orderData.planId) || plans[0];
+    
+    if (!plans || plans.length === 0) {
+        console.warn('[Stars] No plans available');
+        return null;
+    }
+    
+    // Ищем план по ID или bundle_name
+    let selectedPlan = plans.find(p => 
+        p.id === orderData.planId || 
+        p.bundle_name === orderData.planId ||
+        (p.id && p.id.toString() === orderData.planId.toString())
+    );
+    
+    // Если не найден, используем первый план как fallback
+    if (!selectedPlan) {
+        console.warn('[Stars] Plan not found by ID, using first plan:', {
+            planId: orderData.planId,
+            availableIds: plans.slice(0, 3).map(p => p.id),
+            totalPlans: plans.length
+        });
+        selectedPlan = plans[0];
+    }
+    
+    console.log('[Stars] Selected plan:', {
+        planId: orderData.planId,
+        foundPlan: {
+            id: selectedPlan?.id,
+            bundle_name: selectedPlan?.bundle_name,
+            price: selectedPlan?.price,
+            priceValue: selectedPlan?.priceValue
+        }
+    });
+    
+    return selectedPlan;
 }
 
 function getPriceValueFromPlan(plan) {
@@ -1672,9 +1705,28 @@ function setupStarsButton() {
             return;
         }
         
+        // Валидация плана
+        if (!plan.id && !plan.bundle_name) {
+            console.error('[Stars] Plan has no id or bundle_name:', plan);
+            alert('Ошибка: план не содержит необходимых данных. Обновите страницу.');
+            return;
+        }
+        
         const priceValue = getPriceValueFromPlan(plan);
+        if (!priceValue || priceValue <= 0) {
+            console.error('[Stars] Invalid price value:', priceValue, plan);
+            alert('Ошибка: неверная цена плана. Обновите страницу.');
+            return;
+        }
+        
         const currency = plan.currency || 'USD';
         const bundleName = plan.bundle_name || plan.id;
+        
+        if (!bundleName || bundleName.trim() === '') {
+            console.error('[Stars] Bundle name is empty:', plan);
+            alert('Ошибка: не указано название тарифа. Обновите страницу.');
+            return;
+        }
         
         // ✅ ВАЖНО: Вычисляем себестоимость (cost), разделив цену на базовую маржу
         // Цена из API уже содержит базовую маржу (например, 1.29 = +29%)
