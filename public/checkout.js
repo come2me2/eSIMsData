@@ -1797,8 +1797,19 @@ function setupStarsButton() {
                 throw new Error(validation.error || 'Validation failed');
             }
             
+            // ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ для отладки
+            console.log('[Stars] orderData:', {
+                type: orderData.type,
+                name: orderData.name,
+                code: orderData.code,
+                planId: orderData.planId,
+                planType: orderData.planType
+            });
+            
             // Для Region и Global используем короткие коды без пробелов
             let countryCode = orderData.code;
+            console.log('[Stars] Initial countryCode from orderData.code:', countryCode);
+            
             if (!countryCode && orderData.type === 'region') {
                 // Маппинг регионов на короткие коды без пробелов для Telegram API
                 const regionCodeMap = {
@@ -1813,10 +1824,18 @@ function setupStarsButton() {
                 };
                 // Используем маппинг или преобразуем название в код (убираем пробелы, делаем uppercase)
                 countryCode = regionCodeMap[orderData.name] || (orderData.name || 'REGION').replace(/\s+/g, '').toUpperCase();
+                console.log('[Stars] Generated countryCode for region:', {
+                    regionName: orderData.name,
+                    mappedCode: regionCodeMap[orderData.name],
+                    finalCode: countryCode
+                });
             } else if (!countryCode && orderData.type === 'global') {
                 // Для глобальных планов используем "GLOBAL"
                 countryCode = 'GLOBAL';
+                console.log('[Stars] Set countryCode to GLOBAL for global plan');
             }
+            
+            console.log('[Stars] Final countryCode:', countryCode);
             
             // Валидация всех обязательных полей перед отправкой
             if (!plan.id) {
