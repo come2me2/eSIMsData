@@ -1831,10 +1831,12 @@ function setupStarsButton() {
             });
             
             // Для Region и Global используем короткие коды без пробелов
-            let countryCode = orderData.code;
-            console.log('[Stars] Initial countryCode from orderData.code:', countryCode);
+            // ✅ ВАЖНО: Проверяем не только на null/undefined, но и на пустую строку
+            let countryCode = (orderData.code && orderData.code.trim() !== '') ? orderData.code.trim() : null;
+            console.log('[Stars] Initial countryCode from orderData.code:', countryCode, '(raw:', orderData.code, ')');
             
-            if (!countryCode && orderData.type === 'region') {
+            // Если countryCode пустой или отсутствует, формируем его на основе типа заказа
+            if ((!countryCode || countryCode.trim() === '') && orderData.type === 'region') {
                 // Маппинг регионов на короткие коды без пробелов для Telegram API
                 const regionCodeMap = {
                     'Africa': 'AFRICA',
@@ -1853,10 +1855,21 @@ function setupStarsButton() {
                     mappedCode: regionCodeMap[orderData.name],
                     finalCode: countryCode
                 });
-            } else if (!countryCode && orderData.type === 'global') {
+            } else if ((!countryCode || countryCode.trim() === '') && orderData.type === 'global') {
                 // Для глобальных планов используем "GLOBAL"
                 countryCode = 'GLOBAL';
                 console.log('[Stars] Set countryCode to GLOBAL for global plan');
+            }
+            
+            // ✅ ФИНАЛЬНАЯ ПРОВЕРКА: countryCode должен быть заполнен
+            if (!countryCode || countryCode.trim() === '') {
+                console.error('[Stars] ❌ countryCode is still empty after generation!', {
+                    orderData: orderData,
+                    type: orderData.type,
+                    name: orderData.name,
+                    code: orderData.code
+                });
+                throw new Error(`Failed to generate country_code. Type: ${orderData.type}, Name: ${orderData.name}`);
             }
             
             console.log('[Stars] Final countryCode:', countryCode);
