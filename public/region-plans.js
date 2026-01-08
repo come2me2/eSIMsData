@@ -621,8 +621,27 @@ function setupCountriesList() {
 
 // Setup next button
 function setupNextButton() {
-    document.getElementById('nextBtn').addEventListener('click', () => {
+    const nextBtn = document.getElementById('nextBtn');
+    if (!nextBtn) {
+        console.error('❌ Next button not found');
+        return;
+    }
+    
+    // Удаляем старые обработчики, если они есть
+    const newNextBtn = nextBtn.cloneNode(true);
+    nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+    
+    newNextBtn.addEventListener('click', () => {
+        console.log('🔵 Next button clicked:', {
+            selectedPlanId: selectedPlanId,
+            currentPlanType: currentPlanType,
+            regionDataName: regionData.name,
+            standardPlansCount: standardPlans.length,
+            unlimitedPlansCount: unlimitedPlans.length
+        });
+        
         if (!selectedPlanId) {
+            console.warn('❌ No plan selected');
             if (tg) {
                 tg.showAlert('Please select a plan');
             } else {
@@ -631,18 +650,51 @@ function setupNextButton() {
             return;
         }
         
+        // Проверяем, что выбранный план существует в текущем списке планов
+        const plans = currentPlanType === 'unlimited' ? unlimitedPlans : standardPlans;
+        const selectedPlan = plans.find(p => p.id === selectedPlanId || p.bundle_name === selectedPlanId);
+        
+        if (!selectedPlan) {
+            console.error('❌ Selected plan not found in plans list:', {
+                selectedPlanId: selectedPlanId,
+                currentPlanType: currentPlanType,
+                availablePlans: plans.map(p => ({ id: p.id, bundle_name: p.bundle_name }))
+            });
+            if (tg) {
+                tg.showAlert('Selected plan not found. Please select again.');
+            } else {
+                alert('Selected plan not found. Please select again.');
+            }
+            return;
+        }
+        
         if (tg) {
             tg.HapticFeedback.impactOccurred('medium');
         }
         
-        // Navigate to checkout screen for both standard and unlimited plans
-        const checkoutParams = new URLSearchParams({
+        // Получаем название региона из URL или из regionData
+        const urlParams = new URLSearchParams(window.location.search);
+        const regionName = urlParams.get('region') || regionData.name || 'Africa';
+        
+        console.log('🔵 Navigating to checkout:', {
             type: 'region',
-            name: regionData.name,
+            name: regionName,
             plan: selectedPlanId,
             planType: currentPlanType
         });
-        window.location.href = `checkout.html?${checkoutParams.toString()}`;
+        
+        // Navigate to checkout screen for both standard and unlimited plans
+        const checkoutParams = new URLSearchParams({
+            type: 'region',
+            name: regionName,
+            plan: selectedPlanId,
+            planType: currentPlanType
+        });
+        
+        const checkoutUrl = `checkout.html?${checkoutParams.toString()}`;
+        console.log('🔵 Checkout URL:', checkoutUrl);
+        
+        window.location.href = checkoutUrl;
     });
 }
 
