@@ -376,13 +376,13 @@ module.exports = async function handler(req, res) {
                 }
                 
                 // Формируем сообщение с данными eSIM
-                let message = `📱 Ваши данные eSIM:\n\n`;
+                let message = `📱 Your eSIM data:\n\n`;
                 if (iccid) message += `ICCID: \`${iccid}\`\n`;
                 if (matchingId) message += `Matching ID: \`${matchingId}\`\n`;
                 if (rspUrl) message += `RSP URL: \`${rspUrl}\`\n`;
                 
                 if (qrCode) {
-                    message += `\nQR код:`;
+                    message += `\nQR code:`;
                 }
                 
                 // Отправляем текстовое сообщение
@@ -406,7 +406,7 @@ module.exports = async function handler(req, res) {
                         body: JSON.stringify({
                             chat_id: order.telegram_user_id,
                             photo: qrCode,
-                            caption: 'QR код для активации eSIM'
+                            caption: 'QR code for eSIM activation'
                         })
                     });
                     
