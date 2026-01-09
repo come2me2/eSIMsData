@@ -189,6 +189,11 @@ const Users = {
                                         };
                                         const statusInfo = statusMap[orderStatus] || { text: orderStatus, color: 'bg-gray-100 text-gray-800' };
                                         
+                                        // Get order ID and escape it for use in onclick
+                                        const orderId = order.orderReference || order.id || order.number || '';
+                                        const orderIdEscaped = orderId.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                                        const userIdEscaped = (user.telegram_user_id || '').toString().replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                                        
                                         return `
                                             <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
                                                 <div class="flex-1">
@@ -202,7 +207,7 @@ const Users = {
                                                 </div>
                                                 <div class="text-right ml-4">
                                                     <div class="text-sm font-bold text-gray-900">$${order.price || '0.00'}</div>
-                                                    <button onclick="Users.openOrderDetails('${order.orderReference || order.id || order.number}', '${user.telegram_user_id}')" class="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">${t('viewDetails')}</button>
+                                                    ${orderId ? `<button onclick="Users.openOrderDetails('${orderIdEscaped}', '${userIdEscaped}')" class="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">${t('viewDetails')}</button>` : '<span class="text-xs text-gray-400">N/A</span>'}
                                                 </div>
                                             </div>
                                         `;
@@ -232,13 +237,30 @@ const Users = {
     
     // Open order details modal
     async openOrderDetails(orderId, userId) {
-        // Check if Orders is available (we're on users page, need to load orders functionality)
-        if (typeof Orders !== 'undefined') {
-            // If orders.js is loaded, use its function
-            await Orders.showOrderDetails(orderId, userId);
-        } else {
-            // Otherwise, navigate to orders page with search
-            window.location.href = `orders.html?search=${orderId}`;
+        try {
+            console.log('[Users] openOrderDetails called:', { orderId, userId });
+            
+            // Validate parameters
+            if (!orderId || orderId === 'N/A' || (typeof orderId === 'string' && orderId.trim() === '')) {
+                console.error('[Users] Invalid orderId:', orderId);
+                this.showError('Order ID is required');
+                return;
+            }
+            
+            // Check if Orders is available (we're on users page, need to load orders functionality)
+            if (typeof Orders !== 'undefined' && typeof Orders.showOrderDetails === 'function') {
+                console.log('[Users] Calling Orders.showOrderDetails');
+                // If orders.js is loaded, use its function
+                await Orders.showOrderDetails(orderId, userId);
+            } else {
+                console.log('[Users] Orders not available, redirecting to orders page');
+                // Otherwise, navigate to orders page with search
+                window.location.href = `orders.html?search=${encodeURIComponent(orderId)}`;
+            }
+        } catch (error) {
+            console.error('[Users] Error in openOrderDetails:', error);
+            const t = (key) => window.i18n ? window.i18n.t(key) : key;
+            this.showError(t('errorLoadingOrderDetails') + ': ' + (error.message || error));
         }
     },
     
