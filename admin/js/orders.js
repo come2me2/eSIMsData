@@ -153,8 +153,9 @@ const Orders = {
                 if (orderModal) {
                     orderModal.classList.remove('hidden');
                 } else {
-                    // If orderModal doesn't exist (e.g., on users.html page), redirect to orders page
-                    window.location.href = `orders.html?search=${orderId}`;
+                    // If orderModal doesn't exist, show error
+                    const t = (key) => window.i18n ? window.i18n.t(key) : key;
+                    this.showError(t('errorLoadingOrderDetails'));
                 }
             } else {
                 console.error('[Orders] Order not found in response:', data);

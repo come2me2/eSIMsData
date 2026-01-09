@@ -278,6 +278,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+        
+        // Close order modal (same handler as in orders.js, but we add it here too for users.html)
+        const closeModal = document.getElementById('closeModal');
+        const orderModal = document.getElementById('orderModal');
+        if (closeModal && orderModal) {
+            // Check if handler is not already attached (orders.js might have already attached it)
+            if (!closeModal.hasAttribute('data-handler-attached')) {
+                closeModal.addEventListener('click', () => {
+                    orderModal.classList.add('hidden');
+                });
+                closeModal.setAttribute('data-handler-attached', 'true');
+            }
+            orderModal.addEventListener('click', (e) => {
+                if (e.target === orderModal) {
+                    orderModal.classList.add('hidden');
+                }
+            });
+        }
     } catch (error) {
         console.error('Error initializing users page:', error);
     }
