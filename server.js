@@ -103,6 +103,7 @@ const apiRoutes = {
     '/api/cache/prefill': require('./api/cache/prefill'),
     '/api/telegram/stars/create-invoice': require('./api/telegram/stars/create-invoice'),
     '/api/telegram/stars/webhook': require('./api/telegram/stars/webhook'),
+    '/api/telegram/bot/webhook': require('./api/telegram/bot/webhook'),
     '/api/orders': require('./api/orders'),
     // Promocode validation API
     '/api/promocode/validate': require('./api/promocode/validate'),
