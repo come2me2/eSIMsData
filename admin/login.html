@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход - eSIMsData Admin</title>
+    <title>Login - eSIMsData Admin</title>
     <link rel="stylesheet" href="css/tailwind.css">
     <link rel="stylesheet" href="css/admin.css">
 </head>
@@ -11,13 +11,13 @@
     <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-gray-800">eSIMsData</h1>
-            <p class="text-gray-600 mt-2">Административная панель</p>
+            <p class="text-gray-600 mt-2">Admin Panel</p>
         </div>
 
         <form id="loginForm" class="space-y-6">
             <div>
                 <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
-                    Имя пользователя
+                    Username
                 </label>
                 <input 
                     type="text" 
@@ -25,13 +25,13 @@
                     name="username" 
                     required
                     class="form-input"
-                    placeholder="Введите имя пользователя"
+                    placeholder="Enter username"
                 >
             </div>
 
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                    Пароль
+                    Password
                 </label>
                 <input 
                     type="password" 
@@ -39,7 +39,7 @@
                     name="password" 
                     required
                     class="form-input"
-                    placeholder="Введите пароль"
+                    placeholder="Enter password"
                 >
             </div>
 
@@ -51,7 +51,7 @@
                 class="w-full btn btn-primary"
                 id="loginBtn"
             >
-                Войти
+                Login
             </button>
         </form>
     </div>
@@ -70,17 +70,17 @@
             // Hide error
             errorDiv.classList.add('hidden');
             loginBtn.disabled = true;
-            loginBtn.textContent = 'Вход...';
+            loginBtn.textContent = 'Logging in...';
             
             const result = await Auth.login(username, password);
             
             if (result.success) {
                 window.location.href = 'index.html';
             } else {
-                errorDiv.textContent = result.error || 'Ошибка входа';
+                errorDiv.textContent = result.error || 'Login error';
                 errorDiv.classList.remove('hidden');
                 loginBtn.disabled = false;
-                loginBtn.textContent = 'Войти';
+                loginBtn.textContent = 'Login';
             }
         });
 
