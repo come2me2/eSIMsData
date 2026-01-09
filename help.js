@@ -151,11 +151,11 @@ function setupHelpItems() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            // Открываем Telegram бота для связи
+            // Открываем Telegram группу для связи
             if (tg && tg.openTelegramLink) {
-                tg.openTelegramLink('https://t.me/esimsdata_bot');
+                tg.openTelegramLink('https://t.me/SIAMOCEAN');
             } else {
-                window.open('https://t.me/esimsdata_bot', '_blank');
+                window.open('https://t.me/SIAMOCEAN', '_blank');
             }
         });
     }

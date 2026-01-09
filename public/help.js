@@ -151,8 +151,12 @@ function setupHelpItems() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('light');
             }
-            // TODO: Navigate to Contact page
-            console.log('Navigate to Contact');
+            // Открываем Telegram группу для связи
+            if (tg && tg.openTelegramLink) {
+                tg.openTelegramLink('https://t.me/SIAMOCEAN');
+            } else {
+                window.open('https://t.me/SIAMOCEAN', '_blank');
+            }
         });
     }
 }
