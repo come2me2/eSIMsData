@@ -524,21 +524,19 @@ module.exports = async function handler(req, res) {
                 
                 // Формируем сообщение для пользователя
                 let messageText = [
-                    '✅ <b>Оплата через Stars успешно</b>',
-                    `План: ${payloadObj.pid || 'N/A'}`,
-                    `Страна: ${payloadObj.cc || payloadObj.cn || 'N/A'}`,
-                    `Заказ: <code>${orderRef}</code>`
+                    '✅ <b>Payment with Stars successful</b>',
+                    `Plan: ${payloadObj.pid || 'N/A'}`,
+                    `Country: ${payloadObj.cc || payloadObj.cn || 'N/A'}`,
+                    `Order: <code>${orderRef}</code>`
                 ];
                 
                 if (assignments && assignments.iccid) {
                     messageText.push('');
-                    messageText.push('📱 <b>eSIM готов к использованию!</b>');
+                    messageText.push('📱 <b>eSIM is ready to use!</b>');
                     messageText.push(`ICCID: <code>${assignments.iccid}</code>`);
-                    messageText.push('');
-                    messageText.push('Откройте раздел "My eSIMs" в приложении для получения QR кода.');
                 } else {
                     messageText.push('');
-                    messageText.push('eSIM обрабатывается. Проверьте раздел "My eSIMs" через несколько минут.');
+                    messageText.push('eSIM is being processed. Please check back in a few minutes.');
                 }
                 
                 await sendStatusMessage(message.chat.id, messageText.join('\n'));
