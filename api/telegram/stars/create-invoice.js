@@ -386,6 +386,59 @@ module.exports = async function handler(req, res) {
         }
 
         const invoiceLink = tgData.result;
+        
+        // Извлекаем invoice ID из ссылки (формат: https://t.me/invoice/INVOICE_ID)
+        const invoiceIdMatch = invoiceLink.match(/\/invoice\/([^\/\?]+)/);
+        const invoiceId = invoiceIdMatch ? invoiceIdMatch[1] : null;
+        
+        // Создаем заказ со статусом on_hold (БЕЗ создания в eSIM Go)
+        // Заказ будет создан в eSIM Go только после подтверждения платежа
+        try {
+            const ordersHandler = require('../orders');
+            const orderReq = {
+                method: 'POST',
+                body: {
+                    telegram_user_id: telegram_user_id,
+                    orderReference: `pending_${invoiceId || Date.now()}`, // Временный ID, будет заменен после оплаты
+                    status: 'on_hold',
+                    payment_method: 'telegram_stars',
+                    payment_session_id: invoiceId,
+                    payment_status: 'pending',
+                    country_code: finalCountryCode || country_code,
+                    country_name: country_name,
+                    plan_id: plan_id,
+                    plan_type: plan_type,
+                    bundle_name: bundle_name,
+                    price: finalPrice,
+                    currency: currency,
+                    provider_base_price_usd: costPrice,
+                    provider_product_id: bundle_name,
+                    source: 'telegram_mini_app',
+                    customer: telegram_user_id,
+                    // Таймаут: 5 минут для Telegram Stars
+                    expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+                    createdAt: new Date().toISOString()
+                }
+            };
+            
+            const orderRes = {
+                status: (code) => ({ json: (data) => {} }),
+                setHeader: () => {},
+                statusCode: 200
+            };
+            
+            await ordersHandler(orderReq, orderRes);
+            
+            console.log('✅ Order created with status on_hold:', {
+                invoiceId,
+                telegram_user_id,
+                bundle_name,
+                expires_at: orderReq.body.expires_at
+            });
+        } catch (orderError) {
+            console.error('⚠️ Failed to create on_hold order:', orderError);
+            // Не блокируем создание invoice, но логируем ошибку
+        }
 
         console.log('✅ Invoice created successfully:', {
             plan_id,
@@ -393,7 +446,8 @@ module.exports = async function handler(req, res) {
             cost: costPrice,
             finalPrice: finalPrice.toFixed(2),
             stars: amountStars,
-            invoiceLink: invoiceLink.substring(0, 50) + '...'
+            invoiceLink: invoiceLink.substring(0, 50) + '...',
+            invoiceId: invoiceId
         });
 
         return res.status(200).json({
@@ -401,6 +455,7 @@ module.exports = async function handler(req, res) {
             invoiceLink,
             amountStars,
             finalPrice: finalPrice.toFixed(2),
+            invoiceId: invoiceId, // Возвращаем invoice ID для отслеживания
             details: {
                 cost: costPrice,
                 baseMarkup,

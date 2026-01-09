@@ -120,6 +120,58 @@ function safeParsePayload(payloadStr) {
     }
 }
 
+// Обновить статус заказа на failed при ошибке платежа
+async function updateOrderStatusOnPaymentError(paymentSessionId, reason) {
+    try {
+        const fs = require('fs').promises;
+        const path = require('path');
+        const ORDERS_FILE = path.join(__dirname, '..', '..', 'data', 'orders.json');
+        
+        const ordersData = await fs.readFile(ORDERS_FILE, 'utf8');
+        const allOrders = JSON.parse(ordersData);
+        let updated = false;
+        
+        // Ищем заказ по payment_session_id
+        for (const userId in allOrders) {
+            if (!Array.isArray(allOrders[userId])) continue;
+            
+            for (let i = 0; i < allOrders[userId].length; i++) {
+                const order = allOrders[userId][i];
+                
+                if (order.status === 'on_hold' && 
+                    order.payment_method === 'telegram_stars' &&
+                    (order.payment_session_id === paymentSessionId || 
+                     order.orderReference?.includes(paymentSessionId))) {
+                    
+                    allOrders[userId][i] = {
+                        ...order,
+                        status: 'failed',
+                        failed_reason: reason,
+                        payment_status: 'failed',
+                        updatedAt: new Date().toISOString()
+                    };
+                    
+                    updated = true;
+                    console.log('❌ Order status updated to failed:', {
+                        userId: userId,
+                        orderReference: order.orderReference,
+                        reason: reason
+                    });
+                    break;
+                }
+            }
+            
+            if (updated) break;
+        }
+        
+        if (updated) {
+            await fs.writeFile(ORDERS_FILE, JSON.stringify(allOrders, null, 2), 'utf8');
+        }
+    } catch (error) {
+        console.warn('⚠️ Failed to update order status on payment error:', error.message);
+    }
+}
+
 module.exports = async function handler(req, res) {
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -154,6 +206,8 @@ module.exports = async function handler(req, res) {
                 ok: false,
                 error_message: 'Invalid payload'
             });
+            // Обновляем заказ на failed если он существует
+            await updateOrderStatusOnPaymentError(pq.id, 'Invalid payload');
             return res.status(200).json({ ok: true });
         }
 
@@ -165,10 +219,25 @@ module.exports = async function handler(req, res) {
                 ok: false,
                 error_message: 'Price mismatch'
             });
+            // Обновляем заказ на failed если он существует
+            await updateOrderStatusOnPaymentError(pq.id, 'Price mismatch');
             return res.status(200).json({ ok: true });
         }
 
         await answerPreCheckout(pq);
+        return res.status(200).json({ ok: true });
+    }
+    
+    // Обработка ошибок платежа (если есть)
+    if (update.message && update.message.successful_payment === false) {
+        // Пользователь отменил оплату или произошла ошибка
+        const paymentId = update.message.payment?.telegram_payment_charge_id || 
+                         update.message.payment?.provider_payment_charge_id;
+        
+        if (paymentId) {
+            await updateOrderStatusOnPaymentError(paymentId, 'Payment canceled by user');
+        }
+        
         return res.status(200).json({ ok: true });
     }
 
@@ -247,10 +316,56 @@ module.exports = async function handler(req, res) {
 
         processedPayments.add(paymentId);
 
+        const telegramUserId = payloadObj.uid || (message.from && message.from.id);
+        
+        // Ищем существующий заказ on_hold по payment_session_id (invoice ID)
+        let existingOrder = null;
+        
+        try {
+            // Загружаем все заказы пользователя
+            const fs = require('fs').promises;
+            const path = require('path');
+            const ORDERS_FILE = path.join(__dirname, '..', '..', 'data', 'orders.json');
+            
+            try {
+                const ordersData = await fs.readFile(ORDERS_FILE, 'utf8');
+                const allOrders = JSON.parse(ordersData);
+                const userOrders = allOrders[telegramUserId] || [];
+                
+                // Ищем заказ по payment_session_id (invoice ID из payload или payment)
+                // Invoice ID может быть в разных местах, проверяем все варианты
+                const invoiceId = payment.telegram_payment_charge_id || payment.provider_payment_charge_id || paymentId;
+                
+                existingOrder = userOrders.find(o => 
+                    o.status === 'on_hold' && 
+                    o.payment_method === 'telegram_stars' &&
+                    (o.payment_session_id === invoiceId || 
+                     o.orderReference?.includes(invoiceId) ||
+                     o.payment_session_id === paymentId ||
+                     (o.orderReference && o.orderReference.startsWith('pending_') && o.orderReference.includes(invoiceId)))
+                );
+                
+                if (existingOrder) {
+                    console.log('✅ Found existing on_hold order:', {
+                        orderReference: existingOrder.orderReference,
+                        payment_session_id: existingOrder.payment_session_id,
+                        invoiceId: invoiceId,
+                        expires_at: existingOrder.expires_at
+                    });
+                } else {
+                    console.log('ℹ️ No existing on_hold order found, will create new order');
+                }
+            } catch (loadError) {
+                console.warn('⚠️ Failed to load orders to find existing order:', loadError.message);
+            }
+        } catch (searchError) {
+            console.warn('⚠️ Error searching for existing order:', searchError.message);
+        }
+
         // Собираем данные для заказа
         const orderReq = createMockReq({
             bundle_name: payloadObj.bn,
-            telegram_user_id: payloadObj.uid || (message.from && message.from.id),
+            telegram_user_id: telegramUserId,
             telegram_username: message.from && message.from.username,
             user_name: message.from && message.from.first_name,
             country_code: payloadObj.cc,
@@ -313,12 +428,32 @@ module.exports = async function handler(req, res) {
                 // Используем полные данные из eSIMgo, если они доступны
                 const finalOrderData = fullOrderData || orderData;
                 
+                // Проверяем, выдана ли eSIM
+                const hasEsim = !!(assignments?.iccid || assignments?.matchingId || 
+                                  finalOrderData.order?.[0]?.esims?.[0]?.iccid);
+                
+                // Определяем финальный статус:
+                // COMPLETED только если платеж подтвержден И eSIM выдана
+                // Если платеж подтвержден, но eSIM не выдана - оставляем ON HOLD
+                let finalStatus = 'on_hold';
+                if (success && hasEsim) {
+                    finalStatus = 'completed';
+                } else if (success && !hasEsim) {
+                    finalStatus = 'on_hold';
+                    console.warn('⚠️ Payment confirmed but eSIM not issued yet. Keeping status on_hold.');
+                }
+                
                 // Сохраняем заказ через API
                 try {
-                    const telegramUserId = payloadObj.uid || (message.from && message.from.id);
+                    // Если был заказ on_hold, используем его orderReference для обновления
+                    // Иначе используем новый orderReference из eSIM Go
+                    const finalOrderReference = existingOrder && existingOrder.orderReference?.startsWith('pending_') 
+                        ? orderRef  // Заменяем временный ID на реальный
+                        : orderRef;
+                    
                     const saveOrderReq = {
                         telegram_user_id: telegramUserId,
-                        orderReference: orderRef,
+                        orderReference: finalOrderReference, // Используем реальный orderReference из eSIM Go
                         iccid: assignments?.iccid || finalOrderData.order?.[0]?.esims?.[0]?.iccid || null,
                         matchingId: assignments?.matchingId || null,
                         smdpAddress: assignments?.smdpAddress || null,
@@ -330,28 +465,55 @@ module.exports = async function handler(req, res) {
                         bundle_name: payloadObj.bn || null,
                         price: finalOrderData.total || orderData.total || null,
                         currency: finalOrderData.currency || orderData.currency || 'USD',
-                        status: finalOrderData.status || orderData.status || 'completed',
-                        createdAt: new Date().toISOString(),
+                        status: finalStatus, // Используем определенный статус
+                        createdAt: existingOrder?.createdAt || new Date().toISOString(), // Сохраняем оригинальную дату создания
                         // Новые обязательные поля
                         source: 'telegram_mini_app',
                         customer: telegramUserId,
                         provider_product_id: payloadObj.bn || null,
                         provider_base_price_usd: payloadObj.bp || finalOrderData.basePrice || orderData.basePrice || null,
                         payment_method: 'telegram_stars',
-                        // Дополнительные данные из eSIMgo
-                        order_status: finalOrderData.status || orderData.status,
-                        order_total: finalOrderData.total || orderData.total,
-                        order_currency: finalOrderData.currency || orderData.currency,
-                        order_date: finalOrderData.date || finalOrderData.createdAt || new Date().toISOString()
+                        // Новые поля для статусов
+                        payment_session_id: existingOrder?.payment_session_id || paymentId,
+                        payment_status: 'succeeded',
+                        payment_confirmed: true,
+                        esim_issued: hasEsim,
+                        esim_checked_at: new Date().toISOString(),
+                        expires_at: null // Убираем таймаут после подтверждения платежа
                     };
+                    
+                    // Если обновляем существующий заказ, нужно обновить по старому orderReference
+                    if (existingOrder && existingOrder.orderReference?.startsWith('pending_')) {
+                        // Сначала удаляем старый заказ с временным ID
+                        try {
+                            const fs = require('fs').promises;
+                            const path = require('path');
+                            const ORDERS_FILE = path.join(__dirname, '..', '..', 'data', 'orders.json');
+                            const ordersData = await fs.readFile(ORDERS_FILE, 'utf8');
+                            const allOrders = JSON.parse(ordersData);
+                            const userOrders = allOrders[telegramUserId] || [];
+                            const oldIndex = userOrders.findIndex(o => o.orderReference === existingOrder.orderReference);
+                            if (oldIndex >= 0) {
+                                userOrders.splice(oldIndex, 1);
+                                await fs.writeFile(ORDERS_FILE, JSON.stringify(allOrders, null, 2), 'utf8');
+                                console.log('✅ Removed old pending order:', existingOrder.orderReference);
+                            }
+                        } catch (removeError) {
+                            console.warn('⚠️ Failed to remove old pending order:', removeError.message);
+                        }
+                    }
                     
                     // Вызываем API для сохранения заказа
                     const saveOrderRes = createMockRes();
-                    const saveOrderHandler = require('../orders');
-                    await Promise.resolve(saveOrderHandler(createMockReq(saveOrderReq), saveOrderRes));
+                    await Promise.resolve(ordersHandler(createMockReq(saveOrderReq), saveOrderRes));
                     
                     if (saveOrderRes.statusCode === 200) {
-                        console.log('✅ Order saved to database:', orderRef);
+                        console.log('✅ Order updated in database:', {
+                            orderReference: orderRef,
+                            status: finalStatus,
+                            hasEsim: hasEsim,
+                            wasOnHold: !!existingOrder
+                        });
                     } else {
                         console.warn('⚠️ Failed to save order to database:', saveOrderRes.data);
                     }
@@ -381,6 +543,31 @@ module.exports = async function handler(req, res) {
                 
                 await sendStatusMessage(message.chat.id, messageText.join('\n'));
             } else {
+                // Заказ не создан в eSIM Go - обновляем существующий заказ на failed
+                if (existingOrder) {
+                    try {
+                        const ordersHandler = require('../orders');
+                        const updateReq = {
+                            method: 'POST',
+                            body: {
+                                telegram_user_id: telegramUserId,
+                                orderReference: existingOrder.orderReference,
+                                status: 'failed',
+                                failed_reason: 'esim_order_creation_failed',
+                                payment_status: 'succeeded', // Платеж прошел, но заказ не создан
+                                payment_confirmed: true,
+                                esim_issued: false,
+                                updatedAt: new Date().toISOString()
+                            }
+                        };
+                        const updateRes = createMockRes();
+                        await Promise.resolve(ordersHandler(createMockReq(updateReq), updateRes));
+                        console.log('❌ Order updated to failed (eSIM order creation failed)');
+                    } catch (updateError) {
+                        console.error('❌ Error updating order to failed:', updateError);
+                    }
+                }
+                
                 await sendStatusMessage(message.chat.id, [
                     '⚠️ Оплата прошла, но заказ не создан.',
                     'Мы уже разбираемся. Пожалуйста, свяжитесь с поддержкой.',
@@ -389,6 +576,32 @@ module.exports = async function handler(req, res) {
             }
         } catch (error) {
             console.error('❌ Error creating order after payment:', error);
+            
+            // Обновляем существующий заказ на failed при ошибке
+            if (existingOrder) {
+                try {
+                    const ordersHandler = require('../orders');
+                    const updateReq = {
+                        method: 'POST',
+                        body: {
+                            telegram_user_id: telegramUserId,
+                            orderReference: existingOrder.orderReference,
+                            status: 'failed',
+                            failed_reason: 'esim_order_creation_error',
+                            payment_status: 'succeeded',
+                            payment_confirmed: true,
+                            esim_issued: false,
+                            updatedAt: new Date().toISOString()
+                        }
+                    };
+                    const updateRes = createMockRes();
+                    await Promise.resolve(ordersHandler(createMockReq(updateReq), updateRes));
+                    console.log('❌ Order updated to failed (error during order creation)');
+                } catch (updateError) {
+                    console.error('❌ Error updating order to failed:', updateError);
+                }
+            }
+            
             await sendStatusMessage(message.chat.id, [
                 '⚠️ Оплата прошла, но произошла ошибка при создании заказа.',
                 'Мы уже разбираемся. Пожалуйста, свяжитесь с поддержкой.',

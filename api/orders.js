@@ -136,7 +136,16 @@ module.exports = async function handler(req, res) {
                 // Промокод
                 promocode,
                 discount_amount,
-                discount_percent
+                discount_percent,
+                // Новые поля для статусов
+                payment_session_id,
+                payment_status,
+                expires_at,
+                canceled_reason,
+                failed_reason,
+                payment_confirmed,
+                esim_issued,
+                esim_checked_at
             } = req.body;
             
             if (!telegram_user_id) {
@@ -168,6 +177,10 @@ module.exports = async function handler(req, res) {
             const createdAtDate = createdAt ? new Date(createdAt) : new Date();
             const date = createdAtDate.toISOString().split('T')[0]; // YYYY-MM-DD
             const time = createdAtDate.toTimeString().split(' ')[0]; // HH:MM:SS
+            
+            // Определяем статусы платежа и eSIM
+            const isPaymentConfirmed = payment_confirmed !== undefined ? payment_confirmed : (status === 'completed');
+            const isEsimIssued = esim_issued !== undefined ? esim_issued : !!(iccid || matchingId);
             
             const orderData = {
                 // Базовые поля
@@ -210,19 +223,35 @@ module.exports = async function handler(req, res) {
                 discount_amount: discount_amount || null,
                 discount_percent: discount_percent || null,
                 
+                // Новые поля для статусов
+                payment_session_id: payment_session_id || null,
+                payment_status: payment_status || (isPaymentConfirmed ? 'succeeded' : 'pending'),
+                expires_at: expires_at || null,
+                canceled_reason: canceled_reason || null,
+                failed_reason: failed_reason || null,
+                payment_confirmed: isPaymentConfirmed,
+                esim_issued: isEsimIssued,
+                esim_checked_at: esim_checked_at || null,
+                
                 // Временные метки
                 createdAt: createdAt || createdAtDate.toISOString(),
                 updatedAt: new Date().toISOString(),
                 
                 // Для обратной совместимости
-                telegram_user_id: telegram_user_id
+                telegram_user_id: telegram_user_id,
+                paymentType: payment_method // Для обратной совместимости
             };
             
             if (existingIndex >= 0) {
-                // Обновляем существующий заказ
+                // Обновляем существующий заказ, сохраняя оригинальные поля если они не переданы
+                const existingOrder = allOrders[telegram_user_id][existingIndex];
                 allOrders[telegram_user_id][existingIndex] = {
-                    ...allOrders[telegram_user_id][existingIndex],
+                    ...existingOrder,
                     ...orderData,
+                    // Сохраняем оригинальную дату создания если не передана новая
+                    createdAt: createdAt || existingOrder.createdAt || new Date().toISOString(),
+                    // Сохраняем expires_at если он был установлен и не передано новое значение
+                    expires_at: expires_at !== undefined ? expires_at : existingOrder.expires_at,
                     updatedAt: new Date().toISOString()
                 };
             } else {

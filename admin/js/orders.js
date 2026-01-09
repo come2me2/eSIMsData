@@ -243,6 +243,39 @@ const Orders = {
                                     <option value="failed" ${order.status === 'failed' ? 'selected' : ''}>Failed</option>
                                 </select>
                             </div>
+                            ${order.status === 'on_hold' && order.expires_at ? `
+                                <div class="text-xs text-yellow-600 mb-2">
+                                    <strong>Expires at:</strong> ${new Date(order.expires_at).toLocaleString(locale)}
+                                    ${new Date(order.expires_at) > new Date() ? 
+                                        `(${Math.round((new Date(order.expires_at) - new Date()) / 1000 / 60)} minutes remaining)` : 
+                                        '(Expired)'}
+                                </div>
+                            ` : ''}
+                            ${order.status === 'failed' && order.failed_reason ? `
+                                <div class="text-xs text-red-600 mb-2">
+                                    <strong>Failed reason:</strong> ${order.failed_reason}
+                                </div>
+                            ` : ''}
+                            ${order.status === 'canceled' && order.canceled_reason ? `
+                                <div class="text-xs text-gray-600 mb-2">
+                                    <strong>Canceled reason:</strong> ${order.canceled_reason}
+                                </div>
+                            ` : ''}
+                            ${order.payment_status ? `
+                                <div class="text-xs text-gray-500 mb-2">
+                                    <strong>Payment status:</strong> ${order.payment_status}
+                                </div>
+                            ` : ''}
+                            ${order.payment_confirmed !== undefined ? `
+                                <div class="text-xs text-gray-500 mb-2">
+                                    <strong>Payment confirmed:</strong> ${order.payment_confirmed ? 'Yes' : 'No'}
+                                </div>
+                            ` : ''}
+                            ${order.esim_issued !== undefined ? `
+                                <div class="text-xs text-gray-500 mb-2">
+                                    <strong>eSIM issued:</strong> ${order.esim_issued ? 'Yes' : 'No'}
+                                </div>
+                            ` : ''}
                             <button onclick="Orders.updateStatus('${order.orderReference || order.id}', '${order.telegram_user_id}')" class="btn btn-primary w-full">
                                 <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -409,15 +442,15 @@ const Orders = {
     // Get status CSS class
     getStatusClass(status) {
         const statusMap = {
-            'on_hold': 'status-pending',
-            'completed': 'status-completed',
-            'canceled': 'status-failed',
-            'failed': 'status-failed',
+            'on_hold': 'status-pending', // Желтый
+            'completed': 'status-completed', // Зеленый
+            'canceled': 'status-canceled', // Серый
+            'failed': 'status-failed', // Красный
             // Old statuses for backward compatibility
             'pending': 'status-pending',
             'processing': 'status-pending',
             'active': 'status-completed',
-            'cancelled': 'status-failed'
+            'cancelled': 'status-canceled'
         };
         return statusMap[status] || 'status-pending';
     },
