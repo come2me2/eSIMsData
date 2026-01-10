@@ -634,11 +634,26 @@ async function initiateStarsPayment(auth) {
         
         console.log('💫 Stars payment request payload:', requestPayload);
         
-        const invoiceResponse = await fetch('/api/telegram/stars/create-invoice', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestPayload)
-        });
+        // Создаем AbortController для таймаута (30 секунд)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        let invoiceResponse;
+        try {
+            invoiceResponse = await fetch('/api/telegram/stars/create-invoice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestPayload),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            if (fetchError.name === 'AbortError') {
+                throw new Error('Request timeout. Please try again.');
+            }
+            throw new Error('Network error: ' + fetchError.message);
+        }
         
         const invoiceResult = await invoiceResponse.json();
         

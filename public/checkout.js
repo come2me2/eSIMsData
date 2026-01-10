@@ -1570,6 +1570,10 @@ function setupPurchaseButton() {
                 
                 let response;
                 try {
+                    // Создаем AbortController для таймаута (30 секунд)
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 30000);
+                    
                     response = await fetch('/api/telegram/stars/create-invoice', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1583,12 +1587,19 @@ function setupPurchaseButton() {
                             currency,
                             telegram_user_id: auth.getUserId(),
                             telegram_username: auth.getUsername()
-                        })
+                        }),
+                        signal: controller.signal
                     });
+                    
+                    clearTimeout(timeoutId);
                 } catch (fetchError) {
                     console.error('❌ Fetch error:', fetchError);
                     purchaseBtn.textContent = originalText;
                     purchaseBtn.disabled = false;
+                    
+                    if (fetchError.name === 'AbortError') {
+                        throw new Error('Request timeout. Please try again.');
+                    }
                     throw new Error('Network error: ' + fetchError.message);
                 }
                 
@@ -2010,15 +2021,31 @@ function setupStarsButton() {
                 throw new Error(`price is invalid: ${requestPayload.price}. costPrice: ${costPrice}, plan: ${JSON.stringify(plan)}`);
             }
             
-            const response = await fetch('/api/telegram/stars/create-invoice', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestPayload)
-            });
+            // Создаем AbortController для таймаута (30 секунд)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            
+            let response;
+            try {
+                response = await fetch('/api/telegram/stars/create-invoice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestPayload),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+            } catch (fetchError) {
+                clearTimeout(timeoutId);
+                if (fetchError.name === 'AbortError') {
+                    throw new Error('Request timeout. Please try again.');
+                }
+                throw new Error('Network error: ' + fetchError.message);
+            }
             
             const result = await response.json();
             if (!result.success || !result.invoiceLink) {
-                throw new Error(result.error || 'Не удалось создать счёт');
+                throw new Error(result.error || 'Failed to create invoice');
             }
             
             const invoiceLink = result.invoiceLink;
