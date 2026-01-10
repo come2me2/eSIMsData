@@ -461,7 +461,7 @@ async function initiateStarsPayment(auth) {
     
     // Проверка, что мы в Telegram Web App
     if (!tg || !tg.openInvoice) {
-        alert('Оплата через Telegram Stars доступна только внутри Telegram');
+        alert('Payment with Telegram Stars is only available inside Telegram');
         return;
     }
     
@@ -1468,7 +1468,7 @@ async function setupPromoCode() {
                     discountAmount = 0;
                     appliedPromocode = null;
                     
-                    promoError.textContent = data.error || 'Промокод недействителен';
+                    promoError.textContent = data.error || 'Promocode is invalid';
                     promoError.style.display = 'block';
                     promoSuccess.style.display = 'none';
                     promoInput.style.borderColor = '#FF3B30';
@@ -1490,7 +1490,7 @@ async function setupPromoCode() {
                 discountAmount = 0;
                 appliedPromocode = null;
                 
-                promoError.textContent = 'Ошибка проверки промокода';
+                promoError.textContent = 'Promocode validation error';
                 promoError.style.display = 'block';
                 promoSuccess.style.display = 'none';
                 promoInput.style.borderColor = '#FF3B30';
@@ -1709,7 +1709,7 @@ function setupPurchaseButton() {
         
         // Проверка авторизации
         if (!auth || !auth.isAuthenticated()) {
-            alert('Пожалуйста, авторизуйтесь через Telegram для оформления заказа');
+            alert('Please authorize through Telegram to place an order');
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
             }
@@ -1802,9 +1802,9 @@ function setupPurchaseButton() {
             
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
-                tg.showAlert('Ошибка проверки данных: ' + error.message);
+                tg.showAlert('Data validation error: ' + error.message);
             } else {
-                alert('Ошибка проверки данных: ' + error.message);
+                alert('Data validation error: ' + error.message);
             }
         }
     });
@@ -2341,7 +2341,7 @@ async function setupPromoCode() {
                     discountAmount = 0;
                     appliedPromocode = null;
                     
-                    promoError.textContent = data.error || 'Промокод недействителен';
+                    promoError.textContent = data.error || 'Promocode is invalid';
                     promoError.style.display = 'block';
                     promoSuccess.style.display = 'none';
                     promoInput.style.borderColor = '#FF3B30';
@@ -2363,7 +2363,7 @@ async function setupPromoCode() {
                 discountAmount = 0;
                 appliedPromocode = null;
                 
-                promoError.textContent = 'Ошибка проверки промокода';
+                promoError.textContent = 'Promocode validation error';
                 promoError.style.display = 'block';
                 promoSuccess.style.display = 'none';
                 promoInput.style.borderColor = '#FF3B30';
@@ -2582,7 +2582,7 @@ function setupPurchaseButton() {
         
         // Проверка авторизации
         if (!auth || !auth.isAuthenticated()) {
-            alert('Пожалуйста, авторизуйтесь через Telegram для оформления заказа');
+            alert('Please authorize through Telegram to place an order');
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
             }
@@ -2675,9 +2675,9 @@ function setupPurchaseButton() {
             
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
-                tg.showAlert('Ошибка проверки данных: ' + error.message);
+                tg.showAlert('Data validation error: ' + error.message);
             } else {
-                alert('Ошибка проверки данных: ' + error.message);
+                alert('Data validation error: ' + error.message);
             }
         }
     });

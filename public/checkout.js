@@ -1505,7 +1505,7 @@ function setupPurchaseButton() {
         
         // Проверка авторизации
         if (!auth || !auth.isAuthenticated()) {
-            alert('Пожалуйста, авторизуйтесь через Telegram для оформления заказа');
+            alert('Please authorize through Telegram to place an order');
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
             }
@@ -1531,14 +1531,14 @@ function setupPurchaseButton() {
             if (!tg || !tg.openInvoice) {
                 purchaseBtn.textContent = originalText;
                 purchaseBtn.disabled = false;
-                throw new Error('Оплата через Stars доступна только внутри Telegram');
+                throw new Error('Payment with Stars is only available inside Telegram');
             }
             
             const plan = getSelectedPlan();
             if (!plan) {
                 purchaseBtn.textContent = originalText;
                 purchaseBtn.disabled = false;
-                throw new Error('План не найден. Обновите страницу.');
+                throw new Error('Plan not found. Please refresh the page.');
             }
             
             purchaseBtn.textContent = 'Creating invoice...';
@@ -1707,9 +1707,9 @@ function setupPurchaseButton() {
                 purchaseBtn.disabled = false;
                 if (tg) {
                     tg.HapticFeedback.notificationOccurred('error');
-                    tg.showAlert('Ошибка оплаты через Stars: ' + starsError.message);
+                    tg.showAlert('Payment with Stars error: ' + starsError.message);
                 } else {
-                    alert('Ошибка оплаты через Stars: ' + starsError.message);
+                    alert('Payment with Stars error: ' + starsError.message);
                 }
                 return;
             }
@@ -1765,9 +1765,9 @@ function setupPurchaseButton() {
             
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
-                tg.showAlert('Ошибка проверки данных: ' + error.message);
+                tg.showAlert('Data validation error: ' + error.message);
             } else {
-                alert('Ошибка проверки данных: ' + error.message);
+                alert('Data validation error: ' + error.message);
             }
         }
     });
@@ -1788,7 +1788,7 @@ function setupStarsButton() {
         const auth = window.telegramAuth;
         
         if (!auth || !auth.isAuthenticated()) {
-            alert('Пожалуйста, авторизуйтесь через Telegram для оплаты');
+            alert('Please authorize through Telegram to make a payment');
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
             }
@@ -1796,27 +1796,27 @@ function setupStarsButton() {
         }
         
         if (!tg || !tg.openInvoice) {
-            alert('Оплата через Stars доступна только внутри Telegram');
+            alert('Payment with Stars is only available inside Telegram');
             return;
         }
         
         const plan = getSelectedPlan();
         if (!plan) {
-            alert('План не найден. Обновите страницу.');
+            alert('Plan not found. Please refresh the page.');
             return;
         }
         
         // Валидация плана
         if (!plan.id && !plan.bundle_name) {
             console.error('[Stars] Plan has no id or bundle_name:', plan);
-            alert('Ошибка: план не содержит необходимых данных. Обновите страницу.');
+            alert('Error: plan missing required data. Please refresh the page.');
             return;
         }
         
         const priceValue = getPriceValueFromPlan(plan);
         if (!priceValue || priceValue <= 0) {
             console.error('[Stars] Invalid price value:', priceValue, plan);
-            alert('Ошибка: неверная цена плана. Обновите страницу.');
+            alert('Error: invalid plan price. Please refresh the page.');
             return;
         }
         
@@ -1825,7 +1825,7 @@ function setupStarsButton() {
         
         if (!bundleName || bundleName.trim() === '') {
             console.error('[Stars] Bundle name is empty:', plan);
-            alert('Ошибка: не указано название тарифа. Обновите страницу.');
+            alert('Error: plan bundle name is missing. Please refresh the page.');
             return;
         }
         
