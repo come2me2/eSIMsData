@@ -700,9 +700,9 @@ async function initiateStarsPayment(auth) {
                     tg.HapticFeedback.notificationOccurred('success');
                     tg.showAlert('✅ Payment successful! Your eSIM will be sent to you shortly.');
                 }
-                // Можно перенаправить на страницу успеха или показать сообщение
+                // Редирект на страницу My eSIMs после успешной оплаты
                 setTimeout(() => {
-                    window.location.href = 'index.html?segment=local';
+                    window.location.href = 'my-esims.html';
                 }, 2000);
             } else if (status === 'cancelled') {
                 // Пользователь отменил оплату

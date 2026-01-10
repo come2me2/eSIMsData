@@ -1629,7 +1629,7 @@ function setupPurchaseButton() {
                 if (!result.success || !result.invoiceLink) {
                     purchaseBtn.textContent = originalText;
                     purchaseBtn.disabled = false;
-                    throw new Error(result.error || 'Не удалось создать счёт');
+                    throw new Error(result.error || 'Failed to create invoice');
                 }
                 
                 const invoiceLink = result.invoiceLink;
@@ -1660,11 +1660,30 @@ function setupPurchaseButton() {
                     purchaseBtn.textContent = originalText;
                     purchaseBtn.disabled = false;
                     if (status === 'paid') {
-                        tg.showAlert('Оплата принята. eSIM будет выдана в чат после обработки заказа.');
+                        // Успешная оплата - заказ будет создан через webhook
+                        if (tg) {
+                            tg.HapticFeedback.notificationOccurred('success');
+                            tg.showAlert('✅ Payment successful! Your eSIM will be sent to you shortly.');
+                        }
+                        // Редирект на страницу My eSIMs после успешной оплаты
+                        setTimeout(() => {
+                            window.location.href = 'my-esims.html';
+                        }, 2000);
                     } else if (status === 'cancelled') {
-                        tg.showAlert('Оплата отменена.');
+                        // Пользователь отменил оплату
+                        if (tg) {
+                            tg.HapticFeedback.notificationOccurred('error');
+                            tg.showAlert('Payment cancelled.');
+                        }
                     } else if (status === 'failed') {
-                        tg.showAlert('Оплата не удалась. Попробуйте снова.');
+                        // Ошибка оплаты
+                        if (tg) {
+                            tg.HapticFeedback.notificationOccurred('error');
+                            tg.showAlert('Payment failed. Please try again.');
+                        }
+                    } else if (status === 'pending') {
+                        // Платеж в обработке
+                        console.log('Payment is pending...');
                     }
                 };
                 
@@ -2054,9 +2073,30 @@ function setupStarsButton() {
             const cb = (status) => {
                 console.log('Invoice status:', status);
                 if (status === 'paid') {
-                    tg.showAlert('Оплата принята. eSIM будет выдана в чат после обработки заказа.');
+                    // Успешная оплата - заказ будет создан через webhook
+                    if (tg) {
+                        tg.HapticFeedback.notificationOccurred('success');
+                        tg.showAlert('✅ Payment successful! Your eSIM will be sent to you shortly.');
+                    }
+                    // Редирект на страницу My eSIMs после успешной оплаты
+                    setTimeout(() => {
+                        window.location.href = 'my-esims.html';
+                    }, 2000);
                 } else if (status === 'cancelled') {
-                    tg.showAlert('Оплата отменена.');
+                    // Пользователь отменил оплату
+                    if (tg) {
+                        tg.HapticFeedback.notificationOccurred('error');
+                        tg.showAlert('Payment cancelled.');
+                    }
+                } else if (status === 'failed') {
+                    // Ошибка оплаты
+                    if (tg) {
+                        tg.HapticFeedback.notificationOccurred('error');
+                        tg.showAlert('Payment failed. Please try again.');
+                    }
+                } else if (status === 'pending') {
+                    // Платеж в обработке
+                    console.log('Payment is pending...');
                 }
             };
             
@@ -2064,9 +2104,9 @@ function setupStarsButton() {
         } catch (error) {
             console.error('❌ Stars payment error:', error);
             if (tg) {
-                tg.showAlert('Оплата через Stars не удалась: ' + error.message);
+                tg.showAlert('Payment with Stars failed: ' + error.message);
             } else {
-                alert('Оплата через Stars не удалась: ' + error.message);
+                alert('Payment with Stars failed: ' + error.message);
             }
         } finally {
             starsBtn.textContent = originalText;
