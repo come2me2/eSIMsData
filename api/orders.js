@@ -75,7 +75,7 @@ module.exports = async function handler(req, res) {
     // GET - получить заказы пользователя
     if (req.method === 'GET') {
         try {
-            const { telegram_user_id } = req.query;
+            let { telegram_user_id } = req.query;
             
             if (!telegram_user_id) {
                 return res.status(400).json({
@@ -84,8 +84,24 @@ module.exports = async function handler(req, res) {
                 });
             }
             
+            // Преобразуем в строку для единообразия (в базе хранится как строка)
+            telegram_user_id = String(telegram_user_id);
+            
             const allOrders = await loadOrders();
-            const userOrders = allOrders[telegram_user_id] || [];
+            
+            // Проверяем, есть ли заказы для этого пользователя (как строка)
+            // Также проверяем числовой вариант, если пользователь передал число
+            let userOrders = allOrders[telegram_user_id] || [];
+            
+            // Если не нашли по строковому ключу, пробуем числовой
+            if (userOrders.length === 0) {
+                const numericKey = parseInt(telegram_user_id);
+                if (!isNaN(numericKey)) {
+                    userOrders = allOrders[String(numericKey)] || allOrders[numericKey] || [];
+                }
+            }
+            
+            console.log(`[Orders API] Getting orders for user ${telegram_user_id}: found ${userOrders.length} orders`);
             
             // Сортируем по дате создания (новые первыми)
             userOrders.sort((a, b) => {
@@ -94,9 +110,22 @@ module.exports = async function handler(req, res) {
                 return dateB - dateA;
             });
             
+            // Фильтруем только заказы со статусом completed, on_hold, failed, canceled
+            // Исключаем pending_ заказы (временные, которые еще не оплачены)
+            const validOrders = userOrders.filter(order => {
+                // Исключаем временные заказы с pending_ в orderReference
+                if (order.orderReference && order.orderReference.startsWith('pending_')) {
+                    return false;
+                }
+                // Включаем все заказы с валидным статусом
+                return order.status && ['completed', 'on_hold', 'failed', 'canceled', 'pending', 'processing'].includes(order.status);
+            });
+            
+            console.log(`[Orders API] Filtered orders: ${validOrders.length} valid orders out of ${userOrders.length} total`);
+            
             return res.status(200).json({
                 success: true,
-                data: userOrders
+                data: validOrders
             });
             
         } catch (error) {
