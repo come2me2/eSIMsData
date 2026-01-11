@@ -76,19 +76,55 @@ function loadOrdersFromLocalStorage() {
 // Загрузить заказы с сервера
 async function loadOrdersFromServer(userId) {
     try {
-        const response = await fetch(`/api/orders?telegram_user_id=${userId}`);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        const result = await response.json();
+        // Убеждаемся, что userId строка (как хранится в базе)
+        const userIdStr = String(userId);
+        const apiUrl = `/api/orders?telegram_user_id=${userIdStr}`;
+        console.log('[My eSIMs] Fetching orders from:', apiUrl);
         
-        if (result.success && result.data) {
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            cache: 'no-cache' // Отключаем кеширование для получения актуальных данных
+        });
+        
+        console.log('[My eSIMs] API response status:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[My eSIMs] API error response:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        console.log('[My eSIMs] API response:', {
+            success: result.success,
+            hasData: !!result.data,
+            dataLength: result.data ? result.data.length : 0,
+            dataType: Array.isArray(result.data) ? 'array' : typeof result.data,
+            error: result.error
+        });
+        
+        if (result.success && result.data && Array.isArray(result.data)) {
+            console.log(`[My eSIMs] ✅ Loaded ${result.data.length} orders from server for user ${userIdStr}`);
+            
+            // Логируем первые несколько заказов для отладки
+            if (result.data.length > 0) {
+                console.log('[My eSIMs] Sample orders:', result.data.slice(0, 2).map(o => ({
+                    orderReference: o.orderReference,
+                    status: o.status,
+                    hasIccid: !!o.iccid,
+                    hasMatchingId: !!o.matchingId
+                })));
+            }
+            
             // Сохраняем в localStorage для офлайн доступа
             const ordersToStore = result.data.map(order => ({
                 orderReference: order.orderReference,
                 iccid: order.iccid,
                 matchingId: order.matchingId,
-                smdpAddress: order.smdpAddress,
+                smdpAddress: order.smdpAddress || order.rspUrl,
                 country_code: order.country_code,
                 country_name: order.country_name,
                 plan_id: order.plan_id,
@@ -97,66 +133,111 @@ async function loadOrdersFromServer(userId) {
                 price: order.price,
                 currency: order.currency,
                 status: order.status,
-                createdAt: order.createdAt
+                createdAt: order.createdAt || order.date
             }));
             localStorage.setItem('esim_orders', JSON.stringify(ordersToStore));
+            console.log('[My eSIMs] Saved', ordersToStore.length, 'orders to localStorage');
             
             // Преобразуем в формат для отображения
-            return result.data.map(order => ({
-                id: `#${order.orderReference?.substring(0, 8) || 'N/A'}`,
-                date: order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: '2-digit', 
-                    day: '2-digit' 
-                }) : 'N/A',
-                status: order.status || 'completed',
-                hasDetails: !!(order.iccid && order.matchingId),
-                country: order.country_name || '',
-                code: order.country_code || '',
-                plan: order.plan_id || '',
-                duration: '', // Можно добавить из плана
-                price: order.price ? `${order.currency || '$'} ${order.price}` : '',
-                activationDate: order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '',
-                expiryDate: '', // Можно добавить из плана
-                iccid: order.iccid || '',
-                matchingId: order.matchingId || '',
-                rspUrl: order.smdpAddress || '',
-                orderReference: order.orderReference || '',
-                bundle_name: order.bundle_name || ''
-            }));
+            const formattedOrders = result.data.map(order => {
+                // Преобразуем статус on_hold в onhold для совместимости с UI
+                let displayStatus = order.status || 'completed';
+                if (displayStatus === 'on_hold') {
+                    displayStatus = 'onhold';
+                }
+                
+                return {
+                    id: `#${order.orderReference?.substring(0, 8) || 'N/A'}`,
+                    date: order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: '2-digit', 
+                        day: '2-digit' 
+                    }) : 'N/A',
+                    status: displayStatus,
+                    hasDetails: !!(order.iccid && order.matchingId),
+                    country: order.country_name || '',
+                    code: order.country_code || '',
+                    plan: order.plan_id || '',
+                    duration: '', // Можно добавить из плана
+                    price: order.price ? `${order.currency || '$'} ${order.price}` : '',
+                    activationDate: order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '',
+                    expiryDate: '', // Можно добавить из плана
+                    iccid: order.iccid || '',
+                    matchingId: order.matchingId || '',
+                    rspUrl: order.smdpAddress || order.rspUrl || '',
+                    orderReference: order.orderReference || '',
+                    bundle_name: order.bundle_name || ''
+                };
+            });
+            
+            console.log('[My eSIMs] Formatted orders for display:', formattedOrders.length);
+            return formattedOrders;
+        } else {
+            console.warn('[My eSIMs] No orders found or invalid response format:', {
+                success: result.success,
+                hasData: !!result.data,
+                dataType: typeof result.data,
+                isArray: Array.isArray(result.data),
+                error: result.error,
+                fullResponse: result
+            });
         }
     } catch (error) {
-        console.error('Error loading orders from server:', error);
+        console.error('[My eSIMs] Error loading orders from server:', error);
+        console.error('[My eSIMs] Error stack:', error.stack);
     }
     return [];
 }
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('[My eSIMs] Initializing...');
+    
     // Telegram Auth - получение Telegram ID пользователя
     const auth = window.telegramAuth;
     let userId = null;
     
     if (auth && auth.isAuthenticated()) {
         userId = auth.getUserId();
-        console.log('My eSIMs - Loading for user:', userId);
+        console.log('[My eSIMs] Loading for user:', userId);
+        console.log('[My eSIMs] Auth object:', { 
+            isAuthenticated: auth.isAuthenticated(), 
+            userId: userId,
+            username: auth.getUsername ? auth.getUsername() : 'N/A'
+        });
         
         // Сохранить userId для использования при загрузке заказов
         window.currentUserId = userId;
         
         // Сначала загружаем из localStorage (быстро)
-        esimsData = loadOrdersFromLocalStorage();
+        const localOrders = loadOrdersFromLocalStorage();
+        console.log('[My eSIMs] Loaded from localStorage:', localOrders.length, 'orders');
+        esimsData = localOrders;
         renderESimsList();
         
         // Затем загружаем с сервера (синхронизация)
+        console.log('[My eSIMs] Loading orders from server...');
         const serverOrders = await loadOrdersFromServer(userId);
+        console.log('[My eSIMs] Loaded from server:', serverOrders.length, 'orders');
+        
         if (serverOrders.length > 0) {
             esimsData = serverOrders;
+            console.log('[My eSIMs] Using server orders, rendering list...');
+            renderESimsList();
+        } else if (localOrders.length > 0) {
+            // Если сервер вернул пустой массив, но есть локальные данные, используем их
+            console.log('[My eSIMs] Server returned empty, using local orders');
+            esimsData = localOrders;
+            renderESimsList();
+        } else {
+            console.log('[My eSIMs] No orders found (neither server nor local)');
             renderESimsList();
         }
     } else {
+        console.log('[My eSIMs] User not authenticated, loading from localStorage only');
         // Если нет авторизации, загружаем только из localStorage
         esimsData = loadOrdersFromLocalStorage();
+        console.log('[My eSIMs] Loaded from localStorage (no auth):', esimsData.length, 'orders');
         renderESimsList();
     }
     
@@ -251,23 +332,36 @@ function setupScrollPreservation() {
 
 // Render eSIMs list
 function renderESimsList() {
+    console.log('[My eSIMs] Rendering list with', esimsData.length, 'orders');
+    
     const esimsList = document.getElementById('esimsList');
     const emptyState = document.getElementById('emptyState');
-    if (!esimsList || !emptyState) return;
+    if (!esimsList || !emptyState) {
+        console.error('[My eSIMs] DOM elements not found!');
+        return;
+    }
     
     // Check if there are no orders
     if (esimsData.length === 0) {
+        console.log('[My eSIMs] No orders to display, showing empty state');
         esimsList.style.display = 'none';
         emptyState.style.display = 'flex';
         return;
     }
     
     // Show list and hide empty state
+    console.log('[My eSIMs] Rendering', esimsData.length, 'orders');
     esimsList.style.display = 'flex';
     emptyState.style.display = 'none';
     esimsList.innerHTML = '';
     
-    esimsData.forEach(esim => {
+    esimsData.forEach((esim, index) => {
+        console.log(`[My eSIMs] Rendering order ${index + 1}:`, {
+            id: esim.id,
+            status: esim.status,
+            hasDetails: esim.hasDetails,
+            orderReference: esim.orderReference
+        });
         const esimItem = document.createElement('div');
         esimItem.className = 'esim-item';
         
