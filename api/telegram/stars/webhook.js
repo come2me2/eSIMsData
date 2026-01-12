@@ -198,13 +198,29 @@ module.exports = async function handler(req, res) {
     // Обработка pre_checkout_query
     if (update.pre_checkout_query) {
         const pq = update.pre_checkout_query;
+        const userId = pq.from?.id;
+        
+        console.log('🔍 Pre-checkout query received:', {
+            query_id: pq.id,
+            user_id: userId,
+            total_amount: pq.total_amount,
+            currency: pq.currency,
+            invoice_payload: pq.invoice_payload?.substring(0, 100) + '...'
+        });
+        
         const payloadObj = safeParsePayload(pq.invoice_payload);
 
         if (!payloadObj) {
+            console.error('❌ Invalid payload in pre_checkout_query:', {
+                query_id: pq.id,
+                user_id: userId,
+                invoice_payload: pq.invoice_payload
+            });
+            
             await callTelegram('answerPreCheckoutQuery', {
                 pre_checkout_query_id: pq.id,
                 ok: false,
-                error_message: 'Invalid payload'
+                error_message: 'Invalid payload. Please try again.'
             });
             // Обновляем заказ на failed если он существует
             await updateOrderStatusOnPaymentError(pq.id, 'Invalid payload');
@@ -214,16 +230,31 @@ module.exports = async function handler(req, res) {
         // Проверяем сумму: payload amt против total_amount
         const totalStars = pq.total_amount; // В Stars
         if (payloadObj.amt && Number(payloadObj.amt) !== Number(totalStars)) {
+            console.error('❌ Price mismatch in pre_checkout_query:', {
+                query_id: pq.id,
+                user_id: userId,
+                payload_amount: payloadObj.amt,
+                total_amount: totalStars,
+                difference: Math.abs(Number(payloadObj.amt) - Number(totalStars))
+            });
+            
             await callTelegram('answerPreCheckoutQuery', {
                 pre_checkout_query_id: pq.id,
                 ok: false,
-                error_message: 'Price mismatch'
+                error_message: 'Price mismatch. Please try again.'
             });
             // Обновляем заказ на failed если он существует
             await updateOrderStatusOnPaymentError(pq.id, 'Price mismatch');
             return res.status(200).json({ ok: true });
         }
 
+        console.log('✅ Pre-checkout query validated successfully:', {
+            query_id: pq.id,
+            user_id: userId,
+            bundle_name: payloadObj.bn,
+            plan_id: payloadObj.pid
+        });
+        
         await answerPreCheckout(pq);
         return res.status(200).json({ ok: true });
     }

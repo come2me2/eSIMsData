@@ -341,33 +341,72 @@ module.exports = async function handler(req, res) {
         const title = 'eSIM plan';
         const description = `${country_name || country_code} • ${plan_type}`;
 
-        const tgResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title,
-                description,
-                payload: payloadStr,
-                currency: 'XTR',
-                prices: [
-                    {
-                        label: 'eSIM plan',
-                        amount: amountStars
-                    }
-                ],
-                provider_token: '', // Для Stars не требуется
-                need_name: false,
-                need_email: false,
-                need_phone_number: false
-            })
-        });
+        // Добавляем таймаут для fetch запроса (30 секунд)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        let tgResponse;
+        try {
+            console.log('[Stars] Creating invoice via Telegram API...', {
+                telegram_user_id,
+                bundle_name,
+                amountStars
+            });
+            
+            tgResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    title,
+                    description,
+                    payload: payloadStr,
+                    currency: 'XTR',
+                    prices: [
+                        {
+                            label: 'eSIM plan',
+                            amount: amountStars
+                        }
+                    ],
+                    provider_token: '', // Для Stars не требуется
+                    need_name: false,
+                    need_email: false,
+                    need_phone_number: false
+                })
+            });
+            
+            clearTimeout(timeoutId);
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            console.error('❌ Error creating Telegram Stars invoice:', {
+                error: fetchError.message,
+                code: fetchError.code,
+                cause: fetchError.cause,
+                telegram_user_id,
+                bundle_name
+            });
+            
+            if (fetchError.name === 'AbortError' || fetchError.code === 'UND_ERR_CONNECT_TIMEOUT') {
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'Connection timeout. Please try again.' 
+                });
+            }
+            
+            return res.status(500).json({ 
+                success: false, 
+                error: `Failed to create invoice: ${fetchError.message}` 
+            });
+        }
 
         if (!tgResponse.ok) {
             const errorText = await tgResponse.text();
             console.error('❌ Telegram API error:', {
                 status: tgResponse.status,
                 statusText: tgResponse.statusText,
-                response: errorText
+                response: errorText,
+                telegram_user_id,
+                bundle_name
             });
             return res.status(500).json({ 
                 success: false, 
@@ -378,7 +417,11 @@ module.exports = async function handler(req, res) {
         const tgData = await tgResponse.json();
 
         if (!tgData.ok) {
-            console.error('❌ Telegram API returned error:', tgData);
+            console.error('❌ Telegram API returned error:', {
+                ...tgData,
+                telegram_user_id,
+                bundle_name
+            });
             return res.status(500).json({ 
                 success: false, 
                 error: tgData.description || 'Failed to create invoice' 
