@@ -164,7 +164,6 @@ function convertOrderToESimData(order) {
 // Hide eSIM data until real data is loaded
 function hideESimData() {
     const usageTextElement = document.getElementById('usageText');
-    const remainingTextElement = document.getElementById('remainingText');
     const usageProgressElement = document.getElementById('usageProgress');
     const expirationTextElement = document.getElementById('expirationText');
     const expirationProgressElement = document.getElementById('expirationProgress');
@@ -172,7 +171,6 @@ function hideESimData() {
     
     // Скрываем элементы с данными о трафике
     if (usageTextElement) usageTextElement.style.opacity = '0';
-    if (remainingTextElement) remainingTextElement.style.opacity = '0';
     if (usageProgressElement) usageProgressElement.style.opacity = '0';
     if (expirationTextElement) expirationTextElement.style.opacity = '0';
     if (expirationProgressElement) expirationProgressElement.style.opacity = '0';
@@ -182,7 +180,6 @@ function hideESimData() {
 // Show eSIM data after loading
 function showESimData() {
     const usageTextElement = document.getElementById('usageText');
-    const remainingTextElement = document.getElementById('remainingText');
     const usageProgressElement = document.getElementById('usageProgress');
     const expirationTextElement = document.getElementById('expirationText');
     const expirationProgressElement = document.getElementById('expirationProgress');
@@ -192,12 +189,6 @@ function showESimData() {
     if (usageTextElement) {
         usageTextElement.style.opacity = '1';
         usageTextElement.style.transition = 'opacity 0.3s ease-in';
-        usageTextElement.style.display = 'block';
-    }
-    if (remainingTextElement) {
-        remainingTextElement.style.opacity = '1';
-        remainingTextElement.style.transition = 'opacity 0.3s ease-in';
-        remainingTextElement.style.display = 'block';
     }
     if (usageProgressElement) {
         usageProgressElement.style.opacity = '1';
@@ -206,7 +197,6 @@ function showESimData() {
     if (expirationTextElement) {
         expirationTextElement.style.opacity = '1';
         expirationTextElement.style.transition = 'opacity 0.3s ease-in';
-        expirationTextElement.style.display = 'block';
     }
     if (expirationProgressElement) {
         expirationProgressElement.style.opacity = '1';
@@ -215,7 +205,6 @@ function showESimData() {
     if (expiresDateElement) {
         expiresDateElement.style.opacity = '1';
         expiresDateElement.style.transition = 'opacity 0.3s ease-in';
-        expiresDateElement.style.display = 'block';
     }
     
     console.log('✅ showESimData() called - elements should be visible now');
@@ -247,10 +236,16 @@ function setupESimDetails() {
         planElement.textContent = esimData.plan;
     }
     
-    // Order and ICCID
+    // Order
     const orderInfoElement = document.getElementById('orderInfo');
     if (orderInfoElement) {
-        orderInfoElement.textContent = `Order: ${esimData.orderId}. iccid: ${esimData.iccid}`;
+        orderInfoElement.textContent = `Order: ${esimData.orderId}`;
+    }
+    
+    // ICCID
+    const iccidInfoElement = document.getElementById('iccidInfo');
+    if (iccidInfoElement) {
+        iccidInfoElement.textContent = `ICCID: ${esimData.iccid}`;
     }
     
     // Start date
@@ -259,19 +254,16 @@ function setupESimDetails() {
         startDateElement.textContent = `Started: ${esimData.startDate}`;
     }
     
-    // Usage text (устанавливаем текст, даже если элемент скрыт)
+    // Usage text (компактный формат в одну строку)
     const usageTextElement = document.getElementById('usageText');
     if (usageTextElement) {
         const usedData = esimData.usedData || 0;
         const totalData = esimData.totalData || 1024;
-        usageTextElement.textContent = `${usedData.toFixed(2)}MB of ${totalData.toFixed(2)}MB used`;
-    }
-    
-    // Remaining text (устанавливаем текст, даже если элемент скрыт)
-    const remainingTextElement = document.getElementById('remainingText');
-    if (remainingTextElement) {
-        const remainingData = esimData.remainingData || esimData.totalData || 1024;
-        remainingTextElement.textContent = `${remainingData.toFixed(2)}MB remaining`;
+        const remainingData = esimData.remainingData || (totalData - usedData);
+        const usagePercent = totalData > 0 ? ((usedData / totalData) * 100).toFixed(1) : 0;
+        
+        // Красивый формат: "0.00MB / 1024.00MB (0.0%) • 1024.00MB remaining"
+        usageTextElement.textContent = `${usedData.toFixed(2)}MB / ${totalData.toFixed(2)}MB (${usagePercent}%) • ${remainingData.toFixed(2)}MB remaining`;
     }
     
     // Usage progress bar (устанавливаем ширину, даже если элемент скрыт)
@@ -480,15 +472,16 @@ function updateESimDataFromAPI(data) {
         esimData.remainingData = data.totalData - data.usedData;
     }
     
-    // Update UI
+    // Update UI (компактный формат в одну строку)
     const usageTextElement = document.getElementById('usageText');
     if (usageTextElement) {
-        usageTextElement.textContent = `${esimData.usedData.toFixed(2)}MB of ${esimData.totalData.toFixed(2)}MB used`;
-    }
-    
-    const remainingTextElement = document.getElementById('remainingText');
-    if (remainingTextElement) {
-        remainingTextElement.textContent = `${esimData.remainingData.toFixed(2)}MB remaining`;
+        const usedData = esimData.usedData || 0;
+        const totalData = esimData.totalData || 1024;
+        const remainingData = esimData.remainingData || (totalData - usedData);
+        const usagePercent = totalData > 0 ? ((usedData / totalData) * 100).toFixed(1) : 0;
+        
+        // Красивый формат: "0.00MB / 1024.00MB (0.0%) • 1024.00MB remaining"
+        usageTextElement.textContent = `${usedData.toFixed(2)}MB / ${totalData.toFixed(2)}MB (${usagePercent}%) • ${remainingData.toFixed(2)}MB remaining`;
     }
     
     const usageProgressElement = document.getElementById('usageProgress');
