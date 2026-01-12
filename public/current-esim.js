@@ -32,26 +32,120 @@ if (tg) {
     }
 }
 
-// Mock data for Current eSIM
-const esimData = {
-    plan: 'eSIM 1GB 7 Days Thailand',
-    orderId: '20281',
-    iccid: '8944422711105741667',
-    startDate: '22/10/2025 07:59:52 +00:00',
-    totalData: 1024, // MB
-    usedData: 29.3, // MB
-    remainingData: 970.7, // MB
-    bundleDuration: 7, // days
-    daysRemaining: 6, // days
-    expiresDate: '29/10/2025 07:59:52 +00:00'
-};
+// Current eSIM data
+let esimData = null;
+let currentESimOrder = null; // Store the order data for extend functionality
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadCurrentESim();
     setupESimDetails();
     setupExtendButton();
     setupNavigation();
 });
+
+// Load current active eSIM from orders
+async function loadCurrentESim() {
+    try {
+        // Try to get user ID from Telegram auth
+        const auth = window.telegramAuth;
+        let userId = null;
+        if (auth && auth.isAuthenticated()) {
+            userId = auth.getUserId();
+        }
+        
+        // Try to load from server first
+        if (userId) {
+            try {
+                const response = await fetch(`/api/orders?telegram_user_id=${userId}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    cache: 'no-cache'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.orders && data.orders.length > 0) {
+                        // Find active eSIM (has iccid and status is completed)
+                        const activeOrder = data.orders.find(order => 
+                            order.iccid && 
+                            (order.status === 'completed' || order.status === 'on_hold')
+                        );
+                        
+                        if (activeOrder) {
+                            currentESimOrder = activeOrder;
+                            esimData = convertOrderToESimData(activeOrder);
+                            return;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to load orders from server:', error);
+            }
+        }
+        
+        // Fallback to localStorage
+        try {
+            const stored = localStorage.getItem('esim_orders');
+            if (stored) {
+                const orders = JSON.parse(stored);
+                // Find active eSIM (has iccid)
+                const activeOrder = orders.find(order => order.iccid);
+                
+                if (activeOrder) {
+                    currentESimOrder = activeOrder;
+                    esimData = convertOrderToESimData(activeOrder);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load orders from localStorage:', error);
+        }
+        
+        // If no active eSIM found, esimData remains null
+        console.log('No active eSIM found');
+    } catch (error) {
+        console.error('Error loading current eSIM:', error);
+    }
+}
+
+// Convert order data to eSIM display data
+function convertOrderToESimData(order) {
+    // Extract plan info from bundle_name or plan_id
+    const bundleName = order.bundle_name || order.plan_id || 'eSIM Plan';
+    
+    // Try to extract data amount and duration from bundle_name
+    // Format examples: "1GB_7Days", "2GB_30Days", etc.
+    let dataAmount = '';
+    let duration = '';
+    if (bundleName) {
+        const match = bundleName.match(/(\d+(?:\.\d+)?)\s*(GB|MB|gb|mb).*?(\d+)\s*(Days|days|Day|day)/i);
+        if (match) {
+            dataAmount = `${match[1]}${match[2].toUpperCase()}`;
+            duration = `${match[3]} Days`;
+        }
+    }
+    
+    const planName = dataAmount && duration 
+        ? `eSIM ${dataAmount} ${duration} ${order.country_name || ''}`.trim()
+        : bundleName;
+    
+    return {
+        plan: planName,
+        orderId: order.orderReference || order.id || 'N/A',
+        iccid: order.iccid || '',
+        startDate: order.createdAt ? new Date(order.createdAt).toLocaleString() : 'N/A',
+        totalData: 1024, // Will be updated from API if available
+        usedData: 0, // Will be updated from API if available
+        remainingData: 1024, // Will be updated from API if available
+        bundleDuration: 7, // Will be updated from API if available
+        daysRemaining: 7, // Will be updated from API if available
+        expiresDate: 'N/A', // Will be updated from API if available
+        country_code: order.country_code || '',
+        country_name: order.country_name || '',
+        type: order.type || 'country' // country, region, or global
+    };
+}
 
 // Setup eSIM details
 function setupESimDetails() {
@@ -138,8 +232,46 @@ function setupExtendButton() {
             if (tg) {
                 tg.HapticFeedback.impactOccurred('medium');
             }
-            // TODO: Implement extend functionality
-            console.log('Extend eSIM');
+            
+            // Navigate to plans page for current eSIM
+            if (!esimData || !currentESimOrder) {
+                console.error('No eSIM data available for extend');
+                if (tg && tg.showAlert) {
+                    tg.showAlert('No active eSIM found. Please purchase an eSIM first.');
+                }
+                return;
+            }
+            
+            const countryCode = esimData.country_code || currentESimOrder.country_code || '';
+            const countryName = esimData.country_name || currentESimOrder.country_name || '';
+            const esimType = esimData.type || currentESimOrder.type || 'country';
+            
+            console.log('Extending eSIM:', { countryCode, countryName, esimType });
+            
+            // Navigate based on eSIM type
+            if (esimType === 'global' || countryCode === 'GLOBAL') {
+                // Navigate to global plans
+                window.location.href = 'global-plans.html';
+            } else if (esimType === 'region' || countryCode === 'REGION') {
+                // Navigate to region plans
+                const regionName = countryName || 'Unknown Region';
+                const params = new URLSearchParams({ region: regionName });
+                window.location.href = `region-plans.html?${params.toString()}`;
+            } else if (countryCode && countryName) {
+                // Navigate to country plans
+                const params = new URLSearchParams({
+                    country: countryName,
+                    code: countryCode
+                });
+                window.location.href = `plans.html?${params.toString()}`;
+            } else {
+                // Fallback: navigate to main page
+                console.warn('Could not determine eSIM type, redirecting to main page');
+                if (tg && tg.showAlert) {
+                    tg.showAlert('Unable to determine eSIM location. Redirecting to main page.');
+                }
+                window.location.href = 'index.html';
+            }
         });
     }
 }
