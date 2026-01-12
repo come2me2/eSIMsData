@@ -39,13 +39,19 @@ let currentESimOrder = null; // Store the order data for extend functionality
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
     await loadCurrentESim();
-    setupESimDetails();
+    
+    // Сначала скрываем данные, чтобы не показывать мокап
+    hideESimData();
+    
     setupExtendButton();
     setupNavigation();
     
     // Загружаем реальные данные о расходе трафика из API
     if (esimData && esimData.iccid) {
         await loadBundleUsageData(esimData.iccid);
+    } else {
+        // Если нет ICCID, все равно показываем базовые данные
+        setupESimDetails();
     }
 });
 
@@ -150,6 +156,60 @@ function convertOrderToESimData(order) {
         country_name: order.country_name || '',
         type: order.type || 'country' // country, region, or global
     };
+}
+
+// Hide eSIM data until real data is loaded
+function hideESimData() {
+    const usageTextElement = document.getElementById('usageText');
+    const remainingTextElement = document.getElementById('remainingText');
+    const usageProgressElement = document.getElementById('usageProgress');
+    const expirationTextElement = document.getElementById('expirationText');
+    const expirationProgressElement = document.getElementById('expirationProgress');
+    const expiresDateElement = document.getElementById('expiresDate');
+    
+    // Скрываем элементы с данными о трафике
+    if (usageTextElement) usageTextElement.style.opacity = '0';
+    if (remainingTextElement) remainingTextElement.style.opacity = '0';
+    if (usageProgressElement) usageProgressElement.style.opacity = '0';
+    if (expirationTextElement) expirationTextElement.style.opacity = '0';
+    if (expirationProgressElement) expirationProgressElement.style.opacity = '0';
+    if (expiresDateElement) expiresDateElement.style.opacity = '0';
+}
+
+// Show eSIM data after loading
+function showESimData() {
+    const usageTextElement = document.getElementById('usageText');
+    const remainingTextElement = document.getElementById('remainingText');
+    const usageProgressElement = document.getElementById('usageProgress');
+    const expirationTextElement = document.getElementById('expirationText');
+    const expirationProgressElement = document.getElementById('expirationProgress');
+    const expiresDateElement = document.getElementById('expiresDate');
+    
+    // Показываем элементы с данными о трафике
+    if (usageTextElement) {
+        usageTextElement.style.opacity = '1';
+        usageTextElement.style.transition = 'opacity 0.3s ease-in';
+    }
+    if (remainingTextElement) {
+        remainingTextElement.style.opacity = '1';
+        remainingTextElement.style.transition = 'opacity 0.3s ease-in';
+    }
+    if (usageProgressElement) {
+        usageProgressElement.style.opacity = '1';
+        usageProgressElement.style.transition = 'opacity 0.3s ease-in';
+    }
+    if (expirationTextElement) {
+        expirationTextElement.style.opacity = '1';
+        expirationTextElement.style.transition = 'opacity 0.3s ease-in';
+    }
+    if (expirationProgressElement) {
+        expirationProgressElement.style.opacity = '1';
+        expirationProgressElement.style.transition = 'opacity 0.3s ease-in';
+    }
+    if (expiresDateElement) {
+        expiresDateElement.style.opacity = '1';
+        expiresDateElement.style.transition = 'opacity 0.3s ease-in';
+    }
 }
 
 // Setup eSIM details
@@ -358,6 +418,11 @@ async function loadBundleUsageData(iccid) {
                 ? new Date(bundleData.expiresDate).toLocaleString() 
                 : esimData.expiresDate;
             
+            // Сначала настраиваем базовые данные (если еще не настроены)
+            if (!document.getElementById('esimPlan')?.textContent || document.getElementById('esimPlan')?.textContent.includes('eSIM Plan')) {
+                setupESimDetails();
+            }
+            
             // Update UI with real data
             updateESimDataFromAPI({
                 usedData: esimData.usedData,
@@ -367,11 +432,20 @@ async function loadBundleUsageData(iccid) {
                 bundleDuration: esimData.bundleDuration,
                 expiresDate: esimData.expiresDate
             });
+            
+            // Показываем данные после обновления
+            showESimData();
         } else {
             console.warn('⚠️ No bundle data in response:', result);
+            // Если нет данных из API, показываем базовые данные
+            setupESimDetails();
+            showESimData();
         }
     } catch (error) {
         console.error('❌ Error loading bundle usage data:', error);
+        // При ошибке показываем базовые данные
+        setupESimDetails();
+        showESimData();
     }
 }
 
