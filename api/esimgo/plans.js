@@ -430,7 +430,9 @@ module.exports = async function handler(req, res) {
                 // Это предотвращает мутацию данных в кэше
                 const cachedDataCopy = JSON.parse(JSON.stringify(cachedData.data));
                 // Применяем наценку к копии кэшированных данных
-                const dataWithMarkup = applyMarkupToPlans(cachedDataCopy, countryCode);
+                // Для Global тарифов countryCode = null, но наценка должна применяться
+                // Передаем null для Global, чтобы применить только базовую наценку
+                const dataWithMarkup = applyMarkupToPlans(cachedDataCopy, isGlobal ? null : countryCode);
                 return res.status(200).json({
                     success: true,
                     data: dataWithMarkup,
@@ -1308,7 +1310,9 @@ module.exports = async function handler(req, res) {
         }
         
         // Применяем наценку к данным ПЕРЕД возвратом (после сохранения в кэш)
-        const dataWithMarkup = applyMarkupToPlans(responseData, countryCode);
+        // Для Global тарифов countryCode = null, но наценка должна применяться
+        // Передаем null для Global, чтобы применить только базовую наценку
+        const dataWithMarkup = applyMarkupToPlans(responseData, isGlobal ? null : countryCode);
         
         // Для Global логируем финальный ответ перед отправкой
         if (isGlobal) {
