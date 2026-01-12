@@ -112,7 +112,9 @@ async function generateCountriesFile() {
 async function generateGlobalPlansFile() {
     log('🔄 Generating plans-global.json...');
     try {
-        const response = await fetchAPI('/api/esimgo/plans?category=global');
+        // ВАЖНО: используем noMarkup=true, чтобы получить себестоимость БЕЗ наценки
+        // Наценка будет применяться на клиенте при загрузке данных
+        const response = await fetchAPI('/api/esimgo/plans?category=global&noMarkup=true');
         if (response.data) {
             const data = {
                 success: true,
@@ -153,7 +155,8 @@ async function generateRegionPlansFiles() {
     
     for (const region of regions) {
         try {
-            const response = await fetchAPI(`/api/esimgo/region-plans?region=${encodeURIComponent(region)}`);
+            // ВАЖНО: используем noMarkup=true, чтобы получить себестоимость БЕЗ наценки
+            const response = await fetchAPI(`/api/esimgo/region-plans?region=${encodeURIComponent(region)}&noMarkup=true`);
             if (response.data) {
                 const data = {
                     success: true,
@@ -233,7 +236,8 @@ async function generateLocalPlansFiles() {
         
         const batchPromises = batch.map(async (countryCode) => {
             try {
-                const response = await fetchAPI(`/api/esimgo/plans?country=${countryCode}&category=local`);
+                // ВАЖНО: используем noMarkup=true, чтобы получить себестоимость БЕЗ наценки
+                const response = await fetchAPI(`/api/esimgo/plans?country=${countryCode}&category=local&noMarkup=true`);
                 if (response.data) {
                     const standardCount = response.data.standard?.length || 0;
                     const unlimitedCount = response.data.unlimited?.length || 0;

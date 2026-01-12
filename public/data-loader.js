@@ -9,8 +9,8 @@
     
     const CACHE_PREFIX = 'esim_cache_';
     // Bump this to force-reset localStorage cache for all users
-    // v9: Force cache invalidation after markup fix
-    const CACHE_VERSION = 'v9';
+    // v10: Clear all caches with wrong prices, ensure cost prices are cached
+    const CACHE_VERSION = 'v10';
     const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 часа (данные обновляются ночью)
     
     /**

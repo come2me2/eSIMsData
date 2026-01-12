@@ -81,9 +81,32 @@ async function loadGlobalPlans() {
         if (window.DataLoader && typeof window.DataLoader.loadGlobalPlans === 'function') {
             try {
                 console.log('⚡ Trying DataLoader.loadGlobalPlans...');
-                data = await window.DataLoader.loadGlobalPlans();
-                if (data) {
-                    console.log('✅ Data loaded via DataLoader');
+                const dataLoaderResult = await window.DataLoader.loadGlobalPlans();
+                if (dataLoaderResult) {
+                    // DataLoader может вернуть данные напрямую или обернутые в объект
+                    const loadedData = dataLoaderResult.data || dataLoaderResult;
+                    
+                    // КРИТИЧЕСКАЯ ПРОВЕРКА: проверяем цену из DataLoader
+                    if (loadedData && loadedData.standard && loadedData.standard.length > 0) {
+                        const firstPlan = loadedData.standard[0];
+                        console.log('🔍 DataLoader returned:', {
+                            bundle_name: firstPlan.bundle_name,
+                            priceValue: firstPlan.priceValue,
+                            price: firstPlan.price
+                        });
+                        
+                        // Если цена неправильная, игнорируем данные из DataLoader
+                        if (firstPlan.priceValue && firstPlan.priceValue > 20) {
+                            console.error('🚨 DataLoader вернул неправильную цену! Игнорируем и используем прямой API запрос.');
+                            data = null; // Сбрасываем данные, чтобы использовать прямой API
+                        } else {
+                            data = loadedData;
+                            console.log('✅ Data loaded via DataLoader');
+                        }
+                    } else {
+                        data = loadedData;
+                        console.log('✅ Data loaded via DataLoader');
+                    }
                 }
             } catch (e) {
                 console.warn('⚠️ DataLoader failed:', e.message);
@@ -92,7 +115,7 @@ async function loadGlobalPlans() {
             console.log('⚠️ DataLoader not available');
         }
         
-        // Fallback: direct API
+        // Fallback: direct API (всегда используем, если DataLoader вернул неправильные данные)
         if (!data) {
             try {
                 console.log('🔄 Trying direct API...');
@@ -105,6 +128,16 @@ async function loadGlobalPlans() {
                 if (result.success && result.data) {
                     data = result.data;
                     console.log('✅ Data loaded via API');
+                    
+                    // Проверяем цену из API
+                    if (data.standard && data.standard.length > 0) {
+                        const firstPlan = data.standard[0];
+                        console.log('🔍 API returned:', {
+                            bundle_name: firstPlan.bundle_name,
+                            priceValue: firstPlan.priceValue,
+                            price: firstPlan.price
+                        });
+                    }
                 } else {
                     console.warn('⚠️ API response unsuccessful:', result);
                 }

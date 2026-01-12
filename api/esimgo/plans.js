@@ -448,10 +448,16 @@ module.exports = async function handler(req, res) {
                     }
                 }
                 
+                // Проверяем, нужно ли возвращать данные БЕЗ наценки (для генерации статических файлов)
+                const noMarkup = req.query.noMarkup === 'true' || req.query.noMarkup === '1';
+                
                 // Применяем наценку к копии кэшированных данных
                 // Для Global тарифов countryCode = null, но наценка должна применяться
                 // Передаем null для Global, чтобы применить только базовую наценку
-                const dataWithMarkup = applyMarkupToPlans(cachedDataCopy, isGlobal ? null : countryCode);
+                // НО: если noMarkup=true, возвращаем данные БЕЗ наценки (для статических файлов)
+                const dataWithMarkup = noMarkup 
+                    ? cachedDataCopy  // Возвращаем БЕЗ наценки для статических файлов
+                    : applyMarkupToPlans(cachedDataCopy, isGlobal ? null : countryCode);
                 
                 // Логируем цену ПОСЛЕ применения наценки
                 if (isGlobal && dataWithMarkup.standard && dataWithMarkup.standard.length > 0) {
@@ -1369,15 +1375,21 @@ module.exports = async function handler(req, res) {
             console.warn('⚠️ Not caching empty plans data for:', cacheKey);
         }
         
+        // Проверяем, нужно ли возвращать данные БЕЗ наценки (для генерации статических файлов)
+        const noMarkup = req.query.noMarkup === 'true' || req.query.noMarkup === '1';
+        
         // Применяем наценку к данным ПЕРЕД возвратом (после сохранения в кэш)
         // Для Global тарифов countryCode = null, но наценка должна применяться
         // Передаем null для Global, чтобы применить только базовую наценку
-        const dataWithMarkup = applyMarkupToPlans(responseData, isGlobal ? null : countryCode);
+        // НО: если noMarkup=true, возвращаем данные БЕЗ наценки (для статических файлов)
+        const dataWithMarkup = noMarkup 
+            ? responseData  // Возвращаем БЕЗ наценки для статических файлов
+            : applyMarkupToPlans(responseData, isGlobal ? null : countryCode);
         
         // Логируем пример цены после применения наценки (для Global)
         if (isGlobal && dataWithMarkup.standard && dataWithMarkup.standard.length > 0) {
             const samplePlan = dataWithMarkup.standard[0];
-            console.log('📤 Global plan after markup (should have markup applied):', {
+            console.log(`📤 Global plan ${noMarkup ? '(NO MARKUP - for static files)' : '(WITH markup)'}:`, {
                 bundle_name: samplePlan.bundle_name,
                 priceValue: samplePlan.priceValue,
                 price: samplePlan.price
@@ -1388,6 +1400,7 @@ module.exports = async function handler(req, res) {
         if (isGlobal) {
             console.log('📤 Sending Global plans response:', {
                 success: true,
+                noMarkup: noMarkup,
                 standardPlansCount: responseData.standard.length,
                 unlimitedPlansCount: responseData.unlimited.length,
                 countriesCount: responseData.countries?.length || 0,
@@ -1396,7 +1409,7 @@ module.exports = async function handler(req, res) {
             });
         }
         
-        // Возвращаем данные С наценкой
+        // Возвращаем данные С наценкой (или БЕЗ, если noMarkup=true)
         return res.status(200).json({
             success: true,
             data: dataWithMarkup,

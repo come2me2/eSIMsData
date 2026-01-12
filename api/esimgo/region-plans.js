@@ -694,8 +694,15 @@ module.exports = async function handler(req, res) {
                 // КРИТИЧЕСКИ ВАЖНО: Создаем глубокую копию кэшированных данных перед применением наценки
                 // Это предотвращает мутацию данных в кэше
                 const cachedDataCopy = JSON.parse(JSON.stringify(cachedData.data));
+                
+                // Проверяем, нужно ли возвращать данные БЕЗ наценки (для генерации статических файлов)
+                const noMarkup = req.query.noMarkup === 'true' || req.query.noMarkup === '1';
+                
                 // Применяем наценку к копии кэшированных данных
-                const dataWithMarkup = applyMarkupToPlans(cachedDataCopy, null);
+                // НО: если noMarkup=true, возвращаем данные БЕЗ наценки (для статических файлов)
+                const dataWithMarkup = noMarkup 
+                    ? cachedDataCopy  // Возвращаем БЕЗ наценки для статических файлов
+                    : applyMarkupToPlans(cachedDataCopy, null);
                 return res.status(200).json({
                     success: true,
                     data: dataWithMarkup,
@@ -1056,10 +1063,16 @@ module.exports = async function handler(req, res) {
         });
         console.log('💾 Cached region plans data for:', region, '(without markup)');
         
-        // Применяем наценку к данным ПЕРЕД возвратом (после сохранения в кэш)
-        const dataWithMarkup = applyMarkupToPlans(responseData, null);
+        // Проверяем, нужно ли возвращать данные БЕЗ наценки (для генерации статических файлов)
+        const noMarkup = req.query.noMarkup === 'true' || req.query.noMarkup === '1';
         
-        // Возвращаем данные С наценкой
+        // Применяем наценку к данным ПЕРЕД возвратом (после сохранения в кэш)
+        // НО: если noMarkup=true, возвращаем данные БЕЗ наценки (для статических файлов)
+        const dataWithMarkup = noMarkup 
+            ? responseData  // Возвращаем БЕЗ наценки для статических файлов
+            : applyMarkupToPlans(responseData, null);
+        
+        // Возвращаем данные С наценкой (или БЕЗ, если noMarkup=true)
         return res.status(200).json({
             success: true,
             data: dataWithMarkup,

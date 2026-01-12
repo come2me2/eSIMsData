@@ -9,8 +9,8 @@
     
     const CACHE_PREFIX = 'esim_cache_';
     // Bump this to force-reset localStorage cache for all users
-    // v7: Fixed markup application for Global tariffs
-    const CACHE_VERSION = 'v7';
+    // v10: Clear all caches with wrong prices, ensure cost prices are cached
+    const CACHE_VERSION = 'v10';
     const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 часа (данные обновляются ночью)
     
     /**

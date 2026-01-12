@@ -84,3 +84,4 @@ CACHE_REFRESH_SECRET=your_secret_key  # Для защиты endpoint prefill
 
 Или используйте Vercel Cron Jobs (если настроено).
 
+
