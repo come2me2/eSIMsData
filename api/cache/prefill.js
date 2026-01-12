@@ -90,7 +90,13 @@ async function prefillCountriesCache() {
 async function prefillGlobalPlansCache() {
     log('🔄 Prefilling global plans cache...');
     try {
-        const req = createMockReq({ category: 'global' });
+        // ВАЖНО: Используем forceRefresh=true для очистки старого кэша
+        // и noMarkup=true для сохранения данных БЕЗ наценки в кэш
+        const req = createMockReq({ 
+            category: 'global', 
+            forceRefresh: 'true',
+            noMarkup: 'true'  // Сохраняем в кэш БЕЗ наценки
+        });
         const res = createMockRes();
         
         // Вызываем handler с обработкой ошибок
@@ -132,7 +138,13 @@ async function prefillRegionPlansCache() {
     for (const region of regions) {
         try {
             log(`🔄 Prefilling ${region} plans cache...`);
-            const req = createMockReq({ region: region });
+            // ВАЖНО: Используем forceRefresh=true для очистки старого кэша
+            // и noMarkup=true для сохранения данных БЕЗ наценки в кэш
+            const req = createMockReq({ 
+                region: region,
+                forceRefresh: 'true',
+                noMarkup: 'true'  // Сохраняем в кэш БЕЗ наценки
+            });
             const res = createMockRes();
             
             // Вызываем handler с обработкой ошибок
@@ -213,7 +225,14 @@ async function prefillLocalPlansCache() {
     // Функция для предзаполнения одной страны
     async function prefillCountry(countryCode) {
         try {
-            const req = createMockReq({ country: countryCode, category: 'local' });
+            // ВАЖНО: Используем forceRefresh=true для очистки старого кэша
+            // и noMarkup=true для сохранения данных БЕЗ наценки в кэш
+            const req = createMockReq({ 
+                country: countryCode, 
+                category: 'local',
+                forceRefresh: 'true',
+                noMarkup: 'true'  // Сохраняем в кэш БЕЗ наценки
+            });
             const res = createMockRes();
             
             // Вызываем handler с обработкой ошибок
