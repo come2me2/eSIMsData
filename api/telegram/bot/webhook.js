@@ -105,6 +105,19 @@ module.exports = async function handler(req, res) {
 
     const update = req.body || {};
 
+    // Перенаправляем Stars платежи на stars webhook
+    if (update.pre_checkout_query || (update.message && update.message.successful_payment)) {
+        console.log('🔄 Redirecting Stars payment update to stars webhook:', {
+            has_pre_checkout_query: !!update.pre_checkout_query,
+            has_successful_payment: !!(update.message && update.message.successful_payment),
+            user_id: update.pre_checkout_query?.from?.id || update.message?.from?.id
+        });
+        
+        // Импортируем и вызываем stars webhook handler
+        const starsWebhook = require('../stars/webhook');
+        return starsWebhook(req, res);
+    }
+
     // Обработка команды /start
     if (update.message && update.message.text) {
         const message = update.message;
