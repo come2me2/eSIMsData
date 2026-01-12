@@ -679,7 +679,8 @@ module.exports = async function handler(req, res) {
         console.log('Region plans API request:', { region });
         
         // Определяем ключ кэша для региона
-        const cacheKey = `region-plans:${region}`;
+        // ВАЖНО: Используем правильный ключ кэша через getPlansCacheKey
+        const cacheKey = cache.getPlansCacheKey(null, region, null);
         
         // Проверяем кэш перед запросом к API
         const cachedData = cache.get(cacheKey, cache.getTTL('regionPlans'));

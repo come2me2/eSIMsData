@@ -62,11 +62,13 @@ async function refreshPlansCache() {
         }
         
         // Очищаем кэш для Region планов
+        // ВАЖНО: Используем правильный ключ кэша plans:region:${region}
         const regions = ['Africa', 'Asia', 'Europe', 'North America', 'Latin America', 'Oceania', 'Balkanas', 'Central Eurasia'];
         for (const region of regions) {
             try {
                 console.log(`🔄 Clearing ${region} plans cache...`);
-                cache.clear(`region-plans:${region}`);
+                // Используем правильный ключ кэша
+                cache.clear(`plans:region:${region}`);
                 results.cleared.push(`region:${region}`);
             } catch (error) {
                 console.error(`❌ Error clearing ${region} plans cache:`, error);
