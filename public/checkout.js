@@ -977,6 +977,16 @@ function setupOrderDetails() {
     
     // Update total price
     updateTotalPrice();
+    
+    // Показываем элементы после установки данных
+    if (planDetailsElement) {
+        planDetailsElement.style.opacity = '1';
+        planDetailsElement.style.transition = 'opacity 0.3s ease-in';
+    }
+    if (totalPriceElement) {
+        totalPriceElement.style.opacity = '1';
+        totalPriceElement.style.transition = 'opacity 0.3s ease-in';
+    }
 }
 
 /**
@@ -1033,6 +1043,16 @@ function updateOrderDetailsWithRealPlans() {
         originalPriceValue = priceMatch ? parseFloat(priceMatch[1]) : 0;
         
         updateTotalPrice();
+        
+        // Показываем элементы после обновления данных
+        if (planDetailsElement) {
+            planDetailsElement.style.opacity = '1';
+            planDetailsElement.style.transition = 'opacity 0.3s ease-in';
+        }
+        if (totalPriceElement) {
+            totalPriceElement.style.opacity = '1';
+            totalPriceElement.style.transition = 'opacity 0.3s ease-in';
+        }
         
         console.log('Order details updated with real plan:', {
             plan: selectedPlan.data,
@@ -1166,6 +1186,14 @@ async function loadPublicSettings() {
 
 function updateTotalPrice() {
     const totalPriceElement = document.getElementById('checkoutTotalPrice');
+    
+    // Показываем цену при обновлении (если она была скрыта и есть реальная цена)
+    if (totalPriceElement && originalPrice && originalPrice !== '$ 9.99') {
+        if (totalPriceElement.style.opacity === '0' || totalPriceElement.textContent === '—') {
+            totalPriceElement.style.opacity = '1';
+            totalPriceElement.style.transition = 'opacity 0.3s ease-in';
+        }
+    }
     
     // Используем базовую цену (БЕЗ наценки способа оплаты)
     let basePrice = originalPriceValue || 0;
