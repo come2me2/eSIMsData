@@ -117,6 +117,25 @@ async function loadGlobalPlans() {
             standardPlans = data.standard || [];
             unlimitedPlans = data.unlimited || [];
             
+            // КРИТИЧЕСКАЯ ПРОВЕРКА: логируем цены для отладки
+            if (standardPlans.length > 0) {
+                const firstPlan = standardPlans[0];
+                console.log('🔍 First plan data:', {
+                    bundle_name: firstPlan.bundle_name,
+                    priceValue: firstPlan.priceValue,
+                    price: firstPlan.price,
+                    data: firstPlan.data
+                });
+                // Проверяем, не является ли цена слишком высокой (признак двойной наценки)
+                if (firstPlan.priceValue && firstPlan.priceValue > 20) {
+                    console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: Цена слишком высокая!', {
+                        bundle_name: firstPlan.bundle_name,
+                        priceValue: firstPlan.priceValue,
+                        expectedPrice: '~$10.40 for 1GB'
+                    });
+                }
+            }
+            
             // Сортируем unlimited планы по duration и data для консистентности
             if (unlimitedPlans.length > 0) {
                 unlimitedPlans.sort((a, b) => {
@@ -299,7 +318,33 @@ function renderPlans() {
         planItem.dataset.planId = planId;
         
         // Определяем цену (приоритет: priceValue > price > fallback)
-        const price = plan.priceValue || plan.price || '9.99';
+        // ВАЖНО: priceValue - это число, price - это строка типа "$ 10.40"
+        // Используем priceValue, так как это актуальная цена из API
+        let price = plan.priceValue;
+        
+        // Если priceValue отсутствует, пытаемся извлечь из строки price
+        if (!price && plan.price) {
+            const priceMatch = String(plan.price).match(/[\d.]+/);
+            if (priceMatch) {
+                price = parseFloat(priceMatch[0]);
+            }
+        }
+        
+        // Fallback
+        if (!price || isNaN(price)) {
+            price = 9.99;
+        }
+        
+        // КРИТИЧЕСКАЯ ПРОВЕРКА: если цена > 20 для 1GB, это ошибка
+        if (price > 20 && plan.data && plan.data.includes('1 GB')) {
+            console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: Неправильная цена для 1GB!', {
+                bundle_name: plan.bundle_name,
+                priceValue: plan.priceValue,
+                price: plan.price,
+                extractedPrice: price,
+                data: plan.data
+            });
+        }
         
         planItem.innerHTML = `
             <div class="plan-info">
