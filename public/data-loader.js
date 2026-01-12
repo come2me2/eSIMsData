@@ -9,9 +9,9 @@
     
     const CACHE_PREFIX = 'esim_cache_';
     // Bump this to force-reset localStorage cache for all users
-    // v11: DataLoader now always uses API for fresh prices with markup
-    const CACHE_VERSION = 'v11';
-    const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 часа (данные обновляются ночью)
+    // v12: Force clear all old caches with wrong prices, ensure fresh API data with correct markup
+    const CACHE_VERSION = 'v12';
+    const CACHE_TTL = 2 * 60 * 60 * 1000; // 2 часа (более частое обновление для актуальности)
     
     /**
      * Кэш в localStorage
@@ -225,12 +225,26 @@
         }
         
         // Проверяем localStorage cache (но с коротким TTL для актуальности)
+        // ВАЖНО: Если данные stale, всегда обновляем их из API
         if (!options.forceRefresh) {
             const cached = localCache.get(cacheKey);
             if (cached && cached.data && !cached.stale) {
                 console.log(`💾 LocalStorage cache hit: ${cacheKey}`);
                 memoryCache.set(cacheKey, cached.data);
+                // Обновляем в фоне, если данные скоро устареют
+                if (Date.now() - cached.timestamp > CACHE_TTL * 0.8) {
+                    console.log(`🔄 Cache will expire soon, refreshing in background...`);
+                    fetch(apiPath).then(r => r.json()).then(result => {
+                        if (result.success && result.data) {
+                            memoryCache.set(cacheKey, result.data);
+                            localCache.set(cacheKey, result.data);
+                        }
+                    }).catch(() => {});
+                }
                 return cached.data;
+            } else if (cached && cached.stale) {
+                // Данные устарели, всегда загружаем свежие из API
+                console.log(`⚠️ LocalStorage cache stale, loading fresh data from API...`);
             }
         }
         
