@@ -1744,23 +1744,21 @@ body.checkout-page .bottom-button-container {
 
 .current-esim-usage-info {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
     width: 100%;
+    margin-bottom: 8px;
 }
 
 .current-esim-usage-text {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 400;
     color: var(--text-primary);
     line-height: 20px;
-}
-
-.current-esim-remaining {
-    font-size: 15px;
-    font-weight: 400;
-    color: var(--text-secondary);
-    line-height: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 .current-esim-progress-bar {
@@ -2023,23 +2021,21 @@ body.checkout-page .bottom-button-container {
 
 .current-esim-usage-info {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
     width: 100%;
+    margin-bottom: 8px;
 }
 
 .current-esim-usage-text {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 400;
     color: var(--text-primary);
     line-height: 20px;
-}
-
-.current-esim-remaining {
-    font-size: 15px;
-    font-weight: 400;
-    color: var(--text-secondary);
-    line-height: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 .current-esim-progress-bar {
@@ -2308,23 +2304,21 @@ body.checkout-page .bottom-button-container {
 
 .current-esim-usage-info {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
     width: 100%;
+    margin-bottom: 8px;
 }
 
 .current-esim-usage-text {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 400;
     color: var(--text-primary);
     line-height: 20px;
-}
-
-.current-esim-remaining {
-    font-size: 15px;
-    font-weight: 400;
-    color: var(--text-secondary);
-    line-height: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 .current-esim-progress-bar {
