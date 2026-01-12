@@ -64,25 +64,37 @@ function groupBundlesIntoPlans(bundles, isLocal = false) {
             bundle.userPrice       // Цена для пользователя (последний приоритет, может быть с наценкой)
         ];
         
+        // Отслеживаем, какое поле было использовано
+        let usedFieldName = null;
+        let fieldIndex = 0;
+        const fieldNames = ['cost', 'basePrice', 'pricePerUnit', 'amount', 'price', 'fee', 'totalPrice', 'userPrice'];
+        
         for (const priceField of priceFields) {
+            const fieldName = fieldNames[fieldIndex];
             if (priceField !== undefined && priceField !== null) {
                 if (typeof priceField === 'number' && priceField > 0) {
                     priceValue = priceField;
+                    usedFieldName = fieldName;
                     break;
                 } else if (typeof priceField === 'object' && priceField.amount) {
                     priceValue = typeof priceField.amount === 'number' 
                         ? priceField.amount 
                         : parseFloat(priceField.amount) || 0;
                     currency = priceField.currency || 'USD';
-                    if (priceValue > 0) break;
+                    if (priceValue > 0) {
+                        usedFieldName = fieldName;
+                        break;
+                    }
                 } else if (typeof priceField === 'string') {
                     const parsed = parseFloat(priceField);
                     if (!isNaN(parsed) && parsed > 0) {
                         priceValue = parsed;
+                        usedFieldName = fieldName;
                         break;
                     }
                 }
             }
+            fieldIndex++;
         }
         
         // Если цена в центах (больше 100 и меньше 100000), конвертируем в доллары
@@ -140,7 +152,7 @@ function groupBundlesIntoPlans(bundles, isLocal = false) {
                     name: bundle.name,
                     priceValue: priceValue,
                     currency: currency,
-                    usedField: usedField,
+                    usedField: usedFieldName || usedField || 'unknown',
                     availableFields: {
                         cost: bundle.cost,
                         basePrice: bundle.basePrice,
@@ -149,7 +161,8 @@ function groupBundlesIntoPlans(bundles, isLocal = false) {
                         userPrice: bundle.userPrice,
                         amount: bundle.amount
                     },
-                    source: 'groupBundlesIntoPlans'
+                    source: 'groupBundlesIntoPlans',
+                    note: usedFieldName === 'price' || usedFieldName === 'userPrice' ? '⚠️ WARNING: Using price/userPrice instead of cost/basePrice!' : 'OK'
                 });
             }
         }
