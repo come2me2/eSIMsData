@@ -1,6 +1,76 @@
 // Telegram Web App initialization
 let tg = window.Telegram.WebApp;
 
+/**
+ * Показывает собственное модальное окно с сообщением (вместо tg.showAlert для контроля языка кнопки)
+ */
+function showCustomAlert(message) {
+    // Создаем overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.4); z-index: 10000; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease-out;';
+    
+    // Создаем модальное окно
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background-color: #FFFFFF; border-radius: 14px; padding: 0; max-width: 270px; width: calc(100% - 40px); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); animation: slideUp 0.3s ease-out;';
+    
+    modal.innerHTML = `
+        <div style="padding: 20px; text-align: center;">
+            <div style="font-size: 17px; font-weight: 400; color: #000000; margin-bottom: 20px; line-height: 1.4;">${message}</div>
+        </div>
+        <div style="border-top: 0.5px solid #E5E5EA;">
+            <button id="customAlertClose" style="width: 100%; padding: 16px; font-size: 17px; font-weight: 400; color: #007AFF; background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent;">Close</button>
+        </div>
+    `;
+    
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    // Функция закрытия
+    const close = () => {
+        overlay.style.animation = 'fadeOut 0.2s ease-out';
+        modal.style.animation = 'slideDown 0.2s ease-out';
+        setTimeout(() => {
+            overlay.remove();
+        }, 200);
+    };
+    
+    // Закрытие по клику на кнопку
+    const closeBtn = modal.querySelector('#customAlertClose');
+    closeBtn.addEventListener('click', close);
+    
+    // Закрытие по клику на overlay
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            close();
+        }
+    });
+    
+    // Добавляем стили для анимации (если их еще нет)
+    if (!document.getElementById('customAlertStyles')) {
+        const style = document.createElement('style');
+        style.id = 'customAlertStyles';
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+            @keyframes slideUp {
+                from { opacity: 0; transform: translateY(20px) scale(0.95); }
+                to { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            @keyframes slideDown {
+                from { opacity: 1; transform: translateY(0) scale(1); }
+                to { opacity: 0; transform: translateY(20px) scale(0.95); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
 // 🔧 Флаг режима разработки - деактивирует кнопку Purchase
 const DEV_MODE = false; // Установите false для активации покупок
 const ENABLE_STARS = true; // Включает оплату через Telegram Stars
@@ -1673,17 +1743,16 @@ function setupPurchaseButton() {
                         // Пользователь отменил оплату
                         if (tg) {
                             tg.HapticFeedback.notificationOccurred('error');
-                            // Показываем наше сообщение на английском немедленно, чтобы перекрыть системное
-                            setTimeout(() => {
-                                tg.showAlert('Payment cancelled.');
-                            }, 0);
                         }
+                        // Показываем собственное модальное окно с кнопкой "Close" на английском
+                        showCustomAlert('Payment cancelled.');
                     } else if (status === 'failed') {
                         // Ошибка оплаты
                         if (tg) {
                             tg.HapticFeedback.notificationOccurred('error');
-                            tg.showAlert('Payment failed. Please try again.');
                         }
+                        // Показываем собственное модальное окно с кнопкой "Close" на английском
+                        showCustomAlert('Payment failed. Please try again.');
                     } else if (status === 'pending') {
                         // Платеж в обработке
                         console.log('Payment is pending...');
@@ -2089,17 +2158,16 @@ function setupStarsButton() {
                     // Пользователь отменил оплату
                     if (tg) {
                         tg.HapticFeedback.notificationOccurred('error');
-                        // Показываем наше сообщение на английском немедленно, чтобы перекрыть системное
-                        setTimeout(() => {
-                            tg.showAlert('Payment cancelled.');
-                        }, 0);
                     }
+                    // Показываем собственное модальное окно с кнопкой "Close" на английском
+                    showCustomAlert('Payment cancelled.');
                 } else if (status === 'failed') {
                     // Ошибка оплаты
                     if (tg) {
                         tg.HapticFeedback.notificationOccurred('error');
-                        tg.showAlert('Payment failed. Please try again.');
                     }
+                    // Показываем собственное модальное окно с кнопкой "Close" на английском
+                    showCustomAlert('Payment failed. Please try again.');
                 } else if (status === 'pending') {
                     // Платеж в обработке
                     console.log('Payment is pending...');
