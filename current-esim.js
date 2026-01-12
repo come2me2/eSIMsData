@@ -42,6 +42,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupESimDetails();
     setupExtendButton();
     setupNavigation();
+    
+    // Загружаем реальные данные о расходе трафика из API
+    if (esimData && esimData.iccid) {
+        await loadBundleUsageData(esimData.iccid);
+    }
 });
 
 // Load current active eSIM from orders
@@ -314,29 +319,94 @@ function setupNavigation() {
     }
 }
 
+// Load bundle usage data from API
+async function loadBundleUsageData(iccid) {
+    if (!iccid) {
+        console.warn('⚠️ No ICCID provided for bundle usage data');
+        return;
+    }
+    
+    try {
+        console.log('📦 Loading bundle usage data for ICCID:', iccid);
+        
+        const response = await fetch(`/api/esimgo/bundles?iccid=${encodeURIComponent(iccid)}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            cache: 'no-cache'
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.warn('⚠️ Failed to load bundle usage data:', response.status, errorData.error || 'Unknown error');
+            return;
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const bundleData = result.data;
+            
+            console.log('✅ Bundle usage data loaded:', bundleData);
+            
+            // Update esimData with real data
+            esimData.totalData = bundleData.totalData || esimData.totalData;
+            esimData.usedData = bundleData.usedData || 0;
+            esimData.remainingData = bundleData.remainingData || esimData.totalData;
+            esimData.bundleDuration = bundleData.bundleDuration || esimData.bundleDuration;
+            esimData.daysRemaining = bundleData.daysRemaining || esimData.daysRemaining;
+            esimData.expiresDate = bundleData.expiresDate 
+                ? new Date(bundleData.expiresDate).toLocaleString() 
+                : esimData.expiresDate;
+            
+            // Update UI with real data
+            updateESimDataFromAPI({
+                usedData: esimData.usedData,
+                totalData: esimData.totalData,
+                remainingData: esimData.remainingData,
+                daysRemaining: esimData.daysRemaining,
+                bundleDuration: esimData.bundleDuration,
+                expiresDate: esimData.expiresDate
+            });
+        } else {
+            console.warn('⚠️ No bundle data in response:', result);
+        }
+    } catch (error) {
+        console.error('❌ Error loading bundle usage data:', error);
+    }
+}
+
 // Function to update data from API (will be called when API is ready)
 function updateESimDataFromAPI(data) {
+    if (!esimData) return;
+    
     // Update esimData with API response
     if (data.usedData !== undefined) {
         esimData.usedData = data.usedData;
-        esimData.remainingData = esimData.totalData - esimData.usedData;
-        
-        // Update UI
-        const usageTextElement = document.getElementById('usageText');
-        if (usageTextElement) {
-            usageTextElement.textContent = `${esimData.usedData}MB of ${esimData.totalData}MB used`;
-        }
-        
-        const remainingTextElement = document.getElementById('remainingText');
-        if (remainingTextElement) {
-            remainingTextElement.textContent = `${esimData.remainingData}MB remaining`;
-        }
-        
-        const usageProgressElement = document.getElementById('usageProgress');
-        if (usageProgressElement) {
-            const usagePercent = (esimData.usedData / esimData.totalData) * 100;
-            usageProgressElement.style.width = `${usagePercent}%`;
-        }
+    }
+    if (data.totalData !== undefined) {
+        esimData.totalData = data.totalData;
+    }
+    if (data.remainingData !== undefined) {
+        esimData.remainingData = data.remainingData;
+    } else if (data.usedData !== undefined && data.totalData !== undefined) {
+        esimData.remainingData = data.totalData - data.usedData;
+    }
+    
+    // Update UI
+    const usageTextElement = document.getElementById('usageText');
+    if (usageTextElement) {
+        usageTextElement.textContent = `${esimData.usedData.toFixed(2)}MB of ${esimData.totalData.toFixed(2)}MB used`;
+    }
+    
+    const remainingTextElement = document.getElementById('remainingText');
+    if (remainingTextElement) {
+        remainingTextElement.textContent = `${esimData.remainingData.toFixed(2)}MB remaining`;
+    }
+    
+    const usageProgressElement = document.getElementById('usageProgress');
+    if (usageProgressElement && esimData.totalData > 0) {
+        const usagePercent = Math.min(100, Math.max(0, (esimData.usedData / esimData.totalData) * 100));
+        usageProgressElement.style.width = `${usagePercent}%`;
     }
     
     if (data.daysRemaining !== undefined) {
@@ -348,9 +418,16 @@ function updateESimDataFromAPI(data) {
         }
         
         const expirationProgressElement = document.getElementById('expirationProgress');
-        if (expirationProgressElement) {
-            const expirationPercent = ((esimData.bundleDuration - esimData.daysRemaining) / esimData.bundleDuration) * 100;
+        if (expirationProgressElement && esimData.bundleDuration > 0) {
+            const expirationPercent = Math.min(100, Math.max(0, ((esimData.bundleDuration - esimData.daysRemaining) / esimData.bundleDuration) * 100));
             expirationProgressElement.style.width = `${expirationPercent}%`;
+        }
+    }
+    
+    if (data.expiresDate !== undefined) {
+        const expiresDateElement = document.getElementById('expiresDate');
+        if (expiresDateElement) {
+            expiresDateElement.textContent = `Expires on ${data.expiresDate}`;
         }
     }
 }
