@@ -198,29 +198,33 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method !== 'POST') {
+        console.warn('⚠️ Invalid method in Stars webhook:', req.method);
         return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
 
     if (WEBHOOK_SECRET) {
         const headerToken = req.headers['x-telegram-bot-api-secret-token'];
         if (!headerToken || headerToken !== WEBHOOK_SECRET) {
+            console.warn('⚠️ Unauthorized webhook request - missing or invalid secret token');
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
     }
 
-    // Сразу отвечаем Telegram, чтобы не было таймаута
-    // Вся обработка будет асинхронной
-    res.status(200).json({ ok: true });
-    
     const update = req.body || {};
     
     // Логируем входящий update для диагностики
-    console.log('📥 Webhook update received:', {
+    console.log('📥 Stars webhook update received:', {
+        update_id: update.update_id,
         has_pre_checkout_query: !!update.pre_checkout_query,
         has_successful_payment: !!(update.message && update.message.successful_payment),
         has_message: !!update.message,
-        update_id: update.update_id
+        message_type: update.message?.successful_payment ? 'successful_payment' : (update.message ? 'regular_message' : 'no_message'),
+        user_id: update.pre_checkout_query?.from?.id || update.message?.from?.id || 'unknown'
     });
+
+    // Сразу отвечаем Telegram, чтобы не было таймаута
+    // Вся обработка будет асинхронной
+    res.status(200).json({ ok: true });
 
     // Обработка pre_checkout_query
     if (update.pre_checkout_query) {
