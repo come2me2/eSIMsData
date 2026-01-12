@@ -40,8 +40,11 @@ let currentESimOrder = null; // Store the order data for extend functionality
 document.addEventListener('DOMContentLoaded', async () => {
     await loadCurrentESim();
     
-    // Сначала скрываем данные, чтобы не показывать мокап
+    // Сначала скрываем данные о трафике, чтобы не показывать мокап
     hideESimData();
+    
+    // Всегда настраиваем базовые данные (план, заказ, дата начала)
+    setupESimDetails();
     
     setupExtendButton();
     setupNavigation();
@@ -50,8 +53,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (esimData && esimData.iccid) {
         await loadBundleUsageData(esimData.iccid);
     } else {
-        // Если нет ICCID, все равно показываем базовые данные
-        setupESimDetails();
+        // Если нет ICCID, показываем базовые данные (без данных о трафике)
+        showESimData();
     }
 });
 
@@ -418,11 +421,6 @@ async function loadBundleUsageData(iccid) {
                 ? new Date(bundleData.expiresDate).toLocaleString() 
                 : esimData.expiresDate;
             
-            // Сначала настраиваем базовые данные (если еще не настроены)
-            if (!document.getElementById('esimPlan')?.textContent || document.getElementById('esimPlan')?.textContent.includes('eSIM Plan')) {
-                setupESimDetails();
-            }
-            
             // Update UI with real data
             updateESimDataFromAPI({
                 usedData: esimData.usedData,
@@ -437,14 +435,12 @@ async function loadBundleUsageData(iccid) {
             showESimData();
         } else {
             console.warn('⚠️ No bundle data in response:', result);
-            // Если нет данных из API, показываем базовые данные
-            setupESimDetails();
+            // Если нет данных из API, показываем базовые данные (с дефолтными значениями)
             showESimData();
         }
     } catch (error) {
         console.error('❌ Error loading bundle usage data:', error);
-        // При ошибке показываем базовые данные
-        setupESimDetails();
+        // При ошибке показываем базовые данные (с дефолтными значениями)
         showESimData();
     }
 }
