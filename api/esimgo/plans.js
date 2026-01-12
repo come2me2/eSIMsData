@@ -45,20 +45,23 @@ function groupBundlesIntoPlans(bundles, isLocal = false) {
     
     // Группируем по типу (unlimited или нет)
     bundles.forEach(bundle => {
-        // Извлекаем цену из разных возможных форматов
-        // API eSIM Go может возвращать цену в разных полях: price, pricePerUnit, cost, amount
+        // Извлекаем СЕБЕСТОИМОСТЬ из разных возможных форматов
+        // ВАЖНО: Нужна себестоимость (cost/basePrice), а не цена для пользователя (price/userPrice)
+        // API eSIM Go может возвращать цену в разных полях
         let priceValue = 0;
         let currency = 'USD';
         
-        // Пробуем разные поля для цены
+        // Пробуем разные поля для СЕБЕСТОИМОСТИ (приоритет: cost > basePrice > pricePerUnit > amount > price)
+        // cost и basePrice - это себестоимость, price и userPrice - это цена для пользователя (может быть с наценкой)
         const priceFields = [
-            bundle.price,
-            bundle.pricePerUnit,
-            bundle.cost,
-            bundle.amount,
-            bundle.fee,
-            bundle.totalPrice,
-            bundle.userPrice
+            bundle.cost,           // Себестоимость (приоритет 1)
+            bundle.basePrice,      // Базовая цена/себестоимость (приоритет 2)
+            bundle.pricePerUnit,   // Цена за единицу (может быть себестоимость)
+            bundle.amount,         // Сумма
+            bundle.price,          // Цена (может быть уже с наценкой, используем только если нет cost/basePrice)
+            bundle.fee,            // Комиссия
+            bundle.totalPrice,     // Общая цена
+            bundle.userPrice       // Цена для пользователя (последний приоритет, может быть с наценкой)
         ];
         
         for (const priceField of priceFields) {
