@@ -404,13 +404,27 @@ module.exports = async function handler(req, res) {
         const effectiveCategory = isLocal ? 'local' : (isGlobal ? 'global' : category);
         const cacheKey = cache.getPlansCacheKey(countryCode, region, effectiveCategory);
         
-        // Проверяем параметр forceRefresh для принудительного обновления кэша
-        const forceRefresh = req.query.forceRefresh === 'true' || req.query.refresh === 'true';
+        // ВАЖНО: Пользователи видят ТОЛЬКО предзаполненный кэш
+        // forceRefresh доступен только через секретный ключ (для админов/обновления кэша)
+        const forceRefreshSecret = process.env.CACHE_REFRESH_SECRET || 'change-me-in-production';
+        const providedSecret = req.query.secret || req.headers['x-cache-refresh-secret'] || req.headers['authorization']?.replace('Bearer ', '');
         
-        // Проверяем кэш перед запросом к API (если не требуется принудительное обновление)
-        if (!forceRefresh) {
-            const cachedData = cache.get(cacheKey, cache.getTTL('plans'));
-            if (cachedData && cachedData.data) {
+        // Проверяем, является ли это принудительным обновлением с валидным секретом
+        const isForceRefreshRequest = req.query.forceRefresh === 'true' || req.query.refresh === 'true';
+        const hasValidSecret = forceRefreshSecret !== 'change-me-in-production' && providedSecret === forceRefreshSecret;
+        const forceRefresh = isForceRefreshRequest && hasValidSecret;
+        
+        // Если запрошен forceRefresh без валидного секрета, игнорируем его
+        if (isForceRefreshRequest && !hasValidSecret) {
+            console.warn('⚠️ Force refresh requested without valid secret, ignoring and using cache');
+        }
+        
+        // Проверяем кэш перед запросом к API
+        // Для обычных пользователей ВСЕГДА используем кэш, если он есть
+        const cachedData = cache.get(cacheKey, cache.getTTL('plans'));
+        if (cachedData && cachedData.data) {
+            // Если это не принудительное обновление с валидным секретом, возвращаем кэш
+            if (!forceRefresh) {
                 console.log('✅ Using cached plans data for:', cacheKey);
                 // КРИТИЧЕСКИ ВАЖНО: Создаем глубокую копию кэшированных данных перед применением наценки
                 // Это предотвращает мутацию данных в кэше
@@ -425,11 +439,14 @@ module.exports = async function handler(req, res) {
                         source: 'cache'
                     }
                 });
+            } else {
+                // Принудительное обновление с валидным секретом - очищаем кэш
+                console.log('🔄 Force refresh requested (with valid secret), clearing cache for:', cacheKey);
+                cache.clear(cacheKey);
             }
-        } else {
-            // Очищаем кэш при принудительном обновлении
-            console.log('🔄 Force refresh requested, clearing cache for:', cacheKey);
-            cache.clear(cacheKey);
+        } else if (!cachedData || !cachedData.data) {
+            // Если кэш пуст, логируем предупреждение
+            console.warn('⚠️ Cache is empty for:', cacheKey, '- fetching from API. Consider running /api/cache/prefill first.');
         }
         
         // Извлекаем уникальные страны из bundles (для Global и Local)
