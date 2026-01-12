@@ -253,42 +253,52 @@ function setupESimDetails() {
         startDateElement.textContent = `Started: ${esimData.startDate}`;
     }
     
-    // Usage text
+    // Usage text (устанавливаем текст, даже если элемент скрыт)
     const usageTextElement = document.getElementById('usageText');
     if (usageTextElement) {
-        usageTextElement.textContent = `${esimData.usedData}MB of ${esimData.totalData}MB used`;
+        const usedData = esimData.usedData || 0;
+        const totalData = esimData.totalData || 1024;
+        usageTextElement.textContent = `${usedData.toFixed(2)}MB of ${totalData.toFixed(2)}MB used`;
     }
     
-    // Remaining text
+    // Remaining text (устанавливаем текст, даже если элемент скрыт)
     const remainingTextElement = document.getElementById('remainingText');
     if (remainingTextElement) {
-        remainingTextElement.textContent = `${esimData.remainingData}MB remaining`;
+        const remainingData = esimData.remainingData || esimData.totalData || 1024;
+        remainingTextElement.textContent = `${remainingData.toFixed(2)}MB remaining`;
     }
     
-    // Usage progress bar
+    // Usage progress bar (устанавливаем ширину, даже если элемент скрыт)
     const usageProgressElement = document.getElementById('usageProgress');
-    if (usageProgressElement) {
-        const usagePercent = (esimData.usedData / esimData.totalData) * 100;
+    if (usageProgressElement && esimData.totalData > 0) {
+        const usagePercent = Math.min(100, Math.max(0, (esimData.usedData / esimData.totalData) * 100));
         usageProgressElement.style.width = `${usagePercent}%`;
     }
     
-    // Expiration text
+    // Expiration text (устанавливаем текст, даже если элемент скрыт)
     const expirationTextElement = document.getElementById('expirationText');
     if (expirationTextElement) {
-        expirationTextElement.textContent = `${esimData.bundleDuration} day bundle expires in ${esimData.daysRemaining} days`;
+        const bundleDuration = esimData.bundleDuration || 7;
+        const daysRemaining = esimData.daysRemaining !== undefined ? esimData.daysRemaining : bundleDuration;
+        expirationTextElement.textContent = `${bundleDuration} day bundle expires in ${daysRemaining} days`;
     }
     
-    // Expiration progress bar
+    // Expiration progress bar (устанавливаем ширину, даже если элемент скрыт)
     const expirationProgressElement = document.getElementById('expirationProgress');
-    if (expirationProgressElement) {
-        const expirationPercent = ((esimData.bundleDuration - esimData.daysRemaining) / esimData.bundleDuration) * 100;
+    if (expirationProgressElement && esimData.bundleDuration > 0) {
+        const daysRemaining = esimData.daysRemaining !== undefined ? esimData.daysRemaining : esimData.bundleDuration;
+        const expirationPercent = Math.min(100, Math.max(0, ((esimData.bundleDuration - daysRemaining) / esimData.bundleDuration) * 100));
         expirationProgressElement.style.width = `${expirationPercent}%`;
     }
     
-    // Expires date
+    // Expires date (устанавливаем текст, даже если элемент скрыт)
     const expiresDateElement = document.getElementById('expiresDate');
     if (expiresDateElement) {
-        expiresDateElement.textContent = `Expires on ${esimData.expiresDate}`;
+        if (esimData.expiresDate && esimData.expiresDate !== 'N/A') {
+            expiresDateElement.textContent = `Expires on ${esimData.expiresDate}`;
+        } else {
+            expiresDateElement.textContent = 'Expires date not available';
+        }
     }
 }
 
