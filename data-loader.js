@@ -9,8 +9,8 @@
     
     const CACHE_PREFIX = 'esim_cache_';
     // Bump this to force-reset localStorage cache for all users
-    // v13: AGGRESSIVE cache clear - remove ALL old cache entries to ensure fresh prices
-    const CACHE_VERSION = 'v13';
+    // v14: Полная очистка всех версий кэша - создание нового кэша с правильными ценами
+    const CACHE_VERSION = 'v14';
     const CACHE_TTL = 1 * 60 * 60 * 1000; // 1 час (еще более частое обновление)
     
     /**
@@ -532,16 +532,10 @@
                     oldVersionKeys.forEach(key => localStorage.removeItem(key));
                 }
                 
-                // ВАЖНО: Для v13 также очищаем ВСЕ записи планов, чтобы загрузить свежие данные
-                // Это гарантирует, что пользователи получат актуальные цены
-                const planKeys = allCacheKeys.filter(key => 
-                    key.includes('plans_') && currentVersionKeys.includes(key)
-                );
-                
-                if (planKeys.length > 0) {
-                    console.log(`🔄 Force clearing ${planKeys.length} plan cache entries to ensure fresh prices`);
-                    planKeys.forEach(key => localStorage.removeItem(key));
-                }
+                // ВАЖНО: Для v14 очищаем ВСЕ записи кэша (включая все версии), чтобы создать новый кэш с правильными ценами
+                // Это гарантирует, что пользователи получат актуальные цены из API
+                console.log(`🔄 Force clearing ALL cache entries (${allCacheKeys.length} total) to create fresh cache`);
+                allCacheKeys.forEach(key => localStorage.removeItem(key));
                 
                 // Очищаем memory cache
                 memoryCache.clear();
