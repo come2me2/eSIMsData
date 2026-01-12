@@ -1158,9 +1158,9 @@ module.exports = async function handler(req, res) {
         // Группируем в планы (для Local показываем все тарифы, для Global/Region - дедуплицируем)
         const plans = groupBundlesIntoPlans(bundles, isLocal);
         
-        // Логируем примеры планов для отладки цен
+        // Логируем примеры планов для отладки цен (ПЕРЕД применением наценки)
         if (plans.standard.length > 0) {
-            console.log('Sample standard plans:', plans.standard.slice(0, 3).map(p => ({
+            console.log('📊 Sample standard plans (BEFORE markup, should be cost price):', plans.standard.slice(0, 3).map(p => ({
                 name: p.bundle_name,
                 price: p.price,
                 priceValue: p.priceValue,
@@ -1168,6 +1168,17 @@ module.exports = async function handler(req, res) {
                 data: p.data,
                 duration: p.duration
             })));
+            // Для Global проверяем, что цена правильная (должна быть ~$8.06 для 1GB)
+            if (isGlobal && plans.standard.length > 0) {
+                const firstPlan = plans.standard[0];
+                if (firstPlan.priceValue && firstPlan.priceValue > 20) {
+                    console.error('⚠️ ВНИМАНИЕ: Global план имеет цену > $20, возможно уже с наценкой!', {
+                        bundle_name: firstPlan.bundle_name,
+                        priceValue: firstPlan.priceValue,
+                        expectedCostPrice: '~$8.06 for 1GB'
+                    });
+                }
+            }
         }
         if (plans.unlimited.length > 0) {
             console.log('Sample unlimited plans:', plans.unlimited.slice(0, 3).map(p => ({
