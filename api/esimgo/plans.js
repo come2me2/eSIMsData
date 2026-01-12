@@ -97,12 +97,50 @@ function groupBundlesIntoPlans(bundles, isLocal = false) {
             fieldIndex++;
         }
         
+        // АГРЕССИВНОЕ ЛОГИРОВАНИЕ для отладки проблемы с ценами
+        const originalPriceValue = priceValue;
+        const originalUsedField = usedFieldName;
+        
         // Если цена в центах (больше 100 и меньше 100000), конвертируем в доллары
         // Но только если это выглядит как цена в центах (например, 999 для $9.99)
         if (priceValue > 100 && priceValue < 100000 && priceValue % 1 === 0) {
             // Проверяем, не является ли это уже ценой в долларах (например, 9.99)
             // Если цена целое число и больше 100, вероятно это центы
+            const priceInCents = priceValue;
             priceValue = priceValue / 100;
+            
+            // Логируем конвертацию из центов для Global bundles
+            if (bundle.name && (bundle.name.includes('RGB') || bundle.name.includes('Global'))) {
+                console.log('⚠️ Price converted from cents:', {
+                    bundle: bundle.name,
+                    originalValue: priceInCents,
+                    convertedValue: priceValue,
+                    usedField: originalUsedField
+                });
+            }
+        }
+        
+        // АГРЕССИВНОЕ ЛОГИРОВАНИЕ для 1GB Global bundle
+        if (bundle.name === 'esim_1GB_7D_RGB_V2') {
+            console.log('🔍 DEBUG 1GB Global bundle price extraction:', {
+                bundleName: bundle.name,
+                step1_originalPriceValue: originalPriceValue,
+                step1_usedField: originalUsedField,
+                step2_afterCentsConversion: priceValue,
+                allPriceFields: {
+                    cost: bundle.cost,
+                    basePrice: bundle.basePrice,
+                    pricePerUnit: bundle.pricePerUnit,
+                    amount: bundle.amount,
+                    price: bundle.price,
+                    fee: bundle.fee,
+                    totalPrice: bundle.totalPrice,
+                    userPrice: bundle.userPrice
+                },
+                priceValueFinal: priceValue,
+                expectedPrice: 8.06,
+                difference: Math.abs(priceValue - 8.06)
+            });
         }
         
         // Получаем валюту из bundle
