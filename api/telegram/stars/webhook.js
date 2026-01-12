@@ -651,11 +651,11 @@ module.exports = async function handler(req, res) {
                     }
                 }
                 
-                await sendStatusMessage(message.chat.id, [
-                    '⚠️ Оплата прошла, но заказ не создан.',
-                    'Мы уже разбираемся. Пожалуйста, свяжитесь с поддержкой.',
-                    `Платёж: <code>${paymentId}</code>`
-                ].join('\n'));
+            await sendStatusMessage(message.chat.id, [
+                '⚠️ Payment received, but order was not created.',
+                'We are already investigating. Please contact support.',
+                `Payment ID: <code>${paymentId}</code>`
+            ].join('\n'));
             }
         } catch (error) {
             console.error('❌ Error creating order after payment:', error);
