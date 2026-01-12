@@ -122,12 +122,33 @@ function groupBundlesIntoPlans(bundles, isLocal = false) {
                 allKeys: Object.keys(bundle)
             });
         } else {
-            // Для Global bundles логируем успешное извлечение цены
+            // Для Global bundles логируем успешное извлечение цены с деталями
             if (bundle.name && (bundle.name.includes('RGB') || bundle.name.includes('Global'))) {
+                // Определяем, какое поле было использовано
+                let usedField = 'unknown';
+                if (bundle.cost && priceValue === (typeof bundle.cost === 'number' ? bundle.cost : parseFloat(bundle.cost))) {
+                    usedField = 'cost';
+                } else if (bundle.basePrice && priceValue === (typeof bundle.basePrice === 'number' ? bundle.basePrice : parseFloat(bundle.basePrice))) {
+                    usedField = 'basePrice';
+                } else if (bundle.price && priceValue === (typeof bundle.price === 'number' ? bundle.price : parseFloat(bundle.price))) {
+                    usedField = 'price';
+                } else if (bundle.pricePerUnit && priceValue === (typeof bundle.pricePerUnit === 'number' ? bundle.pricePerUnit : parseFloat(bundle.pricePerUnit))) {
+                    usedField = 'pricePerUnit';
+                }
+                
                 console.log('✅ Price extracted for Global bundle:', {
                     name: bundle.name,
                     priceValue: priceValue,
                     currency: currency,
+                    usedField: usedField,
+                    availableFields: {
+                        cost: bundle.cost,
+                        basePrice: bundle.basePrice,
+                        price: bundle.price,
+                        pricePerUnit: bundle.pricePerUnit,
+                        userPrice: bundle.userPrice,
+                        amount: bundle.amount
+                    },
                     source: 'groupBundlesIntoPlans'
                 });
             }
