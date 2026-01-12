@@ -1763,8 +1763,9 @@ body.checkout-page .bottom-button-container {
 
 .current-esim-usage-info {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
 }
 
 .current-esim-usage-text {

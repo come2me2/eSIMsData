@@ -192,10 +192,12 @@ function showESimData() {
     if (usageTextElement) {
         usageTextElement.style.opacity = '1';
         usageTextElement.style.transition = 'opacity 0.3s ease-in';
+        usageTextElement.style.display = 'block';
     }
     if (remainingTextElement) {
         remainingTextElement.style.opacity = '1';
         remainingTextElement.style.transition = 'opacity 0.3s ease-in';
+        remainingTextElement.style.display = 'block';
     }
     if (usageProgressElement) {
         usageProgressElement.style.opacity = '1';
@@ -204,6 +206,7 @@ function showESimData() {
     if (expirationTextElement) {
         expirationTextElement.style.opacity = '1';
         expirationTextElement.style.transition = 'opacity 0.3s ease-in';
+        expirationTextElement.style.display = 'block';
     }
     if (expirationProgressElement) {
         expirationProgressElement.style.opacity = '1';
@@ -212,7 +215,10 @@ function showESimData() {
     if (expiresDateElement) {
         expiresDateElement.style.opacity = '1';
         expiresDateElement.style.transition = 'opacity 0.3s ease-in';
+        expiresDateElement.style.display = 'block';
     }
+    
+    console.log('✅ showESimData() called - elements should be visible now');
 }
 
 // Setup eSIM details
@@ -411,6 +417,8 @@ async function loadBundleUsageData(iccid) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             console.warn('⚠️ Failed to load bundle usage data:', response.status, errorData.error || 'Unknown error');
+            // При ошибке показываем базовые данные
+            showESimData();
             return;
         }
         
