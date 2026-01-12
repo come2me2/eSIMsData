@@ -431,6 +431,8 @@ module.exports = async function handler(req, res) {
                 const cachedDataCopy = JSON.parse(JSON.stringify(cachedData.data));
                 
                 // КРИТИЧЕСКАЯ ПРОВЕРКА: проверяем цену в кэше ПЕРЕД применением наценки
+                // Если цена слишком высокая, значит в кэше уже нацененная цена - не применяем наценку повторно
+                let cacheHasMarkup = false;
                 if (isGlobal && cachedDataCopy.standard && cachedDataCopy.standard.length > 0) {
                     const samplePlan = cachedDataCopy.standard[0];
                     console.log('🔍 Reading from cache (BEFORE markup):', {
@@ -438,13 +440,32 @@ module.exports = async function handler(req, res) {
                         priceValue: samplePlan.priceValue,
                         price: samplePlan.price
                     });
-                    // Если цена > 20, значит в кэше уже нацененная цена!
+                    // Для Global планов: если цена > 20 для 1GB плана, значит в кэше уже нацененная цена
+                    // Обычно себестоимость 1GB Global плана ~$8-10, с наценкой 1.29 = ~$10-13
+                    // Если цена > 20, вероятно наценка уже применена дважды
                     if (samplePlan.priceValue > 20) {
                         console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: В кэше уже цена с наценкой!', {
                             bundle_name: samplePlan.bundle_name,
                             priceValue: samplePlan.priceValue,
                             expectedCostPrice: '~$8.06 for 1GB'
                         });
+                        cacheHasMarkup = true;
+                    }
+                } else if (cachedDataCopy.standard && cachedDataCopy.standard.length > 0) {
+                    // Для Local/Region планов: проверяем, не слишком ли высокая цена
+                    // Если цена > 50 для стандартного плана, вероятно наценка уже применена
+                    const samplePlan = cachedDataCopy.standard[0];
+                    const settings = loadMarkupSettings();
+                    const markup = settings.markup || {};
+                    const baseMarkup = markup.base || markup.defaultMultiplier || 1.0;
+                    // Оцениваем примерную себестоимость: если цена / baseMarkup > 30, вероятно наценка уже применена
+                    if (samplePlan.priceValue && samplePlan.priceValue / baseMarkup > 30) {
+                        console.warn('⚠️ Возможно в кэше уже цена с наценкой:', {
+                            bundle_name: samplePlan.bundle_name,
+                            priceValue: samplePlan.priceValue,
+                            estimatedCost: samplePlan.priceValue / baseMarkup
+                        });
+                        // Не устанавливаем cacheHasMarkup = true для Local/Region, так как цены могут быть разными
                     }
                 }
                 
@@ -454,9 +475,9 @@ module.exports = async function handler(req, res) {
                 // Применяем наценку к копии кэшированных данных
                 // Для Global тарифов countryCode = null, но наценка должна применяться
                 // Передаем null для Global, чтобы применить только базовую наценку
-                // НО: если noMarkup=true, возвращаем данные БЕЗ наценки (для статических файлов)
-                const dataWithMarkup = noMarkup 
-                    ? cachedDataCopy  // Возвращаем БЕЗ наценки для статических файлов
+                // НО: если noMarkup=true или cacheHasMarkup=true, возвращаем данные БЕЗ повторного применения наценки
+                const dataWithMarkup = (noMarkup || cacheHasMarkup)
+                    ? cachedDataCopy  // Возвращаем БЕЗ наценки (для статических файлов или если наценка уже применена)
                     : applyMarkupToPlans(cachedDataCopy, isGlobal ? null : countryCode);
                 
                 // Логируем цену ПОСЛЕ применения наценки

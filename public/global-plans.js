@@ -78,6 +78,7 @@ async function loadGlobalPlans() {
         let data = null;
         
         // Пробуем загрузить через DataLoader
+        // DataLoader теперь всегда использует API для получения актуальных данных с правильной наценкой
         if (window.DataLoader && typeof window.DataLoader.loadGlobalPlans === 'function') {
             try {
                 console.log('⚡ Trying DataLoader.loadGlobalPlans...');
@@ -86,23 +87,15 @@ async function loadGlobalPlans() {
                     // DataLoader может вернуть данные напрямую или обернутые в объект
                     const loadedData = dataLoaderResult.data || dataLoaderResult;
                     
-                    // КРИТИЧЕСКАЯ ПРОВЕРКА: проверяем цену из DataLoader
                     if (loadedData && loadedData.standard && loadedData.standard.length > 0) {
                         const firstPlan = loadedData.standard[0];
-                        console.log('🔍 DataLoader returned:', {
+                        console.log('✅ DataLoader returned:', {
                             bundle_name: firstPlan.bundle_name,
                             priceValue: firstPlan.priceValue,
-                            price: firstPlan.price
+                            price: firstPlan.price,
+                            source: 'API (with markup)'
                         });
-                        
-                        // Если цена неправильная, игнорируем данные из DataLoader
-                        if (firstPlan.priceValue && firstPlan.priceValue > 20) {
-                            console.error('🚨 DataLoader вернул неправильную цену! Игнорируем и используем прямой API запрос.');
-                            data = null; // Сбрасываем данные, чтобы использовать прямой API
-                        } else {
-                            data = loadedData;
-                            console.log('✅ Data loaded via DataLoader');
-                        }
+                        data = loadedData;
                     } else {
                         data = loadedData;
                         console.log('✅ Data loaded via DataLoader');

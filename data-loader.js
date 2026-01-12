@@ -9,8 +9,8 @@
     
     const CACHE_PREFIX = 'esim_cache_';
     // Bump this to force-reset localStorage cache for all users
-    // v10: Clear all caches with wrong prices, ensure cost prices are cached
-    const CACHE_VERSION = 'v10';
+    // v11: DataLoader now always uses API for fresh prices with markup
+    const CACHE_VERSION = 'v11';
     const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 часа (данные обновляются ночью)
     
     /**
@@ -209,40 +209,185 @@
     
     /**
      * Загрузка Global планов
+     * ВАЖНО: Всегда используем API для получения актуальных цен с наценкой
+     * Статические файлы могут содержать устаревшие данные
      */
     async function loadGlobalPlans(options = {}) {
-        return loadData(
-            'plans_global',
-            '/data/plans-global.json',
-            '/api/esimgo/plans?category=global',
-            options
-        );
+        // Всегда используем API для получения актуальных данных с правильной наценкой
+        // Не используем статические файлы, так как они могут быть устаревшими
+        const cacheKey = 'plans_global';
+        const apiPath = '/api/esimgo/plans?category=global';
+        
+        // Проверяем memory cache
+        if (!options.forceRefresh && memoryCache.has(cacheKey)) {
+            console.log(`⚡ Memory cache hit: ${cacheKey}`);
+            return memoryCache.get(cacheKey);
+        }
+        
+        // Проверяем localStorage cache (но с коротким TTL для актуальности)
+        if (!options.forceRefresh) {
+            const cached = localCache.get(cacheKey);
+            if (cached && cached.data && !cached.stale) {
+                console.log(`💾 LocalStorage cache hit: ${cacheKey}`);
+                memoryCache.set(cacheKey, cached.data);
+                return cached.data;
+            }
+        }
+        
+        // Загружаем из API (всегда актуальные данные с правильной наценкой)
+        try {
+            console.log(`🔄 Loading Global plans from API: ${apiPath}`);
+            const response = await fetch(apiPath);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    console.log(`✅ Global plans loaded from API`);
+                    const data = result.data;
+                    memoryCache.set(cacheKey, data);
+                    localCache.set(cacheKey, data);
+                    return data;
+                }
+            }
+        } catch (e) {
+            console.error(`❌ API failed: ${apiPath}`, e.message);
+        }
+        
+        // Fallback: если API не доступен, пробуем статический файл
+        try {
+            console.log(`⚠️ API failed, trying static file as fallback...`);
+            const response = await fetch('/data/plans-global.json');
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    console.log(`✅ Global plans loaded from static file (fallback)`);
+                    return result.data;
+                }
+            }
+        } catch (e) {
+            console.warn(`⚠️ Static file also failed:`, e.message);
+        }
+        
+        throw new Error(`Failed to load Global plans`);
     }
     
     /**
      * Загрузка Regional планов
+     * ВАЖНО: Всегда используем API для получения актуальных цен с наценкой
      */
     async function loadRegionPlans(region, options = {}) {
         const regionSlug = region.toLowerCase().replace(/\s+/g, '-');
-        return loadData(
-            `plans_region_${regionSlug}`,
-            `/data/plans-region-${regionSlug}.json`,
-            `/api/esimgo/region-plans?region=${encodeURIComponent(region)}`,
-            options
-        );
+        const cacheKey = `plans_region_${regionSlug}`;
+        const apiPath = `/api/esimgo/region-plans?region=${encodeURIComponent(region)}`;
+        
+        // Проверяем memory cache
+        if (!options.forceRefresh && memoryCache.has(cacheKey)) {
+            console.log(`⚡ Memory cache hit: ${cacheKey}`);
+            return memoryCache.get(cacheKey);
+        }
+        
+        // Проверяем localStorage cache
+        if (!options.forceRefresh) {
+            const cached = localCache.get(cacheKey);
+            if (cached && cached.data && !cached.stale) {
+                console.log(`💾 LocalStorage cache hit: ${cacheKey}`);
+                memoryCache.set(cacheKey, cached.data);
+                return cached.data;
+            }
+        }
+        
+        // Загружаем из API
+        try {
+            console.log(`🔄 Loading Region plans from API: ${apiPath}`);
+            const response = await fetch(apiPath);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    console.log(`✅ Region plans loaded from API`);
+                    const data = result.data;
+                    memoryCache.set(cacheKey, data);
+                    localCache.set(cacheKey, data);
+                    return data;
+                }
+            }
+        } catch (e) {
+            console.error(`❌ API failed: ${apiPath}`, e.message);
+        }
+        
+        // Fallback: статический файл
+        try {
+            const response = await fetch(`/data/plans-region-${regionSlug}.json`);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    console.log(`✅ Region plans loaded from static file (fallback)`);
+                    return result.data;
+                }
+            }
+        } catch (e) {
+            console.warn(`⚠️ Static file also failed:`, e.message);
+        }
+        
+        throw new Error(`Failed to load Region plans for ${region}`);
     }
     
     /**
      * Загрузка Local планов для страны
+     * ВАЖНО: Всегда используем API для получения актуальных цен с наценкой
      */
     async function loadLocalPlans(countryCode, options = {}) {
         const code = countryCode.toLowerCase();
-        return loadData(
-            `plans_local_${code}`,
-            `/data/plans-local-${code}.json`,
-            `/api/esimgo/plans?country=${countryCode.toUpperCase()}&category=local`,
-            options
-        );
+        const cacheKey = `plans_local_${code}`;
+        const apiPath = `/api/esimgo/plans?country=${countryCode.toUpperCase()}&category=local`;
+        
+        // Проверяем memory cache
+        if (!options.forceRefresh && memoryCache.has(cacheKey)) {
+            console.log(`⚡ Memory cache hit: ${cacheKey}`);
+            return memoryCache.get(cacheKey);
+        }
+        
+        // Проверяем localStorage cache
+        if (!options.forceRefresh) {
+            const cached = localCache.get(cacheKey);
+            if (cached && cached.data && !cached.stale) {
+                console.log(`💾 LocalStorage cache hit: ${cacheKey}`);
+                memoryCache.set(cacheKey, cached.data);
+                return cached.data;
+            }
+        }
+        
+        // Загружаем из API
+        try {
+            console.log(`🔄 Loading Local plans from API: ${apiPath}`);
+            const response = await fetch(apiPath);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    console.log(`✅ Local plans loaded from API`);
+                    const data = result.data;
+                    memoryCache.set(cacheKey, data);
+                    localCache.set(cacheKey, data);
+                    return data;
+                }
+            }
+        } catch (e) {
+            console.error(`❌ API failed: ${apiPath}`, e.message);
+        }
+        
+        // Fallback: статический файл
+        try {
+            const response = await fetch(`/data/plans-local-${code}.json`);
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    console.log(`✅ Local plans loaded from static file (fallback)`);
+                    return result.data;
+                }
+            }
+        } catch (e) {
+            console.warn(`⚠️ Static file also failed:`, e.message);
+        }
+        
+        throw new Error(`Failed to load Local plans for ${countryCode}`);
     }
     
     /**

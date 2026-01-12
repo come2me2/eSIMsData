@@ -29,10 +29,21 @@ function log(message) {
 
 // Создаем mock request и response объекты
 function createMockReq(query = {}) {
+    // При предзаполнении кэша передаем секрет для forceRefresh
+    const secret = CACHE_REFRESH_SECRET && CACHE_REFRESH_SECRET !== 'change-me-in-production' 
+        ? CACHE_REFRESH_SECRET 
+        : null;
+    
     return {
         method: 'GET',
-        query: query,
-        headers: {}
+        query: {
+            ...query,
+            // Передаем секрет в query, если он установлен
+            ...(secret ? { secret: secret } : {})
+        },
+        headers: secret ? {
+            'x-cache-refresh-secret': secret
+        } : {}
     };
 }
 
