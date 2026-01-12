@@ -1703,10 +1703,21 @@ body.checkout-page .bottom-button-container {
 }
 
 .current-esim-order-info {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 400;
     color: var(--text-secondary);
-    line-height: 20px;
+    line-height: 18px;
+    margin-top: 4px;
+    display: block;
+}
+
+.current-esim-iccid-info {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    line-height: 18px;
+    margin-top: 4px;
+    display: block;
 }
 
 .current-esim-start-date {
