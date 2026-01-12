@@ -9,9 +9,9 @@
     
     const CACHE_PREFIX = 'esim_cache_';
     // Bump this to force-reset localStorage cache for all users
-    // v12: Force clear all old caches with wrong prices, ensure fresh API data with correct markup
-    const CACHE_VERSION = 'v12';
-    const CACHE_TTL = 2 * 60 * 60 * 1000; // 2 часа (более частое обновление для актуальности)
+    // v13: AGGRESSIVE cache clear - remove ALL old cache entries to ensure fresh prices
+    const CACHE_VERSION = 'v13';
+    const CACHE_TTL = 1 * 60 * 60 * 1000; // 1 час (еще более частое обновление)
     
     /**
      * Кэш в localStorage
@@ -493,33 +493,64 @@
         window.addEventListener('load', schedulePreload);
     }
     
-    // Автоматическая очистка старого кэша при загрузке (если версия изменилась)
-    // Это гарантирует, что все пользователи получат свежие данные
+    // АГРЕССИВНАЯ очистка старого кэша при загрузке
+    // Удаляем ВСЕ записи с префиксом кэша, чтобы гарантировать свежие данные
     if (typeof window !== 'undefined' && window.localStorage) {
         try {
-            const oldVersionKeys = [];
+            const allCacheKeys = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (key && key.startsWith(CACHE_PREFIX)) {
+                    allCacheKeys.push(key);
+                }
+            }
+            
+            if (allCacheKeys.length > 0) {
+                // Проверяем версию каждой записи
+                const oldVersionKeys = [];
+                const currentVersionKeys = [];
+                
+                allCacheKeys.forEach(key => {
                     try {
                         const item = JSON.parse(localStorage.getItem(key));
                         if (item.version && item.version !== CACHE_VERSION) {
+                            oldVersionKeys.push(key);
+                        } else if (item.version === CACHE_VERSION) {
+                            currentVersionKeys.push(key);
+                        } else {
+                            // Если нет версии или не удалось распарсить - удаляем
                             oldVersionKeys.push(key);
                         }
                     } catch (e) {
                         // Если не удалось распарсить, удаляем
                         oldVersionKeys.push(key);
                     }
+                });
+                
+                if (oldVersionKeys.length > 0) {
+                    console.log(`🔄 Clearing ${oldVersionKeys.length} old cache entries (version mismatch)`);
+                    oldVersionKeys.forEach(key => localStorage.removeItem(key));
                 }
-            }
-            if (oldVersionKeys.length > 0) {
-                console.log(`🔄 Clearing ${oldVersionKeys.length} old cache entries (version mismatch)`);
-                oldVersionKeys.forEach(key => localStorage.removeItem(key));
-                // Также очищаем memory cache
+                
+                // ВАЖНО: Для v13 также очищаем ВСЕ записи планов, чтобы загрузить свежие данные
+                // Это гарантирует, что пользователи получат актуальные цены
+                const planKeys = allCacheKeys.filter(key => 
+                    key.includes('plans_') && currentVersionKeys.includes(key)
+                );
+                
+                if (planKeys.length > 0) {
+                    console.log(`🔄 Force clearing ${planKeys.length} plan cache entries to ensure fresh prices`);
+                    planKeys.forEach(key => localStorage.removeItem(key));
+                }
+                
+                // Очищаем memory cache
                 memoryCache.clear();
+                console.log(`✅ Cache cleanup complete. Will load fresh data from API.`);
             }
         } catch (e) {
             console.warn('Cache cleanup error:', e);
+            // В случае ошибки все равно очищаем memory cache
+            memoryCache.clear();
         }
     }
     
