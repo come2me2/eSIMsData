@@ -1726,17 +1726,19 @@ function setupPurchaseButton() {
                 console.log('💫 Invoice ID to open:', invoiceId);
                 
                 const cb = (status) => {
-                    console.log('💫 Invoice status:', status);
+                    console.log('💫 Invoice status callback received:', status);
                     purchaseBtn.textContent = originalText;
                     purchaseBtn.disabled = false;
                     if (status === 'paid') {
                         // Успешная оплата - заказ будет создан через webhook
+                        console.log('✅ Payment successful! Redirecting to My eSIMs...');
                         if (tg) {
                             tg.HapticFeedback.notificationOccurred('success');
                             tg.showAlert('✅ Payment successful! Your eSIM will be sent to you shortly.');
                         }
                         // Редирект на страницу My eSIMs после успешной оплаты
                         setTimeout(() => {
+                            console.log('🔄 Redirecting to my-esims.html...');
                             window.location.href = 'my-esims.html';
                         }, 2000);
                     } else if (status === 'cancelled') {
@@ -2143,15 +2145,17 @@ function setupStarsButton() {
             const slug = invoiceLink.split('/').pop();
             
             const cb = (status) => {
-                console.log('Invoice status:', status);
+                console.log('💫 Invoice status callback received:', status);
                 if (status === 'paid') {
                     // Успешная оплата - заказ будет создан через webhook
+                    console.log('✅ Payment successful! Redirecting to My eSIMs...');
                     if (tg) {
                         tg.HapticFeedback.notificationOccurred('success');
                         tg.showAlert('✅ Payment successful! Your eSIM will be sent to you shortly.');
                     }
                     // Редирект на страницу My eSIMs после успешной оплаты
                     setTimeout(() => {
+                        console.log('🔄 Redirecting to my-esims.html...');
                         window.location.href = 'my-esims.html';
                     }, 2000);
                 } else if (status === 'cancelled') {

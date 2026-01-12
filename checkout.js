@@ -762,16 +762,18 @@ async function initiateStarsPayment(auth) {
         
         // Открываем инвойс через Telegram
         const invoiceCallback = (status) => {
-            console.log('💫 Invoice status:', status);
+            console.log('💫 Invoice status callback received:', status);
             
             if (status === 'paid') {
                 // Успешная оплата - заказ будет создан через webhook
+                console.log('✅ Payment successful! Redirecting to My eSIMs...');
                 if (tg) {
                     tg.HapticFeedback.notificationOccurred('success');
                     tg.showAlert('✅ Payment successful! Your eSIM will be sent to you shortly.');
                 }
                 // Редирект на страницу My eSIMs после успешной оплаты
                 setTimeout(() => {
+                    console.log('🔄 Redirecting to my-esims.html...');
                     window.location.href = 'my-esims.html';
                 }, 2000);
             } else if (status === 'cancelled') {
