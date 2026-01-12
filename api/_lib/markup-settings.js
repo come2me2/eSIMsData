@@ -135,7 +135,8 @@ function applyMarkupToPlans(plansData, countryCode = null) {
         
         if (!markup.enabled) {
             console.log('[Markup] Markup is disabled, returning original prices');
-            return plansData;
+            // Возвращаем глубокую копию, чтобы не мутировать исходные данные
+            return JSON.parse(JSON.stringify(plansData));
         }
         
         const baseMarkup = markup.base || markup.defaultMultiplier || 1.0;
@@ -148,10 +149,13 @@ function applyMarkupToPlans(plansData, countryCode = null) {
         const totalMarkup = baseMarkup * countryMarkup;
         console.log(`[Markup] Total markup multiplier: ${totalMarkup} (base: ${baseMarkup}, country: ${countryMarkup})`);
         
+        // ВАЖНО: Создаем глубокую копию, чтобы не мутировать исходные данные
+        const result = JSON.parse(JSON.stringify(plansData));
+        
         // Применяем наценку к стандартным планам
-        if (plansData.standard && Array.isArray(plansData.standard)) {
+        if (result.standard && Array.isArray(result.standard)) {
             let appliedCount = 0;
-            plansData.standard = plansData.standard.map(plan => {
+            result.standard = result.standard.map(plan => {
                 if (plan.priceValue && typeof plan.priceValue === 'number') {
                     const oldPrice = plan.priceValue;
                     const newPriceValue = Math.round(plan.priceValue * totalMarkup * 100) / 100;
@@ -175,9 +179,9 @@ function applyMarkupToPlans(plansData, countryCode = null) {
         }
         
         // Применяем наценку к безлимитным планам
-        if (plansData.unlimited && Array.isArray(plansData.unlimited)) {
+        if (result.unlimited && Array.isArray(result.unlimited)) {
             let appliedCount = 0;
-            plansData.unlimited = plansData.unlimited.map(plan => {
+            result.unlimited = result.unlimited.map(plan => {
                 if (plan.priceValue && typeof plan.priceValue === 'number') {
                     const oldPrice = plan.priceValue;
                     const newPriceValue = Math.round(plan.priceValue * totalMarkup * 100) / 100;
@@ -200,7 +204,7 @@ function applyMarkupToPlans(plansData, countryCode = null) {
             console.log(`[Markup] Applied markup to ${appliedCount} unlimited plans`);
         }
         
-        return plansData;
+        return result;
     } catch (error) {
         console.error('[Markup] Error applying markup to plans:', error.message);
         return plansData;
