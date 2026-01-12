@@ -1299,9 +1299,21 @@ module.exports = async function handler(req, res) {
         // ВАЖНО: Сохраняем глубокую копию данных БЕЗ наценки, чтобы наценка не применялась повторно
         if (bundles.length > 0 || plans.standard.length > 0 || plans.unlimited.length > 0) {
             // Создаем глубокую копию данных для кэша (БЕЗ наценки)
+            // responseData содержит планы с себестоимостью (без наценки) из groupBundlesIntoPlans
             const dataForCache = JSON.parse(JSON.stringify(responseData));
+            
+            // Логируем пример цены для проверки (для Global)
+            if (isGlobal && dataForCache.standard && dataForCache.standard.length > 0) {
+                const samplePlan = dataForCache.standard[0];
+                console.log('💾 Caching Global plan (should be cost price, not markup):', {
+                    bundle_name: samplePlan.bundle_name,
+                    priceValue: samplePlan.priceValue,
+                    price: samplePlan.price
+                });
+            }
+            
             cache.set(cacheKey, {
-                data: dataForCache, // Сохраняем БЕЗ наценки
+                data: dataForCache, // Сохраняем БЕЗ наценки (себестоимость)
                 meta: responseMeta
             });
             console.log('💾 Cached plans data for:', cacheKey, '(without markup)');
@@ -1313,6 +1325,16 @@ module.exports = async function handler(req, res) {
         // Для Global тарифов countryCode = null, но наценка должна применяться
         // Передаем null для Global, чтобы применить только базовую наценку
         const dataWithMarkup = applyMarkupToPlans(responseData, isGlobal ? null : countryCode);
+        
+        // Логируем пример цены после применения наценки (для Global)
+        if (isGlobal && dataWithMarkup.standard && dataWithMarkup.standard.length > 0) {
+            const samplePlan = dataWithMarkup.standard[0];
+            console.log('📤 Global plan after markup (should have markup applied):', {
+                bundle_name: samplePlan.bundle_name,
+                priceValue: samplePlan.priceValue,
+                price: samplePlan.price
+            });
+        }
         
         // Для Global логируем финальный ответ перед отправкой
         if (isGlobal) {
