@@ -90,12 +90,27 @@ async function callTelegram(method, payload) {
 
 async function answerPreCheckout(preCheckoutQuery) {
     try {
-        await callTelegram('answerPreCheckoutQuery', {
+        console.log('✅ Answering pre_checkout_query with ok: true:', {
+            query_id: preCheckoutQuery.id,
+            user_id: preCheckoutQuery.from?.id
+        });
+        
+        const result = await callTelegram('answerPreCheckoutQuery', {
             pre_checkout_query_id: preCheckoutQuery.id,
             ok: true
         });
+        
+        console.log('✅ Pre-checkout query answered successfully:', {
+            query_id: preCheckoutQuery.id,
+            result: result
+        });
     } catch (error) {
-        console.error('❌ answerPreCheckout failed:', error.message);
+        console.error('❌ answerPreCheckout failed:', {
+            query_id: preCheckoutQuery.id,
+            error: error.message,
+            stack: error.stack
+        });
+        throw error; // Пробрасываем ошибку, чтобы она была видна в логах
     }
 }
 
