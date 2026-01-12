@@ -228,14 +228,19 @@ module.exports = async function handler(req, res) {
         }
 
         // Проверяем сумму: payload amt против total_amount
+        // ВАЖНО: Разрешаем небольшие расхождения (до 1 Star) из-за округления
         const totalStars = pq.total_amount; // В Stars
-        if (payloadObj.amt && Number(payloadObj.amt) !== Number(totalStars)) {
+        const payloadAmount = payloadObj.amt ? Number(payloadObj.amt) : null;
+        const amountDifference = payloadAmount !== null ? Math.abs(payloadAmount - Number(totalStars)) : 0;
+        
+        // Разрешаем расхождения до 1 Star (из-за округления)
+        if (payloadAmount !== null && amountDifference > 1) {
             console.error('❌ Price mismatch in pre_checkout_query:', {
                 query_id: pq.id,
                 user_id: userId,
                 payload_amount: payloadObj.amt,
                 total_amount: totalStars,
-                difference: Math.abs(Number(payloadObj.amt) - Number(totalStars))
+                difference: amountDifference
             });
             
             await callTelegram('answerPreCheckoutQuery', {
@@ -246,6 +251,15 @@ module.exports = async function handler(req, res) {
             // Обновляем заказ на failed если он существует
             await updateOrderStatusOnPaymentError(pq.id, 'Price mismatch');
             return res.status(200).json({ ok: true });
+        } else if (payloadAmount !== null && amountDifference > 0) {
+            console.warn('⚠️ Minor price difference (allowed):', {
+                query_id: pq.id,
+                user_id: userId,
+                payload_amount: payloadObj.amt,
+                total_amount: totalStars,
+                difference: amountDifference
+            });
+            // Небольшое расхождение - разрешаем оплату
         }
 
         console.log('✅ Pre-checkout query validated successfully:', {

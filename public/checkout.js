@@ -1673,7 +1673,10 @@ function setupPurchaseButton() {
                         // Пользователь отменил оплату
                         if (tg) {
                             tg.HapticFeedback.notificationOccurred('error');
-                            tg.showAlert('Payment cancelled.');
+                            // Показываем наше сообщение на английском немедленно, чтобы перекрыть системное
+                            setTimeout(() => {
+                                tg.showAlert('Payment cancelled.');
+                            }, 0);
                         }
                     } else if (status === 'failed') {
                         // Ошибка оплаты
@@ -2086,7 +2089,10 @@ function setupStarsButton() {
                     // Пользователь отменил оплату
                     if (tg) {
                         tg.HapticFeedback.notificationOccurred('error');
-                        tg.showAlert('Payment cancelled.');
+                        // Показываем наше сообщение на английском немедленно, чтобы перекрыть системное
+                        setTimeout(() => {
+                            tg.showAlert('Payment cancelled.');
+                        }, 0);
                     }
                 } else if (status === 'failed') {
                     // Ошибка оплаты
