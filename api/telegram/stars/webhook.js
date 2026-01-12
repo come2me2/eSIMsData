@@ -224,7 +224,7 @@ module.exports = async function handler(req, res) {
             });
             // Обновляем заказ на failed если он существует
             await updateOrderStatusOnPaymentError(pq.id, 'Invalid payload');
-            return res.status(200).json({ ok: true });
+            return;
         }
 
         // Проверяем сумму: payload amt против total_amount
@@ -250,7 +250,7 @@ module.exports = async function handler(req, res) {
             });
             // Обновляем заказ на failed если он существует
             await updateOrderStatusOnPaymentError(pq.id, 'Price mismatch');
-            return res.status(200).json({ ok: true });
+            return;
         } else if (payloadAmount !== null && amountDifference > 0) {
             console.warn('⚠️ Minor price difference (allowed):', {
                 query_id: pq.id,
@@ -270,7 +270,7 @@ module.exports = async function handler(req, res) {
         });
         
         await answerPreCheckout(pq);
-        return res.status(200).json({ ok: true });
+        return;
     }
     
     // Обработка ошибок платежа (если есть)
@@ -283,7 +283,7 @@ module.exports = async function handler(req, res) {
             await updateOrderStatusOnPaymentError(paymentId, 'Payment canceled by user');
         }
         
-        return res.status(200).json({ ok: true });
+        return;
     }
 
     // Обработка успешного платежа
@@ -293,8 +293,11 @@ module.exports = async function handler(req, res) {
         const payloadObj = safeParsePayload(payment.invoice_payload);
 
         if (!payloadObj || !payloadObj.bn || !payloadObj.pid) {
-            console.error('❌ Invalid payload in successful_payment');
-            return res.status(200).json({ ok: true });
+            console.error('❌ Invalid payload in successful_payment:', {
+                payload: payment.invoice_payload,
+                parsed: payloadObj
+            });
+            return;
         }
 
         // 🔍 Проверка на тестовый платеж
@@ -343,7 +346,7 @@ module.exports = async function handler(req, res) {
                 `Платёж ID: <code>${paymentId}</code>`
             ].join('\n'));
             
-            return res.status(200).json({ ok: true });
+            return;
         }
         
         if (isTestPayment && ALLOW_TEST_PAYMENTS) {
@@ -356,7 +359,7 @@ module.exports = async function handler(req, res) {
 
         if (processedPayments.has(paymentId)) {
             console.log('⚠️ Duplicate payment detected:', paymentId);
-            return res.status(200).json({ ok: true });
+            return;
         }
 
         processedPayments.add(paymentId);
@@ -706,9 +709,9 @@ module.exports = async function handler(req, res) {
             ].join('\n'));
         }
 
-        return res.status(200).json({ ok: true });
+        return;
     }
-
+    
     // Прочие обновления нам не интересны
-    return res.status(200).json({ ok: true });
+    return;
 };
