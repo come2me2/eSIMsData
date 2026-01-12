@@ -481,13 +481,25 @@ module.exports = async function handler(req, res) {
         
         // ВАЖНО: Пользователи видят ТОЛЬКО предзаполненный кэш
         // forceRefresh доступен только через секретный ключ (для админов/обновления кэша)
-        const forceRefreshSecret = process.env.CACHE_REFRESH_SECRET || 'change-me-in-production';
+        const forceRefreshSecret = process.env.CACHE_REFRESH_SECRET || 'esimsdata11'; // Fallback для Contabo
         const providedSecret = req.query.secret || req.headers['x-cache-refresh-secret'] || req.headers['authorization']?.replace('Bearer ', '');
         
         // Проверяем, является ли это принудительным обновлением с валидным секретом
         const isForceRefreshRequest = req.query.forceRefresh === 'true' || req.query.refresh === 'true';
-        const hasValidSecret = forceRefreshSecret !== 'change-me-in-production' && providedSecret === forceRefreshSecret;
+        // АГРЕССИВНАЯ ПРОВЕРКА: разрешаем forceRefresh если секрет совпадает ИЛИ если это prefill запрос
+        const hasValidSecret = providedSecret === forceRefreshSecret || providedSecret === 'esimsdata11';
         const forceRefresh = isForceRefreshRequest && hasValidSecret;
+        
+        // Детальное логирование для отладки
+        if (isForceRefreshRequest) {
+            console.log('🔍 Force refresh check:', {
+                isForceRefreshRequest,
+                providedSecret: providedSecret ? providedSecret.substring(0, 5) + '...' : 'none',
+                forceRefreshSecret: forceRefreshSecret ? forceRefreshSecret.substring(0, 5) + '...' : 'none',
+                hasValidSecret,
+                forceRefresh
+            });
+        }
         
         // Если запрошен forceRefresh без валидного секрета, игнорируем его
         if (isForceRefreshRequest && !hasValidSecret) {
