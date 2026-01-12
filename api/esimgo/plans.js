@@ -429,10 +429,39 @@ module.exports = async function handler(req, res) {
                 // КРИТИЧЕСКИ ВАЖНО: Создаем глубокую копию кэшированных данных перед применением наценки
                 // Это предотвращает мутацию данных в кэше
                 const cachedDataCopy = JSON.parse(JSON.stringify(cachedData.data));
+                
+                // КРИТИЧЕСКАЯ ПРОВЕРКА: проверяем цену в кэше ПЕРЕД применением наценки
+                if (isGlobal && cachedDataCopy.standard && cachedDataCopy.standard.length > 0) {
+                    const samplePlan = cachedDataCopy.standard[0];
+                    console.log('🔍 Reading from cache (BEFORE markup):', {
+                        bundle_name: samplePlan.bundle_name,
+                        priceValue: samplePlan.priceValue,
+                        price: samplePlan.price
+                    });
+                    // Если цена > 20, значит в кэше уже нацененная цена!
+                    if (samplePlan.priceValue > 20) {
+                        console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: В кэше уже цена с наценкой!', {
+                            bundle_name: samplePlan.bundle_name,
+                            priceValue: samplePlan.priceValue,
+                            expectedCostPrice: '~$8.06 for 1GB'
+                        });
+                    }
+                }
+                
                 // Применяем наценку к копии кэшированных данных
                 // Для Global тарифов countryCode = null, но наценка должна применяться
                 // Передаем null для Global, чтобы применить только базовую наценку
                 const dataWithMarkup = applyMarkupToPlans(cachedDataCopy, isGlobal ? null : countryCode);
+                
+                // Логируем цену ПОСЛЕ применения наценки
+                if (isGlobal && dataWithMarkup.standard && dataWithMarkup.standard.length > 0) {
+                    const samplePlan = dataWithMarkup.standard[0];
+                    console.log('📤 Returning from cache (AFTER markup):', {
+                        bundle_name: samplePlan.bundle_name,
+                        priceValue: samplePlan.priceValue,
+                        price: samplePlan.price
+                    });
+                }
                 return res.status(200).json({
                     success: true,
                     data: dataWithMarkup,
@@ -1321,6 +1350,14 @@ module.exports = async function handler(req, res) {
                     priceValue: samplePlan.priceValue,
                     price: samplePlan.price
                 });
+                // КРИТИЧЕСКАЯ ПРОВЕРКА: если цена > 20, значит в кэш попадает уже нацененная цена!
+                if (samplePlan.priceValue > 20) {
+                    console.error('🚨 КРИТИЧЕСКАЯ ОШИБКА: В кэш сохраняется цена с наценкой!', {
+                        bundle_name: samplePlan.bundle_name,
+                        priceValue: samplePlan.priceValue,
+                        expectedCostPrice: '~$8.06 for 1GB'
+                    });
+                }
             }
             
             cache.set(cacheKey, {
