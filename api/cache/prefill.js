@@ -32,18 +32,20 @@ function createMockReq(query = {}) {
     // При предзаполнении кэша передаем секрет для forceRefresh
     const secret = CACHE_REFRESH_SECRET && CACHE_REFRESH_SECRET !== 'change-me-in-production' 
         ? CACHE_REFRESH_SECRET 
-        : null;
+        : 'esimsdata11'; // Fallback для Contabo
     
     return {
         method: 'GET',
         query: {
             ...query,
-            // Передаем секрет в query, если он установлен
-            ...(secret ? { secret: secret } : {})
+            // Передаем секрет в query для forceRefresh
+            secret: secret,
+            // forceRefresh должен быть в query
+            forceRefresh: query.forceRefresh || 'true'
         },
-        headers: secret ? {
+        headers: {
             'x-cache-refresh-secret': secret
-        } : {}
+        }
     };
 }
 
