@@ -9,8 +9,8 @@
     
     const CACHE_PREFIX = 'esim_cache_';
     // Bump this to force-reset localStorage cache for all users
-    // v14: Полная очистка всех версий кэша - создание нового кэша с правильными ценами
-    const CACHE_VERSION = 'v14';
+    // v15: Обновление для исправления сообщения об отмене оплаты в TMA
+    const CACHE_VERSION = 'v15';
     const CACHE_TTL = 1 * 60 * 60 * 1000; // 1 час (еще более частое обновление)
     
     /**
