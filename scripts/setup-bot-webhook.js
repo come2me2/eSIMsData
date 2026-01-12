@@ -33,7 +33,7 @@ async function setWebhook() {
         
         const payload = {
             url: webhookEndpoint,
-            allowed_updates: ['message', 'callback_query']
+            allowed_updates: ['message', 'callback_query', 'pre_checkout_query', 'successful_payment']
         };
 
         // Если установлен секрет, добавляем его
