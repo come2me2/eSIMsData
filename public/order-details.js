@@ -166,7 +166,8 @@ async function loadOrderFromServer(orderRef) {
                     iccid: foundOrder.iccid || '',
                     matchingId: foundOrder.matchingId || '',
                     rspUrl: foundOrder.smdpAddress || foundOrder.rspUrl || '',
-                    qrCode: foundOrder.qrCode || foundOrder.qr_code || ''
+                    qrCode: foundOrder.qrCode || foundOrder.qr_code || '',
+                    paymentMethod: foundOrder.payment_method || foundOrder.paymentType || ''
                 };
                 
                 console.log('[Order Details] Order data updated:', {
