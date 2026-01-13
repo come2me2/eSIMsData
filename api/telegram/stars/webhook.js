@@ -450,7 +450,7 @@ module.exports = async function handler(req, res) {
             telegram_user_id: telegramUserId,
             telegram_username: message.from && message.from.username,
             user_name: message.from && message.from.first_name,
-            iccid: iccid // Передаем iccid для добавления трафика к существующей eSIM
+            iccid: iccid, // Передаем iccid для добавления трафика к существующей eSIM
             country_code: payloadObj.cc,
             country_name: payloadObj.cn,
             plan_id: payloadObj.pid,
