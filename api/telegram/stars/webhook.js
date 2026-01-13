@@ -476,7 +476,8 @@ module.exports = async function handler(req, res) {
                     try {
                         const esimgoClient = require('../../_lib/esimgo/client');
                         // Ждем немного, чтобы заказ был полностью обработан
-                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        // Увеличиваем задержку до 5 секунд для более надежного получения assignments
+                        await new Promise(resolve => setTimeout(resolve, 5000));
                         
                         // Получаем полный статус заказа из eSIMgo
                         fullOrderData = await esimgoClient.getOrderStatus(orderRef);
@@ -488,20 +489,35 @@ module.exports = async function handler(req, res) {
                         });
                         
                         // Если assignments не были получены ранее, пытаемся получить их
+                        // Делаем до 3 попыток с интервалом 2 секунды
                         if (!assignments && fullOrderData.status === 'completed') {
-                            try {
-                                // Получаем assignments с QR кодом
-                                assignments = await esimgoClient.getESIMAssignments(orderRef, 'qrCode');
-                                console.log('✅ Assignments retrieved from API:', {
-                                    hasIccid: !!assignments?.iccid,
-                                    hasMatchingId: !!assignments?.matchingId,
-                                    hasSmdpAddress: !!assignments?.smdpAddress,
-                                    hasQrCode: !!(assignments?.qrCode || assignments?.qr_code),
-                                    assignmentsType: typeof assignments,
-                                    assignmentsKeys: assignments ? Object.keys(assignments) : []
-                                });
-                            } catch (assignError) {
-                                console.warn('⚠️ Failed to get assignments:', assignError.message);
+                            let attempts = 0;
+                            const maxAttempts = 3;
+                            while (!assignments && attempts < maxAttempts) {
+                                try {
+                                    attempts++;
+                                    if (attempts > 1) {
+                                        console.log(`🔄 Retry ${attempts}/${maxAttempts} getting assignments...`);
+                                        await new Promise(resolve => setTimeout(resolve, 2000));
+                                    }
+                                    // Получаем assignments с QR кодом
+                                    assignments = await esimgoClient.getESIMAssignments(orderRef, 'qrCode');
+                                    console.log('✅ Assignments retrieved from API:', {
+                                        hasIccid: !!assignments?.iccid,
+                                        hasMatchingId: !!assignments?.matchingId,
+                                        hasSmdpAddress: !!assignments?.smdpAddress,
+                                        hasQrCode: !!(assignments?.qrCode || assignments?.qr_code),
+                                        assignmentsType: typeof assignments,
+                                        assignmentsKeys: assignments ? Object.keys(assignments) : [],
+                                        attempt: attempts
+                                    });
+                                    break; // Успешно получено, выходим из цикла
+                                } catch (assignError) {
+                                    console.warn(`⚠️ Failed to get assignments (attempt ${attempts}/${maxAttempts}):`, assignError.message);
+                                    if (attempts >= maxAttempts) {
+                                        console.warn('⚠️ All attempts to get assignments failed');
+                                    }
+                                }
                             }
                         }
                         
@@ -674,13 +690,45 @@ module.exports = async function handler(req, res) {
                 
                 // Если есть данные eSIM, отправляем отдельное сообщение с данными eSIM/QR
                 // Проверяем assignments из разных источников
-                const finalAssignments = assignments || 
+                let finalAssignments = assignments || 
                     (finalOrderData.order?.[0]?.esims?.[0] ? {
                         iccid: finalOrderData.order[0].esims[0].iccid,
                         matchingId: finalOrderData.order[0].esims[0].matchingId,
                         smdpAddress: finalOrderData.order[0].esims[0].smdpAddress,
                         qrCode: finalOrderData.order[0].esims[0].qrCode
                     } : null);
+                
+                // Если assignments все еще не получены, пытаемся извлечь из сохраненного заказа
+                if (!finalAssignments || (!finalAssignments.iccid && !finalAssignments.matchingId)) {
+                    try {
+                        const fs = require('fs').promises;
+                        const path = require('path');
+                        const ORDERS_FILE = path.join(__dirname, '..', '..', 'data', 'orders.json');
+                        const ordersData = await fs.readFile(ORDERS_FILE, 'utf8');
+                        const allOrders = JSON.parse(ordersData);
+                        const userOrders = allOrders[telegramUserId] || [];
+                        
+                        // Ищем заказ по orderReference
+                        const savedOrder = userOrders.find(o => o.orderReference === orderRef);
+                        
+                        if (savedOrder && (savedOrder.iccid || savedOrder.matchingId)) {
+                            console.log('✅ Found assignments in saved order:', {
+                                hasIccid: !!savedOrder.iccid,
+                                hasMatchingId: !!savedOrder.matchingId,
+                                hasQrCode: !!savedOrder.qrCode
+                            });
+                            
+                            finalAssignments = {
+                                iccid: savedOrder.iccid,
+                                matchingId: savedOrder.matchingId,
+                                smdpAddress: savedOrder.smdpAddress,
+                                qrCode: savedOrder.qrCode
+                            };
+                        }
+                    } catch (readError) {
+                        console.warn('⚠️ Failed to read orders file for assignments:', readError.message);
+                    }
+                }
                 
                 console.log('📱 Final assignments for message:', {
                     hasFinalAssignments: !!finalAssignments,
@@ -761,11 +809,49 @@ module.exports = async function handler(req, res) {
                                     console.warn('⚠️ Failed to send QR code photo:', photoData);
                                 } else {
                                     console.log('✅ QR code photo sent successfully');
+                                    // Сохраняем флаг, что сообщение отправлено
+                                    try {
+                                        const ordersHandler = require('../orders');
+                                        const updateReq = {
+                                            method: 'POST',
+                                            body: {
+                                                telegram_user_id: telegramUserId,
+                                                orderReference: orderRef,
+                                                esim_sent_to_user: true,
+                                                updatedAt: new Date().toISOString()
+                                            }
+                                        };
+                                        const updateRes = createMockRes();
+                                        await Promise.resolve(ordersHandler(createMockReq(updateReq), updateRes));
+                                        if (updateRes.statusCode === 200) {
+                                            console.log('✅ Flag esim_sent_to_user saved');
+                                        }
+                                    } catch (flagError) {
+                                        console.warn('⚠️ Failed to save esim_sent_to_user flag:', flagError.message);
+                                    }
                                 }
                             } else if (!qrCode) {
                                 console.warn('⚠️ No QR code available to send');
                             } else if (!textData.ok) {
                                 console.warn('⚠️ Cannot send QR code because text message failed');
+                            } else {
+                                // Если текстовое сообщение отправлено, но QR кода нет, все равно сохраняем флаг
+                                try {
+                                    const ordersHandler = require('../orders');
+                                    const updateReq = {
+                                        method: 'POST',
+                                        body: {
+                                            telegram_user_id: telegramUserId,
+                                            orderReference: orderRef,
+                                            esim_sent_to_user: true,
+                                            updatedAt: new Date().toISOString()
+                                        }
+                                    };
+                                    const updateRes = createMockRes();
+                                    await Promise.resolve(ordersHandler(createMockReq(updateReq), updateRes));
+                                } catch (flagError) {
+                                    console.warn('⚠️ Failed to save esim_sent_to_user flag:', flagError.message);
+                                }
                             }
                         } catch (esimError) {
                             console.error('❌ Error sending eSIM data message:', {
