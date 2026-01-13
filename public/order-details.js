@@ -229,6 +229,33 @@ function setupOrderDetails() {
             qrCodeElement.style.display = 'none';
         }
     }
+    
+    // Update payment method
+    const paymentProviderElement = document.querySelector('.order-payment-provider');
+    if (paymentProviderElement) {
+        const paymentMethodName = getPaymentMethodName(orderData.paymentMethod);
+        paymentProviderElement.textContent = paymentMethodName;
+        console.log('[Order Details] Payment method:', orderData.paymentMethod, '->', paymentMethodName);
+    }
+}
+
+// Get human-readable payment method name
+function getPaymentMethodName(paymentMethod) {
+    if (!paymentMethod) {
+        return 'N/A';
+    }
+    
+    const methodMap = {
+        'telegram_stars': 'Telegram Stars',
+        'telegramStars': 'Telegram Stars',
+        'stars': 'Telegram Stars',
+        'stripe': 'Bank Cards',
+        'bankCard': 'Bank Cards',
+        'cryptomus': 'Cryptomus',
+        'crypto': 'Cryptomus'
+    };
+    
+    return methodMap[paymentMethod] || paymentMethod;
 }
 
 
