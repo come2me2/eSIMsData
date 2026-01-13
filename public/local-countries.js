@@ -201,9 +201,10 @@ async function loadCountriesFromAPI(useCache = true) {
                                     return false;
                                 }
                                 return true;
-                            });
+                            })
+                            .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
                         
-                        console.log(`✅ Загружено ${countries.length} стран из кэша (после фильтрации)`);
+                        console.log(`✅ Загружено ${countries.length} стран из кэша (после фильтрации и сортировки)`);
                         
                         // Обновляем UI с кэшированными данными
                         renderCountries(countries);
@@ -280,9 +281,10 @@ async function loadCountriesFromAPI(useCache = true) {
                         return false;
                     }
                     return true;
-                });
+                })
+                .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
             
-            console.log(`✅ Загружено ${countries.length} стран из API (после фильтрации)`);
+            console.log(`✅ Загружено ${countries.length} стран из API (после фильтрации и сортировки)`);
             
             // Возвращаем успешный результат
             return true;
