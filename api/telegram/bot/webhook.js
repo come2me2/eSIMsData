@@ -35,8 +35,8 @@ async function callTelegram(method, payload) {
     if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not set');
     
     // Проверяем доступность fetch
-    let fetchFunction = globalThis.fetch;
-    if (!fetchFunction) {
+    let fetchFunction = fetch;
+    if (typeof fetch === 'undefined') {
         try {
             fetchFunction = require('node-fetch');
         } catch (e) {
@@ -49,6 +49,7 @@ async function callTelegram(method, payload) {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
     
     try {
+        console.log(`📤 Calling Telegram API: ${method}`);
         const resp = await fetchFunction(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -69,13 +70,15 @@ async function callTelegram(method, payload) {
             console.error(`❌ Telegram ${method} failed:`, data);
             throw new Error(data.description || `${method} failed`);
         }
+        console.log(`✅ Telegram API ${method} succeeded`);
         return data.result;
     } catch (error) {
         clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
+        if (error.name === 'AbortError' || error.message?.includes('timeout')) {
             console.error(`❌ Telegram API request timed out (10s):`, error.message);
             throw new Error('Telegram API request timed out');
         }
+        console.error(`❌ Telegram API error:`, error.message, error.stack);
         throw error;
     }
 }
