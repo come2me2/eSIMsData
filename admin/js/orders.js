@@ -221,7 +221,7 @@ const Orders = {
                             </div>
                             <div class="flex items-start justify-between">
                                 <span class="text-sm text-gray-600">${t('paymentMethod')}</span>
-                                <span class="ml-4 font-medium text-gray-900 text-right">${this.getPaymentTypeText(order.payment_method || order.paymentType)}</span>
+                                <span class="ml-4 font-medium text-gray-900 text-right">${this.getPaymentTypeText(this.determinePaymentMethod(order))}</span>
                             </div>
                             <div class="flex items-start justify-between">
                                 <span class="text-sm text-gray-600">${t('createdAt')}</span>
