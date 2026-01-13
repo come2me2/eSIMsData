@@ -622,9 +622,21 @@ module.exports = async function handler(req, res) {
                         // Используем финальную цену из payload (с наценками), если она есть
                         // Если нет в payload, проверяем existingOrder (on_hold заказ уже имеет правильную цену)
                         // Иначе используем цену из eSIM Go (себестоимость) как fallback
-                        price: payloadObj.fp ? parseFloat(payloadObj.fp) : 
-                               (existingOrder && existingOrder.price ? parseFloat(existingOrder.price) : 
-                                (finalOrderData.total || orderData.total || null)),
+                        price: (() => {
+                            if (payloadObj.fp) {
+                                const finalPrice = parseFloat(payloadObj.fp);
+                                console.log('✅ Using final price from payload (with markups):', finalPrice);
+                                return finalPrice;
+                            } else if (existingOrder && existingOrder.price) {
+                                const existingPrice = parseFloat(existingOrder.price);
+                                console.log('✅ Using price from existing on_hold order:', existingPrice);
+                                return existingPrice;
+                            } else {
+                                const costPrice = finalOrderData.total || orderData.total || null;
+                                console.warn('⚠️ Using cost price from eSIM Go (no final price in payload):', costPrice);
+                                return costPrice;
+                            }
+                        })(),
                         currency: finalOrderData.currency || orderData.currency || 'USD',
                         status: finalStatus, // Используем определенный статус
                         createdAt: existingOrder?.createdAt || new Date().toISOString(), // Сохраняем оригинальную дату создания
