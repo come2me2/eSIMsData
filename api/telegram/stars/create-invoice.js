@@ -104,6 +104,7 @@ function buildPayload(data) {
         pt: data.plan_type,
         bn: data.bundle_name,
         cc: data.country_code,
+        fp: data.finalPrice, // finalPrice - финальная цена с наценками
         cn: data.country_name,
         uid: data.telegram_user_id,
         amt: data.amountStars,
@@ -342,6 +343,7 @@ module.exports = async function handler(req, res) {
             country_name,
             telegram_user_id,
             amountStars,
+            finalPrice: finalPrice.toFixed(2), // Передаем финальную цену с наценками
             iccid: iccid || undefined // Добавляем iccid в payload для extend mode
         });
 

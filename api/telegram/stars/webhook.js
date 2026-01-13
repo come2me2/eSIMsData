@@ -619,7 +619,12 @@ module.exports = async function handler(req, res) {
                         plan_id: payloadObj.pid || null,
                         plan_type: payloadObj.pt || null,
                         bundle_name: payloadObj.bn || null,
-                        price: finalOrderData.total || orderData.total || null,
+                        // Используем финальную цену из payload (с наценками), если она есть
+                        // Если нет в payload, проверяем existingOrder (on_hold заказ уже имеет правильную цену)
+                        // Иначе используем цену из eSIM Go (себестоимость) как fallback
+                        price: payloadObj.fp ? parseFloat(payloadObj.fp) : 
+                               (existingOrder && existingOrder.price ? parseFloat(existingOrder.price) : 
+                                (finalOrderData.total || orderData.total || null)),
                         currency: finalOrderData.currency || orderData.currency || 'USD',
                         status: finalStatus, // Используем определенный статус
                         createdAt: existingOrder?.createdAt || new Date().toISOString(), // Сохраняем оригинальную дату создания
