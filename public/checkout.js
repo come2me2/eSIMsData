@@ -953,26 +953,43 @@ function setupOrderDetails() {
         `;
         
         // Store original price (используем реальную цену из API или fallback)
-        originalPrice = selectedPlan.price || '$ 9.99';
+        originalPrice = selectedPlan.price || selectedPlan.priceValue || '$ 9.99';
         
         // Извлекаем числовое значение цены (БЕЗ наценки способа оплаты)
         // Цена из API уже содержит базовую наценку, но не содержит наценку способа оплаты
         const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
         originalPriceValue = priceMatch ? parseFloat(priceMatch[1]) : 0;
         
-        console.log('Setup order details with plan:', {
+        // Если priceValue есть в плане напрямую, используем его
+        if (selectedPlan.priceValue && typeof selectedPlan.priceValue === 'number') {
+            originalPriceValue = selectedPlan.priceValue;
+            if (!originalPrice || originalPrice === '$ 9.99') {
+                originalPrice = `$ ${originalPriceValue.toFixed(2)}`;
+            }
+        }
+        
+        console.log('[Checkout] Setup order details with plan:', {
             planId: orderData.planId,
-            selectedPlan: selectedPlan,
-            price: originalPrice,
-            priceValue: originalPriceValue
+            selectedPlan: {
+                id: selectedPlan.id,
+                bundle_name: selectedPlan.bundle_name,
+                data: selectedPlan.data,
+                duration: selectedPlan.duration,
+                price: selectedPlan.price,
+                priceValue: selectedPlan.priceValue
+            },
+            originalPrice,
+            originalPriceValue
         });
     } else {
         // Fallback если план не найден
+        console.warn('[Checkout] ⚠️ Plan not found, using fallback');
         planDetailsElement.innerHTML = `
             <span class="checkout-plan-amount">Loading...</span>
             <span class="checkout-plan-duration">Loading...</span>
         `;
         originalPrice = '$ 9.99';
+        originalPriceValue = 9.99;
     }
     
     // Update total price
@@ -1036,11 +1053,26 @@ function updateOrderDetailsWithRealPlans() {
         `;
         
         // Обновляем цену
-        originalPrice = selectedPlan.price || '$ 9.99';
+        originalPrice = selectedPlan.price || selectedPlan.priceValue || '$ 9.99';
         
         // Извлекаем числовое значение цены
         const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
         originalPriceValue = priceMatch ? parseFloat(priceMatch[1]) : 0;
+        
+        // Если priceValue есть в плане напрямую, используем его
+        if (selectedPlan.priceValue && typeof selectedPlan.priceValue === 'number') {
+            originalPriceValue = selectedPlan.priceValue;
+            if (!originalPrice || originalPrice === '$ 9.99') {
+                originalPrice = `$ ${originalPriceValue.toFixed(2)}`;
+            }
+        }
+        
+        // Если цена все еще не установлена, используем fallback
+        if (!originalPriceValue || originalPriceValue === 0 || isNaN(originalPriceValue)) {
+            console.warn('[Checkout] ⚠️ Price value is invalid, using fallback');
+            originalPriceValue = 9.99;
+            originalPrice = '$ 9.99';
+        }
         
         updateTotalPrice();
         
@@ -1054,11 +1086,20 @@ function updateOrderDetailsWithRealPlans() {
             totalPriceElement.style.transition = 'opacity 0.3s ease-in';
         }
         
-        console.log('Order details updated with real plan:', {
+        console.log('[Checkout] Order details updated with real plan:', {
             plan: selectedPlan.data,
             duration: selectedPlan.duration,
-            price: selectedPlan.price
+            price: selectedPlan.price,
+            priceValue: selectedPlan.priceValue,
+            originalPrice,
+            originalPriceValue
         });
+    } else {
+        console.warn('[Checkout] ⚠️ No plan found in updateOrderDetailsWithRealPlans');
+        // Устанавливаем fallback цену даже если план не найден
+        originalPrice = '$ 9.99';
+        originalPriceValue = 9.99;
+        updateTotalPrice();
     }
 }
 
@@ -1187,22 +1228,46 @@ async function loadPublicSettings() {
 function updateTotalPrice() {
     const totalPriceElement = document.getElementById('checkoutTotalPrice');
     
-    // Показываем цену при обновлении (если она была скрыта и есть реальная цена)
-    if (totalPriceElement && originalPrice && originalPrice !== '$ 9.99') {
-        if (totalPriceElement.style.opacity === '0' || totalPriceElement.textContent === '—') {
-            totalPriceElement.style.opacity = '1';
-            totalPriceElement.style.transition = 'opacity 0.3s ease-in';
-        }
+    if (!totalPriceElement) {
+        console.error('[Checkout] ❌ totalPriceElement not found!');
+        return;
     }
+    
+    console.log('[Checkout] updateTotalPrice called:', {
+        originalPrice,
+        originalPriceValue,
+        hasPublicSettings: !!publicSettings,
+        selectedPaymentMethod,
+        isPromoApplied,
+        discountPercent,
+        discountAmount
+    });
     
     // Используем базовую цену (БЕЗ наценки способа оплаты)
     let basePrice = originalPriceValue || 0;
     
     // Если базовой цены нет, пытаемся извлечь из строки
-    if (basePrice === 0) {
+    if (basePrice === 0 && originalPrice) {
         const priceMatch = originalPrice.match(/\$?\s*([\d.]+)/);
         if (priceMatch) {
             basePrice = parseFloat(priceMatch[1]);
+            console.log('[Checkout] Extracted basePrice from originalPrice string:', basePrice);
+        }
+    }
+    
+    // Если цена все еще 0, устанавливаем fallback
+    if (basePrice === 0 || isNaN(basePrice)) {
+        console.warn('[Checkout] ⚠️ basePrice is 0 or NaN, using fallback');
+        if (originalPrice && originalPrice !== '$ 9.99') {
+            const fallbackMatch = originalPrice.match(/\$?\s*([\d.]+)/);
+            if (fallbackMatch) {
+                basePrice = parseFloat(fallbackMatch[1]);
+            }
+        }
+        // Если все еще 0, используем дефолтную цену
+        if (basePrice === 0 || isNaN(basePrice)) {
+            basePrice = 9.99;
+            console.warn('[Checkout] ⚠️ Using default fallback price: $9.99');
         }
     }
     
@@ -1233,20 +1298,26 @@ function updateTotalPrice() {
             discountedPrice = Math.max(0, basePrice - discountAmount);
         }
         
-        const originalPriceDisplay = basePrice > 0 ? `$ ${basePrice.toFixed(2)}` : originalPrice;
+        const originalPriceDisplay = basePrice > 0 ? `$ ${basePrice.toFixed(2)}` : (originalPrice || '$ 9.99');
         const newPrice = `$ ${discountedPrice.toFixed(2)}`;
         
         totalPriceElement.innerHTML = `
             <span class="checkout-total-price-old">${originalPriceDisplay}</span>
             <span class="checkout-total-price-new">${newPrice}</span>
         `;
+        console.log('[Checkout] Price updated with promo:', { originalPriceDisplay, newPrice });
     } else {
         // Без промокода, но с наценкой способа оплаты
-        if (basePrice > 0) {
-            totalPriceElement.textContent = `$ ${basePrice.toFixed(2)}`;
-        } else {
-            totalPriceElement.textContent = originalPrice;
-        }
+        const finalPrice = basePrice > 0 ? `$ ${basePrice.toFixed(2)}` : (originalPrice || '$ 9.99');
+        totalPriceElement.textContent = finalPrice;
+        console.log('[Checkout] Price updated without promo:', finalPrice);
+    }
+    
+    // ВСЕГДА показываем цену после обновления
+    if (totalPriceElement.style.opacity === '0' || totalPriceElement.textContent === '—' || totalPriceElement.textContent.trim() === '') {
+        totalPriceElement.style.opacity = '1';
+        totalPriceElement.style.transition = 'opacity 0.3s ease-in';
+        console.log('[Checkout] ✅ Price element made visible');
     }
 
     // Обновляем отображение Stars после пересчёта цены
