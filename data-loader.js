@@ -213,42 +213,20 @@
      * Статические файлы могут содержать устаревшие данные
      */
     async function loadGlobalPlans(options = {}) {
-        // Всегда используем API для получения актуальных данных с правильной наценкой
-        // Не используем статические файлы, так как они могут быть устаревшими
+        // ВАЖНО:
+        // 1) Для планов используем ТОЛЬКО memory cache + серверный API.
+        // 2) НЕ сохраняем планы в localStorage, чтобы не держать устаревшие цены на клиенте.
+        // 3) Пользователь всегда видит актуальную «серверную версию кэша» с наценкой.
         const cacheKey = 'plans_global';
         const apiPath = '/api/esimgo/plans?category=global';
         
-        // Проверяем memory cache
+        // 1. Проверяем memory cache (быстро, в рамках текущей сессии)
         if (!options.forceRefresh && memoryCache.has(cacheKey)) {
             console.log(`⚡ Memory cache hit: ${cacheKey}`);
             return memoryCache.get(cacheKey);
         }
-        
-        // Проверяем localStorage cache (но с коротким TTL для актуальности)
-        // ВАЖНО: Если данные stale, всегда обновляем их из API
-        if (!options.forceRefresh) {
-            const cached = localCache.get(cacheKey);
-            if (cached && cached.data && !cached.stale) {
-                console.log(`💾 LocalStorage cache hit: ${cacheKey}`);
-                memoryCache.set(cacheKey, cached.data);
-                // Обновляем в фоне, если данные скоро устареют
-                if (Date.now() - cached.timestamp > CACHE_TTL * 0.8) {
-                    console.log(`🔄 Cache will expire soon, refreshing in background...`);
-                    fetch(apiPath).then(r => r.json()).then(result => {
-                        if (result.success && result.data) {
-                            memoryCache.set(cacheKey, result.data);
-                            localCache.set(cacheKey, result.data);
-                        }
-                    }).catch(() => {});
-                }
-                return cached.data;
-            } else if (cached && cached.stale) {
-                // Данные устарели, всегда загружаем свежие из API
-                console.log(`⚠️ LocalStorage cache stale, loading fresh data from API...`);
-            }
-        }
-        
-        // Загружаем из API (всегда актуальные данные с правильной наценкой)
+
+        // 2. Загружаем из API (актуальные данные с правильной наценкой с сервера)
         try {
             console.log(`🔄 Loading Global plans from API: ${apiPath}`);
             const response = await fetch(apiPath);
@@ -257,8 +235,8 @@
                 if (result.success && result.data) {
                     console.log(`✅ Global plans loaded from API`);
                     const data = result.data;
+                    // Сохраняем ТОЛЬКО в memory cache (без localStorage)
                     memoryCache.set(cacheKey, data);
-                    localCache.set(cacheKey, data);
                     return data;
                 }
             }
@@ -266,7 +244,7 @@
             console.error(`❌ API failed: ${apiPath}`, e.message);
         }
         
-        // Fallback: если API не доступен, пробуем статический файл
+        // 3. Fallback: если API не доступен, пробуем статический файл (без наценки)
         try {
             console.log(`⚠️ API failed, trying static file as fallback...`);
             const response = await fetch('/data/plans-global.json');
@@ -293,23 +271,13 @@
         const cacheKey = `plans_region_${regionSlug}`;
         const apiPath = `/api/esimgo/region-plans?region=${encodeURIComponent(region)}`;
         
-        // Проверяем memory cache
+        // 1. Проверяем memory cache (быстро, в рамках текущей сессии)
         if (!options.forceRefresh && memoryCache.has(cacheKey)) {
             console.log(`⚡ Memory cache hit: ${cacheKey}`);
             return memoryCache.get(cacheKey);
         }
-        
-        // Проверяем localStorage cache
-        if (!options.forceRefresh) {
-            const cached = localCache.get(cacheKey);
-            if (cached && cached.data && !cached.stale) {
-                console.log(`💾 LocalStorage cache hit: ${cacheKey}`);
-                memoryCache.set(cacheKey, cached.data);
-                return cached.data;
-            }
-        }
-        
-        // Загружаем из API
+
+        // 2. Загружаем из API (актуальные данные с наценкой)
         try {
             console.log(`🔄 Loading Region plans from API: ${apiPath}`);
             const response = await fetch(apiPath);
@@ -318,8 +286,8 @@
                 if (result.success && result.data) {
                     console.log(`✅ Region plans loaded from API`);
                     const data = result.data;
+                    // Сохраняем ТОЛЬКО в memory cache (без localStorage)
                     memoryCache.set(cacheKey, data);
-                    localCache.set(cacheKey, data);
                     return data;
                 }
             }
@@ -353,23 +321,13 @@
         const cacheKey = `plans_local_${code}`;
         const apiPath = `/api/esimgo/plans?country=${countryCode.toUpperCase()}&category=local`;
         
-        // Проверяем memory cache
+        // 1. Проверяем memory cache (быстро, в рамках текущей сессии)
         if (!options.forceRefresh && memoryCache.has(cacheKey)) {
             console.log(`⚡ Memory cache hit: ${cacheKey}`);
             return memoryCache.get(cacheKey);
         }
-        
-        // Проверяем localStorage cache
-        if (!options.forceRefresh) {
-            const cached = localCache.get(cacheKey);
-            if (cached && cached.data && !cached.stale) {
-                console.log(`💾 LocalStorage cache hit: ${cacheKey}`);
-                memoryCache.set(cacheKey, cached.data);
-                return cached.data;
-            }
-        }
-        
-        // Загружаем из API
+
+        // 2. Загружаем из API (актуальные данные с наценкой)
         try {
             console.log(`🔄 Loading Local plans from API: ${apiPath}`);
             const response = await fetch(apiPath);
@@ -378,8 +336,8 @@
                 if (result.success && result.data) {
                     console.log(`✅ Local plans loaded from API`);
                     const data = result.data;
+                    // Сохраняем ТОЛЬКО в memory cache (без localStorage)
                     memoryCache.set(cacheKey, data);
-                    localCache.set(cacheKey, data);
                     return data;
                 }
             }
@@ -428,20 +386,11 @@
      * Очистка всего кэша
      */
     function clearCache() {
+        // Очищаем только memory cache и устаревшие записи localStorage.
+        // НЕ трогаем актуальные записи, чтобы избежать лишних запросов.
         memoryCache.clear();
         localCache.cleanup();
-        
-        // Удаляем все записи нашего кэша
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith(CACHE_PREFIX)) {
-                keysToRemove.push(key);
-            }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-        
-        console.log('🗑️ Cache cleared');
+        console.log('🗑️ Cache cleared (memory + stale localStorage)');
     }
     
     /**
