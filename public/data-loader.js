@@ -9,8 +9,8 @@
     
     const CACHE_PREFIX = 'esim_cache_';
     // Bump this to force-reset localStorage cache for all users
-    // v15: Обновление для исправления сообщения об отмене оплаты в TMA
-    const CACHE_VERSION = 'v15';
+    // v16: Обновление для сортировки стран по алфавиту
+    const CACHE_VERSION = 'v16';
     const CACHE_TTL = 1 * 60 * 60 * 1000; // 1 час (еще более частое обновление)
     
     /**

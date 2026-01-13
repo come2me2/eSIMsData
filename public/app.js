@@ -272,13 +272,15 @@ async function loadCountriesFromAPI() {
         const result = await response.json();
         
         if (result.success && result.data && Array.isArray(result.data)) {
-            // Преобразуем данные из API в нужный формат
-            countries = result.data.map(country => ({
-                name: country.name,
-                code: country.code
-            }));
+            // Преобразуем данные из API в нужный формат и сортируем по алфавиту
+            countries = result.data
+                .map(country => ({
+                    name: country.name,
+                    code: country.code
+                }))
+                .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
             
-            console.log(`✅ Загружено ${countries.length} стран из API`);
+            console.log(`✅ Загружено ${countries.length} стран из API (отсортировано по алфавиту)`);
             
             // Возвращаем успешный результат
             return true;
