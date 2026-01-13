@@ -98,7 +98,9 @@ const Orders = {
             const orderId = order.orderReference || order.id || 'N/A';
             const userId = order.telegram_user_id || 'N/A';
             const username = order.telegram_username ? `@${order.telegram_username}` : userId;
-            const paymentType = this.getPaymentTypeText(order.payment_method || order.paymentType);
+            // Try to determine payment method from various sources
+            const paymentMethod = this.determinePaymentMethod(order);
+            const paymentType = this.getPaymentTypeText(paymentMethod);
             const planName = order.plan_name || order.bundle_name || order.plan_id || 'N/A';
             
             return `
@@ -469,6 +471,38 @@ const Orders = {
             'cancelled': 'Canceled'
         };
         return statusMap[status] || status;
+    },
+    
+    // Determine payment method from order data (with fallback logic)
+    determinePaymentMethod(order) {
+        // First, try direct payment_method or paymentType
+        if (order.payment_method) return order.payment_method;
+        if (order.paymentType) return order.paymentType;
+        
+        // Try to determine from payment_session_id format
+        if (order.payment_session_id) {
+            // Telegram Stars invoice IDs typically start with specific patterns
+            // or are UUIDs from Telegram
+            if (order.payment_session_id.length > 20 || order.payment_session_id.includes('-')) {
+                // Check if it looks like a Telegram Stars invoice ID
+                // Telegram Stars invoices are typically long strings
+                return 'telegram_stars';
+            }
+        }
+        
+        // Check payment status or other indicators
+        if (order.payment_status === 'succeeded' && order.source === 'telegram_mini_app') {
+            // If payment succeeded via Telegram Mini App, likely Telegram Stars
+            return 'telegram_stars';
+        }
+        
+        // If we have payment_confirmed but no method, likely Telegram Stars (most common)
+        if (order.payment_confirmed === true && !order.payment_method) {
+            return 'telegram_stars';
+        }
+        
+        // Default: return null (will show "Not specified")
+        return null;
     },
     
     // Get payment type text
