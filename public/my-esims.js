@@ -70,6 +70,7 @@ function loadOrdersFromLocalStorage() {
                     iccid: order.iccid || '',
                     matchingId: order.matchingId || '',
                     rspUrl: order.smdpAddress || '',
+                    qrCode: order.qrCode || order.qr_code || '',
                     orderReference: order.orderReference || '',
                     bundle_name: order.bundle_name || ''
                 };
