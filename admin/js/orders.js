@@ -475,12 +475,30 @@ const Orders = {
     getPaymentTypeText(paymentType) {
         const t = (key) => window.i18n ? window.i18n.t(key) : key;
         if (!paymentType) return t('notSpecified');
+        
+        // Normalize payment type (lowercase for comparison)
+        const normalizedType = String(paymentType).toLowerCase().trim();
+        
         const paymentMap = {
+            // Telegram Stars
             'telegram_stars': 'Telegram Stars',
+            'telegramstars': 'Telegram Stars',
+            'stars': 'Telegram Stars',
+            
+            // Cryptocurrencies / Cryptomus
             'crypto': t('cryptocurrencies'),
-            'bank_card': t('bankCards')
+            'cryptomus': t('cryptocurrencies'),
+            'cryptocurrencies': t('cryptocurrencies'),
+            
+            // Bank Cards / Stripe
+            'bank_card': t('bankCards'),
+            'bankcard': t('bankCards'),
+            'stripe': t('bankCards'),
+            'bank_cards': t('bankCards'),
+            'bankcards': t('bankCards')
         };
-        return paymentMap[paymentType] || paymentType;
+        
+        return paymentMap[normalizedType] || paymentType;
     },
     
     // Resend eSIM to Telegram
