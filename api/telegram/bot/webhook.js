@@ -33,17 +33,51 @@ if (!BOT_TOKEN) {
  */
 async function callTelegram(method, payload) {
     if (!BOT_TOKEN) throw new Error('TELEGRAM_BOT_TOKEN is not set');
-    const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-    const data = await resp.json();
-    if (!data.ok) {
-        console.error(`❌ Telegram ${method} failed:`, data);
-        throw new Error(data.description || `${method} failed`);
+    
+    // Проверяем доступность fetch
+    let fetchFunction = globalThis.fetch;
+    if (!fetchFunction) {
+        try {
+            fetchFunction = require('node-fetch');
+        } catch (e) {
+            throw new Error('fetch is not available and node-fetch is not installed');
+        }
     }
-    return data.result;
+    
+    // Добавляем таймаут для запроса
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
+    
+    try {
+        const resp = await fetchFunction(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            console.error(`❌ Telegram API HTTP error (${resp.status}):`, errorText);
+            throw new Error(`HTTP ${resp.status}: ${errorText}`);
+        }
+        
+        const data = await resp.json();
+        if (!data.ok) {
+            console.error(`❌ Telegram ${method} failed:`, data);
+            throw new Error(data.description || `${method} failed`);
+        }
+        return data.result;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            console.error(`❌ Telegram API request timed out (10s):`, error.message);
+            throw new Error('Telegram API request timed out');
+        }
+        throw error;
+    }
 }
 
 /**
