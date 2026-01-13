@@ -151,11 +151,10 @@ module.exports = async function handler(req, res) {
         const activeBundle = bundlesResponse.bundles.find(bundle => {
             // Вариант 1: bundle.assignments (массив assignments внутри bundle)
             if (bundle.assignments && Array.isArray(bundle.assignments) && bundle.assignments.length > 0) {
-                const activeAssignment = bundle.assignments.find(assignment => 
-                    assignment.bundleState === 'Active' || 
-                    assignment.bundleState === 'Queued' ||
-                    assignment.bundleState === 'Processing'
-                );
+                const activeAssignment = bundle.assignments.find(assignment => {
+                    const state = (assignment.bundleState || '').toLowerCase();
+                    return state === 'active' || state === 'queued' || state === 'processing';
+                });
                 if (activeAssignment) {
                     console.log('✅ Found active assignment in bundle.assignments');
                     return true;
@@ -163,13 +162,12 @@ module.exports = async function handler(req, res) {
             }
             
             // Вариант 2: bundle сам по себе является assignment (прямая структура)
-            if (bundle.bundleState && (
-                bundle.bundleState === 'Active' || 
-                bundle.bundleState === 'Queued' ||
-                bundle.bundleState === 'Processing'
-            )) {
-                console.log('✅ Found active bundle with direct bundleState');
-                return true;
+            if (bundle.bundleState) {
+                const state = (bundle.bundleState || '').toLowerCase();
+                if (state === 'active' || state === 'queued' || state === 'processing') {
+                    console.log('✅ Found active bundle with direct bundleState');
+                    return true;
+                }
             }
             
             // Вариант 3: bundle имеет поля assignment напрямую
@@ -209,14 +207,15 @@ module.exports = async function handler(req, res) {
         // Вариант 1: bundle.assignments (массив assignments внутри bundle)
         if (activeBundle.assignments && Array.isArray(activeBundle.assignments) && activeBundle.assignments.length > 0) {
             activeAssignment = activeBundle.assignments
-                .filter(assignment => 
-                    assignment.bundleState === 'Active' || 
-                    assignment.bundleState === 'Queued' ||
-                    assignment.bundleState === 'Processing'
-                )
+                .filter(assignment => {
+                    const state = (assignment.bundleState || '').toLowerCase();
+                    return state === 'active' || state === 'queued' || state === 'processing';
+                })
                 .sort((a, b) => {
-                    const priority = { 'Active': 1, 'Queued': 2, 'Processing': 3 };
-                    return (priority[a.bundleState] || 99) - (priority[b.bundleState] || 99);
+                    const priority = { 'active': 1, 'queued': 2, 'processing': 3 };
+                    const aState = (a.bundleState || '').toLowerCase();
+                    const bState = (b.bundleState || '').toLowerCase();
+                    return (priority[aState] || 99) - (priority[bState] || 99);
                 })[0];
             
             if (activeAssignment) {
@@ -225,11 +224,12 @@ module.exports = async function handler(req, res) {
         }
         
         // Вариант 2: bundle сам по себе является assignment (прямая структура)
-        if (!activeAssignment && (activeBundle.bundleState === 'Active' || 
-            activeBundle.bundleState === 'Queued' ||
-            activeBundle.bundleState === 'Processing')) {
-            activeAssignment = activeBundle;
-            console.log('✅ Using bundle as direct assignment');
+        if (!activeAssignment && activeBundle.bundleState) {
+            const state = (activeBundle.bundleState || '').toLowerCase();
+            if (state === 'active' || state === 'queued' || state === 'processing') {
+                activeAssignment = activeBundle;
+                console.log('✅ Using bundle as direct assignment');
+            }
         }
         
         // Вариант 3: bundle имеет поля assignment напрямую (без bundleState, но с данными)
