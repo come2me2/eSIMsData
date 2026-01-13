@@ -456,8 +456,40 @@ function navigateToOrderDetails(esim) {
         tg.HapticFeedback.impactOccurred('light');
     }
     
+    // Extract full orderReference from id (format: #aa73ec03) or use orderReference directly
+    let orderRef = esim.orderReference || '';
+    if (!orderRef && esim.id) {
+        // Try to extract from id format #aa73ec03
+        const idMatch = esim.id.match(/#([a-f0-9-]+)/i);
+        if (idMatch) {
+            orderRef = idMatch[1];
+        }
+    }
+    
+    // If we still don't have orderReference, try to find it from localStorage
+    if (!orderRef) {
+        try {
+            const stored = localStorage.getItem('esim_orders');
+            if (stored) {
+                const orders = JSON.parse(stored);
+                const foundOrder = orders.find(o => 
+                    o.orderReference && (
+                        o.orderReference.startsWith(esim.id?.replace('#', '') || '') ||
+                        `#${o.orderReference?.substring(0, 8)}` === esim.id
+                    )
+                );
+                if (foundOrder) {
+                    orderRef = foundOrder.orderReference;
+                }
+            }
+        } catch (error) {
+            console.warn('[My eSIMs] Error loading orderReference from localStorage:', error);
+        }
+    }
+    
     const params = new URLSearchParams({
-        id: esim.id || esim.orderReference || '',
+        orderReference: orderRef || esim.orderReference || '',
+        id: esim.id || '',
         date: esim.date || '',
         country: esim.country || '',
         code: esim.code || '',
@@ -468,8 +500,12 @@ function navigateToOrderDetails(esim) {
         expiryDate: esim.expiryDate || '',
         iccid: esim.iccid || '',
         matchingId: esim.matchingId || '',
-        rspUrl: esim.rspUrl || esim.smdpAddress || '',
-        orderReference: esim.orderReference || ''
+        rspUrl: esim.rspUrl || esim.smdpAddress || ''
+    });
+    
+    console.log('[My eSIMs] Navigating to order details:', {
+        orderReference: orderRef,
+        id: esim.id
     });
     
     window.location.href = `order-details.html?${params.toString()}`;
