@@ -702,12 +702,23 @@ function setupNextButton() {
         });
         
         // Navigate to checkout screen for both standard and unlimited plans
+        const urlParams = new URLSearchParams(window.location.search);
+        const extend = urlParams.get('extend');
+        const iccid = urlParams.get('iccid');
+        
         const checkoutParams = new URLSearchParams({
             type: 'region',
             name: regionName,
             plan: selectedPlanId,
             planType: currentPlanType
         });
+        
+        // Если это extend, добавляем параметры
+        if (extend === 'true' && iccid) {
+            checkoutParams.append('extend', 'true');
+            checkoutParams.append('iccid', iccid);
+            console.log('🔵 Extending eSIM with ICCID:', iccid);
+        }
         
         const checkoutUrl = `checkout.html?${checkoutParams.toString()}`;
         console.log('🔵 Checkout URL:', checkoutUrl);

@@ -386,7 +386,25 @@ function setupNextButton() {
         }
         
         // Navigate to checkout page
-        const checkoutUrl = `checkout.html?type=country&code=${countryData.code}&name=${encodeURIComponent(countryData.name)}&plan=${selectedPlanId}&planType=${currentPlanType}`;
+        const urlParams = new URLSearchParams(window.location.search);
+        const extend = urlParams.get('extend');
+        const iccid = urlParams.get('iccid');
+        
+        const checkoutParams = new URLSearchParams({
+            type: 'country',
+            code: countryData.code,
+            name: countryData.name,
+            plan: selectedPlanId,
+            planType: currentPlanType
+        });
+        
+        // Если это extend, добавляем параметры
+        if (extend === 'true' && iccid) {
+            checkoutParams.append('extend', 'true');
+            checkoutParams.append('iccid', iccid);
+        }
+        
+        const checkoutUrl = `checkout.html?${checkoutParams.toString()}`;
         window.location.href = checkoutUrl;
     });
 }

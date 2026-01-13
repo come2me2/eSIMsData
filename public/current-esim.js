@@ -321,23 +321,42 @@ function setupExtendButton() {
             const countryCode = esimData.country_code || currentESimOrder.country_code || '';
             const countryName = esimData.country_name || currentESimOrder.country_name || '';
             const esimType = esimData.type || currentESimOrder.type || 'country';
+            const iccid = esimData.iccid || currentESimOrder.iccid || '';
             
-            console.log('Extending eSIM:', { countryCode, countryName, esimType });
+            console.log('Extending eSIM:', { countryCode, countryName, esimType, iccid });
             
-            // Navigate based on eSIM type
+            if (!iccid) {
+                console.error('No ICCID available for extend');
+                if (tg && tg.showAlert) {
+                    tg.showAlert('No active eSIM found. Please purchase an eSIM first.');
+                }
+                return;
+            }
+            
+            // Navigate based on eSIM type with extend parameters
             if (esimType === 'global' || countryCode === 'GLOBAL') {
-                // Navigate to global plans
-                window.location.href = 'global-plans.html';
+                // Navigate to global plans with extend parameters
+                const params = new URLSearchParams({
+                    extend: 'true',
+                    iccid: iccid
+                });
+                window.location.href = `global-plans.html?${params.toString()}`;
             } else if (esimType === 'region' || countryCode === 'REGION') {
-                // Navigate to region plans
+                // Navigate to region plans with extend parameters
                 const regionName = countryName || 'Unknown Region';
-                const params = new URLSearchParams({ region: regionName });
+                const params = new URLSearchParams({
+                    region: regionName,
+                    extend: 'true',
+                    iccid: iccid
+                });
                 window.location.href = `region-plans.html?${params.toString()}`;
             } else if (countryCode && countryName) {
-                // Navigate to country plans
+                // Navigate to country plans with extend parameters
                 const params = new URLSearchParams({
                     country: countryName,
-                    code: countryCode
+                    code: countryCode,
+                    extend: 'true',
+                    iccid: iccid
                 });
                 window.location.href = `plans.html?${params.toString()}`;
             } else {

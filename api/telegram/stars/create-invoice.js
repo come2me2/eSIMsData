@@ -109,10 +109,15 @@ function buildPayload(data) {
         amt: data.amountStars,
         cur: 'XTR'
     };
+    
+    // Если есть iccid (для extend), добавляем его в payload
+    if (data.iccid) {
+        payload.iccid = data.iccid;
+    }
 
     let payloadStr = JSON.stringify(payload);
 
-    // Если payload слишком длинный, убираем необязательные поля
+    // Если payload слишком длинный, убираем необязательные поля (но сохраняем iccid)
     if (payloadStr.length > 120) {
         delete payload.cn;
         payloadStr = JSON.stringify(payload);
@@ -168,7 +173,8 @@ module.exports = async function handler(req, res) {
             price, // ✅ НОВАЯ ЛОГИКА: price = себестоимость (cost) от eSIM GO
             currency = 'USD',
             telegram_user_id,
-            telegram_username
+            telegram_username,
+            iccid // ICCID существующей eSIM для добавления трафика (extend mode)
         } = req.body || {};
 
         // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Если country_code пустой, генерируем его на сервере
@@ -335,7 +341,8 @@ module.exports = async function handler(req, res) {
             country_code: finalCountryCode || country_code, // Используем сгенерированный код
             country_name,
             telegram_user_id,
-            amountStars
+            amountStars,
+            iccid: iccid || undefined // Добавляем iccid в payload для extend mode
         });
 
         const title = 'eSIM plan';
@@ -474,6 +481,7 @@ module.exports = async function handler(req, res) {
                             provider_product_id: bundle_name,
                             source: 'telegram_mini_app',
                             customer: telegram_user_id,
+                            iccid: iccid || undefined, // Сохраняем iccid для extend mode
                             // Таймаут: 5 минут для Telegram Stars
                             expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
                             createdAt: new Date().toISOString()

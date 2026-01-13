@@ -102,8 +102,19 @@ const orderData = {
     name: urlParams.get('name') || '',
     code: urlParams.get('code') || '',
     planId: urlParams.get('plan') || '',
-    planType: urlParams.get('planType') || 'standard'
+    planType: urlParams.get('planType') || 'standard',
+    extend: urlParams.get('extend') === 'true', // Флаг для добавления трафика к существующей eSIM
+    iccid: urlParams.get('iccid') || '' // ICCID существующей eSIM для extend
 };
+
+// Логируем режим extend
+if (orderData.extend && orderData.iccid) {
+    console.log('[Checkout] 🔄 Extend mode: Adding traffic to existing eSIM', {
+        iccid: orderData.iccid,
+        type: orderData.type,
+        name: orderData.name
+    });
+}
 
 // Plans data - загружаются динамически из API
 let standardPlans = [];
@@ -593,21 +604,36 @@ async function processPurchase(orderWithUser, auth, tg) {
         }
         
         // Создаем заказ
-        purchaseBtn.textContent = testMode ? 'Validating order...' : 'Creating order...';
+        const isExtend = orderData.extend && orderData.iccid;
+        purchaseBtn.textContent = isExtend 
+            ? (testMode ? 'Validating top-up...' : 'Adding traffic...')
+            : (testMode ? 'Validating order...' : 'Creating order...');
+        
+        const orderPayload = {
+            bundle_name: bundleName,
+            telegram_user_id: orderWithUser.telegram_user_id,
+            telegram_username: orderWithUser.telegram_username,
+            user_name: orderWithUser.user_name,
+            country_code: orderWithUser.code,
+            country_name: orderWithUser.name,
+            plan_id: orderWithUser.planId,
+            plan_type: orderWithUser.planType,
+            test_mode: testMode
+        };
+        
+        // Если это extend, добавляем iccid для добавления трафика к существующей eSIM
+        if (isExtend) {
+            orderPayload.iccid = orderData.iccid;
+            console.log('[Checkout] 🔄 Adding traffic to existing eSIM:', {
+                iccid: orderData.iccid,
+                bundle_name: bundleName
+            });
+        }
+        
         const orderResponse = await fetch('/api/esimgo/order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                bundle_name: bundleName,
-                telegram_user_id: orderWithUser.telegram_user_id,
-                telegram_username: orderWithUser.telegram_username,
-                user_name: orderWithUser.user_name,
-                country_code: orderWithUser.code,
-                country_name: orderWithUser.name,
-                plan_id: orderWithUser.planId,
-                plan_type: orderWithUser.planType,
-                test_mode: testMode // Передаем режим тестирования
-            })
+            body: JSON.stringify(orderPayload)
         });
         
         // Проверяем статус ответа перед парсингом
@@ -1743,20 +1769,31 @@ function setupPurchaseButton() {
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 30000);
                     
+                    const invoicePayload = {
+                        plan_id: plan.id,
+                        plan_type: orderData.planType,
+                        bundle_name: bundleName,
+                        country_code: orderData.code,
+                        country_name: orderData.name,
+                        price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
+                        currency,
+                        telegram_user_id: auth.getUserId(),
+                        telegram_username: auth.getUsername()
+                    };
+                    
+                    // Если это extend, добавляем iccid для добавления трафика к существующей eSIM
+                    if (orderData.extend && orderData.iccid) {
+                        invoicePayload.iccid = orderData.iccid;
+                        console.log('[Stars] 🔄 Extend mode: Adding traffic to existing eSIM:', {
+                            iccid: orderData.iccid,
+                            bundle_name: bundleName
+                        });
+                    }
+                    
                     response = await fetch('/api/telegram/stars/create-invoice', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            plan_id: plan.id,
-                            plan_type: orderData.planType,
-                            bundle_name: bundleName,
-                            country_code: orderData.code,
-                            country_name: orderData.name,
-                            price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
-                            currency,
-                            telegram_user_id: auth.getUserId(),
-                            telegram_username: auth.getUsername()
-                        }),
+                        body: JSON.stringify(invoicePayload),
                         signal: controller.signal
                     });
                     

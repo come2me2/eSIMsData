@@ -498,12 +498,24 @@ function setupNextButton() {
         }
         
         // Navigate to checkout screen
+        const urlParams = new URLSearchParams(window.location.search);
+        const extend = urlParams.get('extend');
+        const iccid = urlParams.get('iccid');
+        
         const params = new URLSearchParams({
             type: 'global',
             name: 'Global',
             plan: selectedPlanId,
             planType: currentPlanType
         });
+        
+        // Если это extend, добавляем параметры
+        if (extend === 'true' && iccid) {
+            params.append('extend', 'true');
+            params.append('iccid', iccid);
+            console.log('🔵 Extending eSIM with ICCID:', iccid);
+        }
+        
         window.location.href = `checkout.html?${params.toString()}`;
     });
 }
