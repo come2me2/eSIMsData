@@ -123,7 +123,8 @@ module.exports = async function handler(req, res) {
             bundlesCount: bundlesResponse?.bundles?.length || 0,
             responseKeys: bundlesResponse ? Object.keys(bundlesResponse) : [],
             firstBundleKeys: bundlesResponse?.bundles?.[0] ? Object.keys(bundlesResponse.bundles[0]) : [],
-            firstBundleStructure: bundlesResponse?.bundles?.[0] ? JSON.stringify(bundlesResponse.bundles[0], null, 2).substring(0, 500) : 'no bundle'
+            firstBundleStructure: bundlesResponse?.bundles?.[0] ? JSON.stringify(bundlesResponse.bundles[0], null, 2).substring(0, 1000) : 'no bundle',
+            fullResponse: JSON.stringify(bundlesResponse, null, 2).substring(0, 2000)
         });
         
         if (!bundlesResponse || !bundlesResponse.bundles || bundlesResponse.bundles.length === 0) {
@@ -133,8 +134,20 @@ module.exports = async function handler(req, res) {
             });
         }
         
-        // Находим активный bundle (Active или Queued)
+        // Находим активный bundle (Active, Queued, Processing, или любой с данными о трафике)
         // Проверяем разные возможные структуры ответа
+        // Сначала логируем все bundles для диагностики
+        console.log('🔍 Analyzing all bundles:', bundlesResponse.bundles.map((b, idx) => ({
+            index: idx,
+            name: b.name,
+            bundleState: b.bundleState,
+            hasAssignments: !!b.assignments,
+            assignmentsCount: b.assignments?.length || 0,
+            hasInitialQuantity: b.initialQuantity !== undefined,
+            hasRemainingQuantity: b.remainingQuantity !== undefined,
+            keys: Object.keys(b)
+        })));
+        
         const activeBundle = bundlesResponse.bundles.find(bundle => {
             // Вариант 1: bundle.assignments (массив assignments внутри bundle)
             if (bundle.assignments && Array.isArray(bundle.assignments) && bundle.assignments.length > 0) {
@@ -162,6 +175,13 @@ module.exports = async function handler(req, res) {
             // Вариант 3: bundle имеет поля assignment напрямую
             if (bundle.initialQuantity !== undefined || bundle.remainingQuantity !== undefined) {
                 console.log('✅ Found bundle with direct assignment fields');
+                return true;
+            }
+            
+            // Вариант 4: bundle может быть в любом состоянии, но имеет данные
+            // Проверяем наличие любых данных о трафике
+            if (bundle.remainingQuantity !== undefined || bundle.usedQuantity !== undefined) {
+                console.log('✅ Found bundle with traffic data (any state)');
                 return true;
             }
             
@@ -216,6 +236,12 @@ module.exports = async function handler(req, res) {
         if (!activeAssignment && (activeBundle.initialQuantity !== undefined || activeBundle.remainingQuantity !== undefined)) {
             activeAssignment = activeBundle;
             console.log('✅ Using bundle with direct assignment fields');
+        }
+        
+        // Вариант 4: bundle в любом состоянии, но с данными о трафике
+        if (!activeAssignment && (activeBundle.remainingQuantity !== undefined || activeBundle.usedQuantity !== undefined)) {
+            activeAssignment = activeBundle;
+            console.log('✅ Using bundle with traffic data (any state)');
         }
         
         if (!activeAssignment) {
