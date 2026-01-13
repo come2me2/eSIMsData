@@ -22,19 +22,23 @@ if (tg) {
 
 // Get order data from URL
 const urlParams = new URLSearchParams(window.location.search);
-const orderData = {
-    id: urlParams.get('id') || '#99999',
-    date: urlParams.get('date') || '2023-10-01',
-    country: urlParams.get('country') || 'Germany',
-    code: urlParams.get('code') || 'DE',
-    plan: urlParams.get('plan') || '1GB',
-    duration: urlParams.get('duration') || '7 Days',
-    price: urlParams.get('price') || '$ 9.99',
-    activationDate: urlParams.get('activationDate') || '2023-10-01',
-    expiryDate: urlParams.get('expiryDate') || '2023-10-08',
-    iccid: urlParams.get('iccid') || '8943108161005541531',
-    matchingId: urlParams.get('matchingId') || 'JQ-1UAFOB-1B3U4SN',
-    rspUrl: urlParams.get('rspUrl') || 'rsp.truphone.com'
+const orderReference = urlParams.get('orderReference') || urlParams.get('id')?.replace('#', '') || '';
+
+// Order data - will be loaded from server
+let orderData = {
+    id: urlParams.get('id') || '',
+    date: urlParams.get('date') || '',
+    country: urlParams.get('country') || '',
+    code: urlParams.get('code') || '',
+    plan: urlParams.get('plan') || '',
+    duration: urlParams.get('duration') || '',
+    price: urlParams.get('price') || '',
+    activationDate: urlParams.get('activationDate') || '',
+    expiryDate: urlParams.get('expiryDate') || '',
+    iccid: urlParams.get('iccid') || '',
+    matchingId: urlParams.get('matchingId') || '',
+    rspUrl: urlParams.get('rspUrl') || '',
+    qrCode: urlParams.get('qrCode') || ''
 };
 
 // Function to get flag image URL from local flags folder
@@ -64,10 +68,120 @@ function getFlagPath(countryCode) {
 }
 
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Сначала скрываем данные, чтобы не показывать мокап
+    hideOrderData();
+    
+    // Загружаем актуальные данные с сервера
+    if (orderReference) {
+        await loadOrderFromServer(orderReference);
+    } else {
+        // Если нет orderReference, используем данные из URL (fallback)
+        console.warn('[Order Details] No orderReference, using URL params');
+    }
+    
     setupOrderDetails();
     setupNavigation();
+    
+    // Показываем данные после загрузки
+    showOrderData();
 });
+
+// Hide order data until real data is loaded
+function hideOrderData() {
+    const orderCard = document.querySelector('.order-details-card');
+    if (orderCard) {
+        orderCard.style.opacity = '0';
+    }
+}
+
+// Show order data after loading
+function showOrderData() {
+    const orderCard = document.querySelector('.order-details-card');
+    if (orderCard) {
+        orderCard.style.opacity = '1';
+        orderCard.style.transition = 'opacity 0.3s ease-in';
+    }
+}
+
+// Load order from server
+async function loadOrderFromServer(orderRef) {
+    try {
+        // Get user ID from Telegram auth
+        const auth = window.telegramAuth;
+        let userId = null;
+        if (auth && auth.isAuthenticated()) {
+            userId = auth.getUserId();
+        }
+        
+        if (!userId) {
+            console.warn('[Order Details] No user ID, cannot load order from server');
+            return;
+        }
+        
+        console.log('[Order Details] Loading order from server:', orderRef);
+        
+        // Load all orders for user
+        const response = await fetch(`/api/orders?telegram_user_id=${userId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            cache: 'no-cache'
+        });
+        
+        if (!response.ok) {
+            console.error('[Order Details] Failed to load orders:', response.status);
+            return;
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data && Array.isArray(result.data)) {
+            // Find order by orderReference
+            const fullOrderRef = orderRef.startsWith('#') ? orderRef.substring(1) : orderRef;
+            const foundOrder = result.data.find(o => 
+                o.orderReference === fullOrderRef || 
+                o.orderReference === orderRef ||
+                o.orderReference?.endsWith(fullOrderRef) ||
+                o.orderReference?.endsWith(orderRef)
+            );
+            
+            if (foundOrder) {
+                console.log('[Order Details] Order found:', foundOrder.orderReference);
+                
+                // Update orderData with real data
+                orderData = {
+                    id: `#${foundOrder.orderReference?.substring(0, 8) || 'N/A'}`,
+                    date: foundOrder.createdAt ? new Date(foundOrder.createdAt).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: '2-digit', 
+                        day: '2-digit' 
+                    }) : '',
+                    country: foundOrder.country_name || '',
+                    code: foundOrder.country_code || '',
+                    plan: foundOrder.bundle_name || foundOrder.plan_id || '',
+                    duration: '', // Can be extracted from bundle_name if needed
+                    price: foundOrder.price ? `${foundOrder.currency || '$'} ${foundOrder.price}` : '',
+                    activationDate: foundOrder.createdAt ? new Date(foundOrder.createdAt).toLocaleDateString() : '',
+                    expiryDate: '', // Can be calculated from bundle duration
+                    iccid: foundOrder.iccid || '',
+                    matchingId: foundOrder.matchingId || '',
+                    rspUrl: foundOrder.smdpAddress || foundOrder.rspUrl || '',
+                    qrCode: foundOrder.qrCode || foundOrder.qr_code || ''
+                };
+                
+                console.log('[Order Details] Order data updated:', {
+                    hasIccid: !!orderData.iccid,
+                    hasMatchingId: !!orderData.matchingId,
+                    hasQrCode: !!orderData.qrCode
+                });
+            } else {
+                console.warn('[Order Details] Order not found in server response');
+            }
+        }
+    } catch (error) {
+        console.error('[Order Details] Error loading order from server:', error);
+    }
+}
 
 // Setup order details
 function setupOrderDetails() {
@@ -77,22 +191,43 @@ function setupOrderDetails() {
     const matchingIdElement = document.getElementById('matchingId');
     const rspUrlElement = document.getElementById('rspUrl');
     const orderPriceElement = document.getElementById('orderPrice');
+    const qrCodeElement = document.getElementById('qrCode');
     
     // Update order number
     if (orderNumberElement) {
-        orderNumberElement.textContent = `Order ${orderData.id}`;
+        orderNumberElement.textContent = orderData.id ? `Order ${orderData.id}` : 'Order #N/A';
     }
     
     // Update plan info
     if (orderPlanInfoElement) {
-        orderPlanInfoElement.textContent = `${orderData.plan} ${orderData.duration} ${orderData.country} x1`;
+        const planText = orderData.plan 
+            ? `${orderData.plan} ${orderData.duration || ''} ${orderData.country || ''} x1`.trim()
+            : 'eSIM Plan';
+        orderPlanInfoElement.textContent = planText;
     }
     
     // Update details
-    if (iccidElement) iccidElement.textContent = orderData.iccid;
-    if (matchingIdElement) matchingIdElement.textContent = orderData.matchingId;
-    if (rspUrlElement) rspUrlElement.textContent = orderData.rspUrl;
-    if (orderPriceElement) orderPriceElement.textContent = orderData.price;
+    if (iccidElement) iccidElement.textContent = orderData.iccid || 'N/A';
+    if (matchingIdElement) matchingIdElement.textContent = orderData.matchingId || 'N/A';
+    if (rspUrlElement) rspUrlElement.textContent = orderData.rspUrl || 'N/A';
+    if (orderPriceElement) orderPriceElement.textContent = orderData.price || 'N/A';
+    
+    // Update QR code
+    if (qrCodeElement && orderData.qrCode) {
+        qrCodeElement.src = orderData.qrCode;
+        qrCodeElement.alt = 'eSIM QR Code';
+        qrCodeElement.style.display = 'block';
+    } else if (qrCodeElement) {
+        // If no QR code URL, generate from matchingId and rspUrl
+        if (orderData.matchingId && orderData.rspUrl) {
+            const qrData = `LPA:1$${orderData.rspUrl}$${orderData.matchingId}`;
+            qrCodeElement.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
+            qrCodeElement.alt = 'eSIM QR Code';
+            qrCodeElement.style.display = 'block';
+        } else {
+            qrCodeElement.style.display = 'none';
+        }
+    }
 }
 
 
