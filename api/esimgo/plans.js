@@ -412,6 +412,11 @@ module.exports = async function handler(req, res) {
         const { country, region, perPage = 1000, category } = req.query;
         
         console.log('Plans API request:', { country, region, perPage, category });
+        console.log('[Checkout Debug] Request headers:', {
+            'user-agent': req.headers['user-agent'],
+            'referer': req.headers['referer'],
+            'origin': req.headers['origin']
+        });
         console.log('ESIMGO_API_KEY exists:', !!process.env.ESIMGO_API_KEY);
         
         const countryCode = country ? country.toUpperCase() : null;
@@ -1488,6 +1493,30 @@ module.exports = async function handler(req, res) {
                 countriesCount: responseData.countries?.length || 0,
                 sampleStandardPlan: responseData.standard[0] || null,
                 sampleUnlimitedPlan: responseData.unlimited[0] || null
+            });
+        }
+        
+        // Логируем финальный ответ для checkout диагностики
+        const isCheckoutRequest = req.headers['referer'] && req.headers['referer'].includes('checkout');
+        if (isCheckoutRequest) {
+            console.log('[Checkout Debug] ✅ Sending plans response to checkout:', {
+                country: countryCode,
+                region: region,
+                category: category,
+                standardPlansCount: dataWithMarkup.standard?.length || 0,
+                unlimitedPlansCount: dataWithMarkup.unlimited?.length || 0,
+                sampleStandardPlan: dataWithMarkup.standard?.[0] ? {
+                    id: dataWithMarkup.standard[0].id,
+                    bundle_name: dataWithMarkup.standard[0].bundle_name,
+                    price: dataWithMarkup.standard[0].price,
+                    priceValue: dataWithMarkup.standard[0].priceValue
+                } : null,
+                sampleUnlimitedPlan: dataWithMarkup.unlimited?.[0] ? {
+                    id: dataWithMarkup.unlimited[0].id,
+                    bundle_name: dataWithMarkup.unlimited[0].bundle_name,
+                    price: dataWithMarkup.unlimited[0].price,
+                    priceValue: dataWithMarkup.unlimited[0].priceValue
+                } : null
             });
         }
         
