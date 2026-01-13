@@ -365,10 +365,11 @@ function setupExtendButton() {
                     iccid: iccid
                 });
                 window.location.href = `region-plans.html?${params.toString()}`;
-            } else if (countryCode && countryName) {
+            } else if (countryCode) {
                 // Navigate to country plans with extend parameters
+                // Если countryName отсутствует, используем countryCode как fallback
                 const params = new URLSearchParams({
-                    country: countryName,
+                    country: countryName || countryCode,
                     code: countryCode,
                     extend: 'true',
                     iccid: iccid
