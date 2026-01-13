@@ -492,15 +492,27 @@ module.exports = async function handler(req, res) {
                             try {
                                 // Получаем assignments с QR кодом
                                 assignments = await esimgoClient.getESIMAssignments(orderRef, 'qrCode');
-                                console.log('✅ Assignments retrieved:', {
+                                console.log('✅ Assignments retrieved from API:', {
                                     hasIccid: !!assignments?.iccid,
                                     hasMatchingId: !!assignments?.matchingId,
                                     hasSmdpAddress: !!assignments?.smdpAddress,
-                                    hasQrCode: !!assignments?.qrCode
+                                    hasQrCode: !!(assignments?.qrCode || assignments?.qr_code),
+                                    assignmentsType: typeof assignments,
+                                    assignmentsKeys: assignments ? Object.keys(assignments) : []
                                 });
                             } catch (assignError) {
                                 console.warn('⚠️ Failed to get assignments:', assignError.message);
                             }
+                        }
+                        
+                        // Также проверяем, есть ли assignments в orderData
+                        if (!assignments && orderData.assignments) {
+                            assignments = orderData.assignments;
+                            console.log('✅ Using assignments from orderData:', {
+                                hasIccid: !!assignments?.iccid,
+                                hasMatchingId: !!assignments?.matchingId,
+                                hasQrCode: !!(assignments?.qrCode || assignments?.qr_code)
+                            });
                         }
                     } catch (orderStatusError) {
                         console.warn('⚠️ Failed to get full order data from eSIMgo:', orderStatusError.message);
@@ -511,18 +523,53 @@ module.exports = async function handler(req, res) {
                 // Используем полные данные из eSIMgo, если они доступны
                 const finalOrderData = fullOrderData || orderData;
                 
+                // Если assignments все еще нет, пытаемся получить из сохраненного заказа
+                if (!assignments) {
+                    try {
+                        const fs = require('fs').promises;
+                        const path = require('path');
+                        const ORDERS_FILE = path.join(__dirname, '..', '..', 'data', 'orders.json');
+                        const ordersData = await fs.readFile(ORDERS_FILE, 'utf8');
+                        const allOrders = JSON.parse(ordersData);
+                        const userOrders = allOrders[telegramUserId] || [];
+                        
+                        // Ищем заказ по orderReference
+                        const savedOrder = userOrders.find(o => 
+                            o.orderReference === orderRef || 
+                            o.orderReference === orderData.orderReference
+                        );
+                        
+                        if (savedOrder && (savedOrder.iccid || savedOrder.matchingId)) {
+                            assignments = {
+                                iccid: savedOrder.iccid,
+                                matchingId: savedOrder.matchingId,
+                                smdpAddress: savedOrder.smdpAddress,
+                                qrCode: savedOrder.qrCode || savedOrder.qr_code
+                            };
+                            console.log('✅ Assignments retrieved from saved order:', {
+                                hasIccid: !!assignments.iccid,
+                                hasMatchingId: !!assignments.matchingId,
+                                hasQrCode: !!assignments.qrCode
+                            });
+                        }
+                    } catch (loadError) {
+                        console.warn('⚠️ Failed to load assignments from saved order:', loadError.message);
+                    }
+                }
+                
                 // Проверяем, выдана ли eSIM
                 const hasEsim = !!(assignments?.iccid || assignments?.matchingId || 
                                   finalOrderData.order?.[0]?.esims?.[0]?.iccid);
                 
                 // Логируем assignments для диагностики
-                console.log('🔍 Assignments check for message sending:', {
+                console.log('🔍 Final assignments check for message sending:', {
                     hasAssignments: !!assignments,
                     hasIccid: !!assignments?.iccid,
                     hasMatchingId: !!assignments?.matchingId,
                     hasQrCode: !!(assignments?.qrCode || assignments?.qr_code),
                     assignmentsKeys: assignments ? Object.keys(assignments) : [],
-                    hasEsim: hasEsim
+                    hasEsim: hasEsim,
+                    orderRef: orderRef
                 });
                 
                 // Определяем финальный статус:
