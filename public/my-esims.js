@@ -133,6 +133,7 @@ async function loadOrdersFromServer(userId) {
                 iccid: order.iccid,
                 matchingId: order.matchingId,
                 smdpAddress: order.smdpAddress || order.rspUrl,
+                qrCode: order.qrCode || order.qr_code,
                 country_code: order.country_code,
                 country_name: order.country_name,
                 plan_id: order.plan_id,
@@ -173,6 +174,7 @@ async function loadOrdersFromServer(userId) {
                     iccid: order.iccid || '',
                     matchingId: order.matchingId || '',
                     rspUrl: order.smdpAddress || order.rspUrl || '',
+                    qrCode: order.qrCode || order.qr_code || '',
                     orderReference: order.orderReference || '',
                     bundle_name: order.bundle_name || ''
                 };
