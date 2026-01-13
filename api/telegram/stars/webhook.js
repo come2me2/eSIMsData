@@ -515,6 +515,16 @@ module.exports = async function handler(req, res) {
                 const hasEsim = !!(assignments?.iccid || assignments?.matchingId || 
                                   finalOrderData.order?.[0]?.esims?.[0]?.iccid);
                 
+                // Логируем assignments для диагностики
+                console.log('🔍 Assignments check for message sending:', {
+                    hasAssignments: !!assignments,
+                    hasIccid: !!assignments?.iccid,
+                    hasMatchingId: !!assignments?.matchingId,
+                    hasQrCode: !!(assignments?.qrCode || assignments?.qr_code),
+                    assignmentsKeys: assignments ? Object.keys(assignments) : [],
+                    hasEsim: hasEsim
+                });
+                
                 // Определяем финальный статус:
                 // COMPLETED только если платеж подтвержден И eSIM выдана
                 // Если платеж подтвержден, но eSIM не выдана - оставляем ON HOLD
@@ -616,21 +626,45 @@ module.exports = async function handler(req, res) {
                 await sendStatusMessage(message.chat.id, paymentMessage);
                 
                 // Если есть данные eSIM, отправляем отдельное сообщение с данными eSIM/QR
-                if (assignments && assignments.iccid) {
+                // Проверяем assignments из разных источников
+                const finalAssignments = assignments || 
+                    (finalOrderData.order?.[0]?.esims?.[0] ? {
+                        iccid: finalOrderData.order[0].esims[0].iccid,
+                        matchingId: finalOrderData.order[0].esims[0].matchingId,
+                        smdpAddress: finalOrderData.order[0].esims[0].smdpAddress,
+                        qrCode: finalOrderData.order[0].esims[0].qrCode
+                    } : null);
+                
+                console.log('📱 Final assignments for message:', {
+                    hasFinalAssignments: !!finalAssignments,
+                    hasIccid: !!finalAssignments?.iccid,
+                    hasMatchingId: !!finalAssignments?.matchingId,
+                    hasQrCode: !!(finalAssignments?.qrCode || finalAssignments?.qr_code),
+                    chatId: message.chat.id
+                });
+                
+                if (finalAssignments && (finalAssignments.iccid || finalAssignments.matchingId)) {
                     // Небольшая задержка между сообщениями
                     await new Promise(resolve => setTimeout(resolve, 500));
                     
                     // Формируем сообщение с данными eSIM
                     let esimMessage = `📱 <b>Your eSIM data:</b>\n\n`;
-                    if (assignments.iccid) {
-                        esimMessage += `ICCID: <code>${assignments.iccid}</code>\n`;
+                    if (finalAssignments.iccid) {
+                        esimMessage += `ICCID: <code>${finalAssignments.iccid}</code>\n`;
                     }
-                    if (assignments.matchingId) {
-                        esimMessage += `Matching ID: <code>${assignments.matchingId}</code>\n`;
+                    if (finalAssignments.matchingId) {
+                        esimMessage += `Matching ID: <code>${finalAssignments.matchingId}</code>\n`;
                     }
-                    if (assignments.smdpAddress) {
-                        esimMessage += `RSP URL: <code>${assignments.smdpAddress}</code>\n`;
+                    if (finalAssignments.smdpAddress) {
+                        esimMessage += `RSP URL: <code>${finalAssignments.smdpAddress}</code>\n`;
                     }
+                    
+                    console.log('📤 Sending eSIM data message to user:', {
+                        chatId: message.chat.id,
+                        hasIccid: !!finalAssignments.iccid,
+                        hasMatchingId: !!finalAssignments.matchingId,
+                        messageLength: esimMessage.length
+                    });
                     
                     // Отправляем текстовое сообщение с данными eSIM
                     const botToken = BOT_TOKEN;
@@ -647,10 +681,16 @@ module.exports = async function handler(req, res) {
                             });
                             
                             const textData = await textResponse.json();
+                            console.log('📤 sendMessage response:', {
+                                ok: textData.ok,
+                                error: textData.error,
+                                description: textData.description
+                            });
                             
                             // Если есть QR код, отправляем фото
-                            const qrCode = assignments.qrCode || assignments.qr_code;
+                            const qrCode = finalAssignments.qrCode || finalAssignments.qr_code;
                             if (qrCode && textData.ok) {
+                                console.log('📤 Sending QR code photo...');
                                 await new Promise(resolve => setTimeout(resolve, 500));
                                 
                                 const photoResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
@@ -664,16 +704,35 @@ module.exports = async function handler(req, res) {
                                 });
                                 
                                 const photoData = await photoResponse.json();
+                                console.log('📤 sendPhoto response:', {
+                                    ok: photoData.ok,
+                                    error: photoData.error,
+                                    description: photoData.description
+                                });
+                                
                                 if (!photoData.ok) {
                                     console.warn('⚠️ Failed to send QR code photo:', photoData);
+                                } else {
+                                    console.log('✅ QR code photo sent successfully');
                                 }
+                            } else if (!qrCode) {
+                                console.warn('⚠️ No QR code available to send');
+                            } else if (!textData.ok) {
+                                console.warn('⚠️ Cannot send QR code because text message failed');
                             }
                         } catch (esimError) {
-                            console.error('❌ Error sending eSIM data message:', esimError);
+                            console.error('❌ Error sending eSIM data message:', {
+                                error: esimError.message,
+                                stack: esimError.stack,
+                                chatId: message.chat.id
+                            });
                         }
+                    } else {
+                        console.error('❌ BOT_TOKEN not available for sending eSIM message');
                     }
                 } else {
                     // Если eSIM еще не готова, отправляем сообщение об обработке
+                    console.log('⚠️ eSIM data not ready, sending processing message');
                     await new Promise(resolve => setTimeout(resolve, 500));
                     await sendStatusMessage(message.chat.id, 'eSIM is being processed. Please check back in a few minutes.');
                 }

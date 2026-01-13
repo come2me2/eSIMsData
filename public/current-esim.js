@@ -52,6 +52,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Загружаем реальные данные о расходе трафика из API
     if (esimData && esimData.iccid) {
         await loadBundleUsageData(esimData.iccid);
+        
+        // Автоматическое обновление данных о трафике каждые 30 секунд
+        const autoRefreshInterval = setInterval(async () => {
+            if (esimData && esimData.iccid) {
+                console.log('🔄 Auto-refreshing bundle usage data...');
+                await loadBundleUsageData(esimData.iccid);
+            } else {
+                clearInterval(autoRefreshInterval);
+            }
+        }, 30000); // 30 секунд
+        
+        // Очищаем интервал при уходе со страницы
+        window.addEventListener('beforeunload', () => {
+            clearInterval(autoRefreshInterval);
+        });
     } else {
         // Если нет ICCID, показываем базовые данные (без данных о трафике)
         showESimData();
