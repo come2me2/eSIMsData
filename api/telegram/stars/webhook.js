@@ -623,6 +623,29 @@ module.exports = async function handler(req, res) {
                         ? orderRef  // Заменяем временный ID на реальный
                         : orderRef;
                     
+                    // Определяем тип заказа на основе country_code или country_name
+                    let orderType = existingOrder?.type || null;
+                    if (!orderType) {
+                        const countryCode = payloadObj.cc || null;
+                        const countryName = payloadObj.cn || null;
+                        
+                        if (countryCode === 'GLOBAL' || countryName?.toLowerCase() === 'global') {
+                            orderType = 'global';
+                        } else if (countryCode && ['AFRICA', 'ASIA', 'EUROPE', 'LATAM', 'NA', 'BALKANAS', 'CIS', 'OCEANIA', 'REGION'].includes(countryCode.toUpperCase())) {
+                            orderType = 'region';
+                        } else if (countryName && ['Africa', 'Asia', 'Europe', 'Latin America', 'North America', 'Balkanas', 'Central Eurasia', 'Oceania'].includes(countryName)) {
+                            orderType = 'region';
+                        } else if (countryCode && countryCode.length === 2) {
+                            // Двухбуквенный код страны (ISO 3166-1 alpha-2) - это local/country
+                            orderType = 'country';
+                        } else if (countryCode || countryName) {
+                            // Если есть хотя бы country_code или country_name, считаем это country
+                            orderType = 'country';
+                        } else {
+                            orderType = 'country'; // Default fallback
+                        }
+                    }
+                    
                     const saveOrderReq = {
                         telegram_user_id: telegramUserId,
                         orderReference: finalOrderReference, // Используем реальный orderReference из eSIM Go
@@ -635,6 +658,7 @@ module.exports = async function handler(req, res) {
                         plan_id: payloadObj.pid || null,
                         plan_type: payloadObj.pt || null,
                         bundle_name: payloadObj.bn || null,
+                        type: orderType, // Сохраняем тип заказа для правильной навигации при Extend
                         // Используем финальную цену из payload (с наценками), если она есть
                         // Если нет в payload, проверяем existingOrder (on_hold заказ уже имеет правильную цену)
                         // Иначе используем цену из eSIM Go (себестоимость) как fallback

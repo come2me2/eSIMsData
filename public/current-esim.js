@@ -335,10 +335,27 @@ function setupExtendButton() {
             
             const countryCode = esimData.country_code || currentESimOrder.country_code || '';
             const countryName = esimData.country_name || currentESimOrder.country_name || '';
-            const esimType = esimData.type || currentESimOrder.type || 'country';
+            let esimType = esimData.type || currentESimOrder.type || null;
             const iccid = esimData.iccid || currentESimOrder.iccid || '';
             
-            console.log('Extending eSIM:', { countryCode, countryName, esimType, iccid });
+            // Если тип не определен, пытаемся определить по country_code или country_name
+            if (!esimType) {
+                if (countryCode === 'GLOBAL' || countryName?.toLowerCase() === 'global') {
+                    esimType = 'global';
+                } else if (countryCode && ['AFRICA', 'ASIA', 'EUROPE', 'LATAM', 'NA', 'BALKANAS', 'CIS', 'OCEANIA', 'REGION'].includes(countryCode.toUpperCase())) {
+                    esimType = 'region';
+                } else if (countryName && ['Africa', 'Asia', 'Europe', 'Latin America', 'North America', 'Balkanas', 'Central Eurasia', 'Oceania'].includes(countryName)) {
+                    esimType = 'region';
+                } else if (countryCode && countryCode.length === 2) {
+                    // Двухбуквенный код страны (ISO 3166-1 alpha-2) - это local/country
+                    esimType = 'country';
+                } else if (countryCode || countryName) {
+                    // Если есть хотя бы country_code или country_name, считаем это country
+                    esimType = 'country';
+                }
+            }
+            
+            console.log('Extending eSIM:', { countryCode, countryName, esimType, iccid, orderType: currentESimOrder?.type });
             
             if (!iccid) {
                 console.error('No ICCID available for extend');
@@ -349,14 +366,16 @@ function setupExtendButton() {
             }
             
             // Navigate based on eSIM type with extend parameters
-            if (esimType === 'global' || countryCode === 'GLOBAL') {
+            if (esimType === 'global' || countryCode === 'GLOBAL' || countryCode === 'GLOBAL' || countryName?.toLowerCase() === 'global') {
                 // Navigate to global plans with extend parameters
                 const params = new URLSearchParams({
                     extend: 'true',
                     iccid: iccid
                 });
                 window.location.href = `global-plans.html?${params.toString()}`;
-            } else if (esimType === 'region' || countryCode === 'REGION') {
+            } else if (esimType === 'region' || countryCode === 'REGION' || 
+                       (countryCode && ['AFRICA', 'ASIA', 'EUROPE', 'LATAM', 'NA', 'BALKANAS', 'CIS', 'OCEANIA'].includes(countryCode.toUpperCase())) ||
+                       (countryName && ['Africa', 'Asia', 'Europe', 'Latin America', 'North America', 'Balkanas', 'Central Eurasia', 'Oceania'].includes(countryName))) {
                 // Navigate to region plans with extend parameters
                 const regionName = countryName || 'Unknown Region';
                 const params = new URLSearchParams({
@@ -365,19 +384,24 @@ function setupExtendButton() {
                     iccid: iccid
                 });
                 window.location.href = `region-plans.html?${params.toString()}`;
-            } else if (countryCode) {
+            } else if (countryCode || countryName) {
                 // Navigate to country plans with extend parameters
                 // Если countryName отсутствует, используем countryCode как fallback
                 const params = new URLSearchParams({
                     country: countryName || countryCode,
-                    code: countryCode,
+                    code: countryCode || countryName,
                     extend: 'true',
                     iccid: iccid
                 });
                 window.location.href = `plans.html?${params.toString()}`;
             } else {
                 // Fallback: navigate to main page
-                console.warn('Could not determine eSIM type, redirecting to main page');
+                console.warn('Could not determine eSIM type, redirecting to main page', {
+                    countryCode,
+                    countryName,
+                    esimType,
+                    order: currentESimOrder
+                });
                 if (tg && tg.showAlert) {
                     tg.showAlert('Unable to determine eSIM location. Redirecting to main page.');
                 }
