@@ -395,17 +395,45 @@ function setupExtendButton() {
                 });
                 window.location.href = `plans.html?${params.toString()}`;
             } else {
-                // Fallback: navigate to main page
-                console.warn('Could not determine eSIM type, redirecting to main page', {
+                // Fallback: пытаемся использовать данные из bundle_name для определения страны
+                console.warn('Could not determine eSIM type from order data, trying bundle_name fallback', {
                     countryCode,
                     countryName,
                     esimType,
+                    bundleName: currentESimOrder?.bundle_name,
+                    order: currentESimOrder
+                });
+                
+                // Пробуем извлечь код страны из bundle_name (например, "esim_1GB_7D_TH_V2" -> "TH")
+                const bundleName = currentESimOrder?.bundle_name || '';
+                const bundleCountryMatch = bundleName.match(/_([A-Z]{2})_/);
+                if (bundleCountryMatch && bundleCountryMatch[1]) {
+                    const extractedCode = bundleCountryMatch[1];
+                    console.log('Extracted country code from bundle_name:', extractedCode);
+                    const params = new URLSearchParams({
+                        country: extractedCode,
+                        code: extractedCode,
+                        extend: 'true',
+                        iccid: iccid
+                    });
+                    window.location.href = `plans.html?${params.toString()}`;
+                    return;
+                }
+                
+                // Если ничего не помогло, показываем ошибку
+                console.error('Could not determine eSIM type, redirecting to main page', {
+                    countryCode,
+                    countryName,
+                    esimType,
+                    bundleName,
                     order: currentESimOrder
                 });
                 if (tg && tg.showAlert) {
                     tg.showAlert('Unable to determine eSIM location. Redirecting to main page.');
                 }
-                window.location.href = 'index.html';
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1000);
             }
         });
     }
