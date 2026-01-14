@@ -338,24 +338,47 @@ function setupExtendButton() {
             let esimType = esimData.type || currentESimOrder.type || null;
             const iccid = esimData.iccid || currentESimOrder.iccid || '';
             
+            console.log('🔍 Extend button - initial data:', {
+                esimData_country_code: esimData.country_code,
+                esimData_country_name: esimData.country_name,
+                esimData_type: esimData.type,
+                order_country_code: currentESimOrder?.country_code,
+                order_country_name: currentESimOrder?.country_name,
+                order_type: currentESimOrder?.type,
+                resolved_countryCode: countryCode,
+                resolved_countryName: countryName,
+                resolved_esimType: esimType,
+                iccid: iccid
+            });
+            
             // Если тип не определен, пытаемся определить по country_code или country_name
             if (!esimType) {
+                console.log('🔍 Type not set, determining from countryCode/countryName...');
                 if (countryCode === 'GLOBAL' || countryName?.toLowerCase() === 'global') {
                     esimType = 'global';
+                    console.log('✅ Determined type: global');
                 } else if (countryCode && ['AFRICA', 'ASIA', 'EUROPE', 'LATAM', 'NA', 'BALKANAS', 'CIS', 'OCEANIA', 'REGION'].includes(countryCode.toUpperCase())) {
                     esimType = 'region';
+                    console.log('✅ Determined type: region (from countryCode)');
                 } else if (countryName && ['Africa', 'Asia', 'Europe', 'Latin America', 'North America', 'Balkanas', 'Central Eurasia', 'Oceania'].includes(countryName)) {
                     esimType = 'region';
+                    console.log('✅ Determined type: region (from countryName)');
                 } else if (countryCode && countryCode.length === 2) {
                     // Двухбуквенный код страны (ISO 3166-1 alpha-2) - это local/country
                     esimType = 'country';
+                    console.log('✅ Determined type: country (2-letter code:', countryCode + ')');
                 } else if (countryCode || countryName) {
                     // Если есть хотя бы country_code или country_name, считаем это country
                     esimType = 'country';
+                    console.log('✅ Determined type: country (fallback, has countryCode or countryName)');
+                } else {
+                    console.warn('⚠️ Could not determine type - no countryCode or countryName');
                 }
+            } else {
+                console.log('✅ Using existing type:', esimType);
             }
             
-            console.log('Extending eSIM:', { countryCode, countryName, esimType, iccid, orderType: currentESimOrder?.type });
+            console.log('📋 Extending eSIM - final values:', { countryCode, countryName, esimType, iccid });
             
             if (!iccid) {
                 console.error('No ICCID available for extend');
