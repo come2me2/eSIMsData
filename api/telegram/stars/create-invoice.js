@@ -99,28 +99,33 @@ function parsePrice(value) {
 }
 
 function buildPayload(data) {
+    // Используем максимально компактные ключи, чтобы уложиться в лимит Telegram (1-128 байт)
+    // p  - plan_id
+    // t  - plan_type
+    // b  - bundle_name
+    // fp - finalPrice (финальная цена с наценками)
+    // u  - telegram_user_id
+    // a  - amountStars
+    // i  - iccid (для extend)
     const payload = {
-        pid: data.plan_id,
-        pt: data.plan_type,
-        bn: data.bundle_name,
-        cc: data.country_code,
-        fp: data.finalPrice, // finalPrice - финальная цена с наценками
-        cn: data.country_name,
-        uid: data.telegram_user_id,
-        amt: data.amountStars,
-        cur: 'XTR'
+        p: data.plan_id,
+        t: data.plan_type,
+        b: data.bundle_name,
+        fp: data.finalPrice, // финальная цена с наценками
+        u: data.telegram_user_id,
+        a: data.amountStars
     };
     
     // Если есть iccid (для extend), добавляем его в payload
     if (data.iccid) {
-        payload.iccid = data.iccid;
+        payload.i = data.iccid;
     }
 
     let payloadStr = JSON.stringify(payload);
 
-    // Если payload слишком длинный, убираем необязательные поля (но сохраняем iccid)
+    // Если payload все еще слишком длинный (маловероятно), убираем bundle_name
     if (payloadStr.length > 120) {
-        delete payload.cn;
+        delete payload.b;
         payloadStr = JSON.stringify(payload);
     }
 

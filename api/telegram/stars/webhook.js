@@ -129,7 +129,23 @@ async function sendStatusMessage(chatId, text) {
 
 function safeParsePayload(payloadStr) {
     try {
-        return JSON.parse(payloadStr);
+        const raw = JSON.parse(payloadStr);
+        
+        // Нормализуем payload, чтобы поддерживать как старый, так и новый компактный формат
+        // Старый формат: pid, pt, bn, cc, cn, uid, amt, fp, iccid, cur
+        // Новый формат:  p,  t,  b,      ,    ,  u,  a, fp,  i
+        return {
+            pid: raw.pid || raw.p || null,
+            pt: raw.pt || raw.t || null,
+            bn: raw.bn || raw.b || null,
+            cc: raw.cc || null,
+            cn: raw.cn || null,
+            uid: raw.uid || raw.u || null,
+            amt: raw.amt || raw.a || null,
+            fp: raw.fp || null,
+            iccid: raw.iccid || raw.i || null,
+            cur: raw.cur || 'XTR'
+        };
     } catch (e) {
         return null;
     }
