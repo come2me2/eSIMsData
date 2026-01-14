@@ -417,6 +417,29 @@ async function loadPlansFromAPI(regionName, useCache = true) {
 let currentPlanType = 'standard';
 let selectedPlanId = 'plan2'; // Default selected for standard
 
+// Setup bottom navigation
+function setupNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    navItems.forEach((item) => {
+        item.addEventListener('click', () => {
+            if (tg) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+            
+            const label = item.querySelector('.nav-label')?.textContent;
+            
+            if (label === 'Account') {
+                window.location.href = 'account.html';
+            } else if (label === 'Buy eSIM') {
+                window.location.href = 'index.html';
+            } else if (label === 'Help') {
+                window.location.href = 'help.html';
+            }
+        });
+    });
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
     // Получаем название региона из URL
@@ -429,6 +452,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Настраиваем информацию о регионе (иконка, название, счетчик стран)
     setupRegionInfo();
     setupSegmentedControl();
+    setupNavigation(); // Настраиваем нижнее меню
     
     // Загружаем реальные планы из API для региона
     console.log('🔵 Loading plans for region:', regionName);
