@@ -324,9 +324,16 @@ function setupExtendButton() {
                 tg.HapticFeedback.impactOccurred('medium');
             }
             
+            console.log('🔘 Extend button clicked');
+            console.log('📦 esimData:', esimData);
+            console.log('📦 currentESimOrder:', currentESimOrder);
+            
             // Navigate to plans page for current eSIM
             if (!esimData || !currentESimOrder) {
-                console.error('No eSIM data available for extend');
+                console.error('❌ No eSIM data available for extend', {
+                    hasESimData: !!esimData,
+                    hasCurrentESimOrder: !!currentESimOrder
+                });
                 if (tg && tg.showAlert) {
                     tg.showAlert('No active eSIM found. Please purchase an eSIM first.');
                 }
