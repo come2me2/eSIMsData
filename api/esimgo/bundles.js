@@ -518,10 +518,7 @@ module.exports = async function handler(req, res) {
         });
         
         // Проверяем пороги и отправляем SMS при необходимости (fallback, если callback не пришел)
-        // Конвертируем MB обратно в байты для проверки
-        const initialQuantityBytes = Math.round(result.data.totalData * 1024 * 1024);
-        const remainingQuantityBytes = Math.round(result.data.remainingData * 1024 * 1024);
-        
+        // Используем уже вычисленные значения в байтах (initialQuantityBytes и remainingQuantityBytes)
         await checkUsageThresholdsAndSendSMS(
             iccid,
             initialQuantityBytes,
