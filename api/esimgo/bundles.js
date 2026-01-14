@@ -8,8 +8,15 @@
 const fs = require('fs').promises;
 const path = require('path');
 const esimgoClient = require('../_lib/esimgo/client');
+const { sendSMSToESIM } = require('./send-sms');
 
 const ORDERS_FILE = path.join(__dirname, '..', '..', 'data', 'orders.json');
+
+// Тексты SMS сообщений (дублируем из callback.js для использования здесь)
+const SMS_MESSAGES = {
+    '80': '80% of your data is used.\nOpen esimsdata Telegram Mini App and tap Extend to add more data.',
+    '100': 'Your data is used up (100%).\nOpen esimsdata Telegram Mini App and tap Extend to continue.'
+};
 
 /**
  * Найти заказ по ICCID и получить данные использования
@@ -23,13 +30,191 @@ async function findOrderUsageByICCID(iccid) {
             const userOrders = allOrders[userId] || [];
             const order = userOrders.find(o => o.iccid === iccid);
             if (order && order.usage) {
-                return order.usage;
+                return { order, userId, usage: order.usage };
             }
         }
     } catch (error) {
         // Игнорируем ошибки чтения файла
     }
     return null;
+}
+
+/**
+ * Найти заказ по ICCID
+ */
+async function findOrderByICCID(iccid) {
+    try {
+        const data = await fs.readFile(ORDERS_FILE, 'utf8');
+        const allOrders = JSON.parse(data);
+        
+        for (const userId in allOrders) {
+            const userOrders = allOrders[userId] || [];
+            const order = userOrders.find(o => o.iccid === iccid);
+            if (order) {
+                return { order, userId };
+            }
+        }
+    } catch (error) {
+        // Игнорируем ошибки чтения файла
+    }
+    return null;
+}
+
+/**
+ * Сохранить заказ
+ */
+async function saveOrder(order, userId) {
+    try {
+        const data = await fs.readFile(ORDERS_FILE, 'utf8');
+        const allOrders = JSON.parse(data);
+        const userOrders = allOrders[userId] || [];
+        
+        const orderIndex = userOrders.findIndex(o => 
+            o.orderReference === order.orderReference || 
+            o.iccid === order.iccid
+        );
+        
+        if (orderIndex !== -1) {
+            userOrders[orderIndex] = order;
+        } else {
+            userOrders.push(order);
+        }
+        
+        allOrders[userId] = userOrders;
+        await fs.writeFile(ORDERS_FILE, JSON.stringify(allOrders, null, 2), 'utf8');
+        return true;
+    } catch (error) {
+        console.error('Error saving order:', error);
+        return false;
+    }
+}
+
+/**
+ * Рассчитать процент использования трафика
+ */
+function calculateUsagePercent(initialQuantity, remainingQuantity) {
+    if (!initialQuantity || initialQuantity === 0) {
+        return null;
+    }
+    
+    const usedQuantity = initialQuantity - (remainingQuantity || 0);
+    const usagePercent = (usedQuantity / initialQuantity) * 100;
+    
+    return Math.round(usagePercent * 100) / 100; // Округляем до 2 знаков после запятой
+}
+
+/**
+ * Проверить, была ли уже отправлена SMS для данного порога
+ */
+function wasSmsSentForThreshold(order, threshold) {
+    if (!order || !order.usage || !order.usage.smsSent) {
+        return false;
+    }
+    
+    const thresholdKey = threshold.toString();
+    return order.usage.smsSent[thresholdKey]?.sent === true;
+}
+
+/**
+ * Отметить SMS как отправленную для порога
+ */
+function markSmsAsSent(order, threshold) {
+    if (!order.usage) {
+        order.usage = {};
+    }
+    
+    if (!order.usage.smsSent) {
+        order.usage.smsSent = {};
+    }
+    
+    const thresholdKey = threshold.toString();
+    order.usage.smsSent[thresholdKey] = {
+        sent: true,
+        sentAt: new Date().toISOString()
+    };
+}
+
+/**
+ * Отправить SMS при достижении порога использования трафика
+ */
+async function sendUsageSMS(iccid, threshold) {
+    const message = SMS_MESSAGES[threshold.toString()];
+    
+    if (!message) {
+        console.warn(`⚠️ No SMS message template for threshold ${threshold}`);
+        return false;
+    }
+    
+    try {
+        await sendSMSToESIM(iccid, message, 'eSIM');
+        console.log(`✅ SMS sent to ICCID ${iccid} at ${threshold}% usage threshold`);
+        return true;
+    } catch (error) {
+        console.error(`❌ Failed to send SMS to ICCID ${iccid} at ${threshold}% threshold:`, error.message);
+        return false;
+    }
+}
+
+/**
+ * Проверить пороги использования и отправить SMS при необходимости
+ * Вызывается при получении данных о bundle через API
+ */
+async function checkUsageThresholdsAndSendSMS(iccid, initialQuantity, remainingQuantity, unlimited) {
+    // Пропускаем, если bundle неограниченный
+    if (unlimited === true) {
+        console.log('⏭️ Skipping SMS for unlimited bundle:', iccid);
+        return;
+    }
+    
+    // Рассчитываем процент использования
+    const usagePercent = calculateUsagePercent(initialQuantity, remainingQuantity);
+    
+    if (usagePercent === null) {
+        console.log('⏭️ Cannot calculate usage percent for ICCID:', iccid);
+        return;
+    }
+    
+    console.log('📊 Usage percent calculated (from bundles API):', {
+        iccid,
+        usagePercent: `${usagePercent}%`,
+        initialQuantity,
+        remainingQuantity
+    });
+    
+    // Находим заказ для проверки статуса отправки SMS
+    const orderData = await findOrderByICCID(iccid);
+    
+    if (!orderData) {
+        console.warn('⚠️ Order not found for SMS check:', iccid);
+        return;
+    }
+    
+    const { order, userId } = orderData;
+    
+    // Пороги для проверки
+    const thresholds = [80, 100];
+    
+    for (const threshold of thresholds) {
+        // Проверяем, достигнут ли порог
+        if (usagePercent >= threshold) {
+            // Проверяем, не была ли уже отправлена SMS для этого порога
+            if (!wasSmsSentForThreshold(order, threshold)) {
+                console.log(`📱 Threshold ${threshold}% reached for ICCID ${iccid}, sending SMS...`);
+                
+                // Отправляем SMS
+                const smsSent = await sendUsageSMS(iccid, threshold);
+                
+                if (smsSent) {
+                    // Отмечаем SMS как отправленную
+                    markSmsAsSent(order, threshold);
+                    // Сохраняем обновленный заказ
+                    await saveOrder(order, userId);
+                }
+            } else {
+                console.log(`⏭️ SMS already sent for threshold ${threshold}% for ICCID ${iccid}`);
+            }
+        }
+    }
 }
 
 module.exports = async function handler(req, res) {
@@ -62,14 +247,24 @@ module.exports = async function handler(req, res) {
         console.log('📦 Getting bundles for eSIM:', iccid);
         
         // Сначала проверяем данные из заказа (из callback'а)
-        const orderUsage = await findOrderUsageByICCID(iccid);
-        if (orderUsage && orderUsage.remainingQuantity !== undefined) {
+        const orderUsageData = await findOrderUsageByICCID(iccid);
+        if (orderUsageData && orderUsageData.usage && orderUsageData.usage.remainingQuantity !== undefined) {
             console.log('✅ Using usage data from order (callback data)');
+            
+            const orderUsage = orderUsageData.usage;
             
             // Конвертируем байты в MB
             const initialQuantityMB = (orderUsage.initialQuantity || 0) / (1024 * 1024);
             const remainingQuantityMB = (orderUsage.remainingQuantity || 0) / (1024 * 1024);
             const usedQuantityMB = initialQuantityMB - remainingQuantityMB;
+            
+            // Проверяем пороги и отправляем SMS при необходимости (fallback, если callback не пришел)
+            await checkUsageThresholdsAndSendSMS(
+                iccid,
+                orderUsage.initialQuantity,
+                orderUsage.remainingQuantity,
+                orderUsage.unlimited || false
+            );
             
             // Вычисляем дни
             let bundleDuration = 7; // Default
@@ -321,6 +516,18 @@ module.exports = async function handler(req, res) {
             bundleState: result.data.bundleState,
             daysRemaining: result.data.daysRemaining
         });
+        
+        // Проверяем пороги и отправляем SMS при необходимости (fallback, если callback не пришел)
+        // Конвертируем MB обратно в байты для проверки
+        const initialQuantityBytes = Math.round(result.data.totalData * 1024 * 1024);
+        const remainingQuantityBytes = Math.round(result.data.remainingData * 1024 * 1024);
+        
+        await checkUsageThresholdsAndSendSMS(
+            iccid,
+            initialQuantityBytes,
+            remainingQuantityBytes,
+            result.data.unlimited || false
+        );
         
         return res.status(200).json(result);
         
