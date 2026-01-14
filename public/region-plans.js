@@ -702,7 +702,7 @@ function setupNextButton() {
         });
         
         // Navigate to checkout screen for both standard and unlimited plans
-        const urlParams = new URLSearchParams(window.location.search);
+        // Переиспользуем существующий urlParams, чтобы избежать повторного объявления и ошибок
         const extend = urlParams.get('extend');
         const iccid = urlParams.get('iccid');
         
