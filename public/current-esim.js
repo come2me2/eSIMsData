@@ -102,8 +102,20 @@ async function loadCurrentESim() {
                         );
                         
                         if (activeOrder) {
+                            console.log('✅ Active order found from server:', {
+                                orderReference: activeOrder.orderReference,
+                                country_code: activeOrder.country_code,
+                                country_name: activeOrder.country_name,
+                                type: activeOrder.type,
+                                iccid: activeOrder.iccid
+                            });
                             currentESimOrder = activeOrder;
                             esimData = convertOrderToESimData(activeOrder);
+                            console.log('✅ Converted esimData:', {
+                                country_code: esimData.country_code,
+                                country_name: esimData.country_name,
+                                type: esimData.type
+                            });
                             return;
                         }
                     }
@@ -122,8 +134,20 @@ async function loadCurrentESim() {
                 const activeOrder = orders.find(order => order.iccid);
                 
                 if (activeOrder) {
+                    console.log('✅ Active order found from localStorage:', {
+                        orderReference: activeOrder.orderReference,
+                        country_code: activeOrder.country_code,
+                        country_name: activeOrder.country_name,
+                        type: activeOrder.type,
+                        iccid: activeOrder.iccid
+                    });
                     currentESimOrder = activeOrder;
                     esimData = convertOrderToESimData(activeOrder);
+                    console.log('✅ Converted esimData:', {
+                        country_code: esimData.country_code,
+                        country_name: esimData.country_name,
+                        type: esimData.type
+                    });
                     return;
                 }
             }
