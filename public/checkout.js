@@ -1872,7 +1872,11 @@ function setupPurchaseButton() {
                         invoicePayload.iccid = orderData.iccid;
                         console.log('[Stars] 🔄 Extend mode: Adding traffic to existing eSIM:', {
                             iccid: orderData.iccid,
-                            bundle_name: bundleName
+                            bundle_name: bundleName,
+                            country_code: countryCode,
+                            country_name: countryName,
+                            plan_id: plan.id || plan.bundle_name,
+                            fullInvoicePayload: JSON.stringify(invoicePayload, null, 2)
                         });
                     }
                     

@@ -119,6 +119,17 @@ function buildPayload(data) {
     // Если есть iccid (для extend), добавляем его в payload
     if (data.iccid) {
         payload.i = data.iccid;
+        console.log('[Create Invoice] 🔄 Extend mode: Adding iccid to payload:', {
+            iccid: data.iccid,
+            bundle_name: data.bundle_name || data.bn,
+            payloadKey: 'i',
+            fullPayload: JSON.stringify(payload, null, 2)
+        });
+    } else {
+        console.log('[Create Invoice] 📦 New eSIM mode (no iccid in payload):', {
+            bundle_name: data.bundle_name || data.bn,
+            hasIccid: !!data.iccid
+        });
     }
 
     let payloadStr = JSON.stringify(payload);

@@ -461,6 +461,15 @@ module.exports = async function handler(req, res) {
         // Если есть iccid в payload (extend mode), используем его
         const iccid = payloadObj.iccid || (existingOrder && existingOrder.iccid) || null;
         
+        console.log('[Webhook] 🔍 Extracting iccid for order creation:', {
+            iccidFromPayload: payloadObj.iccid,
+            iccidFromExistingOrder: existingOrder && existingOrder.iccid,
+            finalIccid: iccid,
+            isExtendMode: !!iccid,
+            bundle_name: payloadObj.bn,
+            payloadObj: JSON.stringify(payloadObj, null, 2)
+        });
+        
         const orderReq = createMockReq({
             bundle_name: payloadObj.bn,
             telegram_user_id: telegramUserId,
@@ -472,6 +481,14 @@ module.exports = async function handler(req, res) {
             plan_id: payloadObj.pid,
             plan_type: payloadObj.pt,
             test_mode: false
+        });
+        
+        console.log('[Webhook] 📤 Creating order with data:', {
+            bundle_name: payloadObj.bn,
+            iccid: iccid,
+            hasIccid: !!iccid,
+            country_code: payloadObj.cc,
+            country_name: payloadObj.cn
         });
 
         const orderRes = createMockRes();
