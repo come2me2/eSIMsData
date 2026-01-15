@@ -1867,6 +1867,17 @@ function setupPurchaseButton() {
                         telegram_username: auth.getUsername()
                     };
                     
+                    // Детальное логирование перед проверкой extend
+                    console.log('[Stars] 🔍 Checking extend mode before adding iccid:', {
+                        orderData_extend: orderData.extend,
+                        orderData_iccid: orderData.iccid,
+                        hasExtend: !!orderData.extend,
+                        hasIccid: !!orderData.iccid,
+                        extendValue: orderData.extend,
+                        iccidValue: orderData.iccid,
+                        fullOrderData: JSON.stringify(orderData, null, 2)
+                    });
+                    
                     // Если это extend, добавляем iccid для добавления трафика к существующей eSIM
                     if (orderData.extend && orderData.iccid) {
                         invoicePayload.iccid = orderData.iccid;
@@ -1877,6 +1888,13 @@ function setupPurchaseButton() {
                             country_name: countryName,
                             plan_id: plan.id || plan.bundle_name,
                             fullInvoicePayload: JSON.stringify(invoicePayload, null, 2)
+                        });
+                    } else {
+                        console.warn('[Stars] ⚠️ Extend mode NOT activated:', {
+                            orderData_extend: orderData.extend,
+                            orderData_iccid: orderData.iccid,
+                            reason: !orderData.extend ? 'extend is false/undefined' : (!orderData.iccid ? 'iccid is empty/undefined' : 'unknown'),
+                            invoicePayloadKeys: Object.keys(invoicePayload)
                         });
                     }
                     
