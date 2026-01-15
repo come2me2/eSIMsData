@@ -748,6 +748,7 @@ module.exports = async function handler(req, res) {
                     }
                     
                     // Вызываем API для сохранения заказа
+                    const ordersHandler = require('../orders');
                     const saveOrderRes = createMockRes();
                     await Promise.resolve(ordersHandler(createMockReq(saveOrderReq), saveOrderRes));
                     
