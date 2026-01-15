@@ -107,12 +107,31 @@ const orderData = {
     iccid: urlParams.get('iccid') || '' // ICCID существующей eSIM для extend
 };
 
+// Детальное логирование при инициализации
+console.log('[Checkout] 🔍 Initial orderData from URL:', {
+    extend: orderData.extend,
+    iccid: orderData.iccid,
+    hasExtend: !!orderData.extend,
+    hasIccid: !!orderData.iccid,
+    extendValue: orderData.extend,
+    iccidValue: orderData.iccid,
+    fullUrl: window.location.href,
+    urlParams: window.location.search,
+    allUrlParams: Object.fromEntries(urlParams.entries())
+});
+
 // Логируем режим extend
 if (orderData.extend && orderData.iccid) {
     console.log('[Checkout] 🔄 Extend mode: Adding traffic to existing eSIM', {
         iccid: orderData.iccid,
         type: orderData.type,
         name: orderData.name
+    });
+} else {
+    console.warn('[Checkout] ⚠️ Extend mode NOT detected:', {
+        extend: orderData.extend,
+        iccid: orderData.iccid,
+        reason: !orderData.extend ? 'extend not in URL or not "true"' : (!orderData.iccid ? 'iccid not in URL or empty' : 'unknown')
     });
 }
 
