@@ -465,6 +465,14 @@ function setupNextButton() {
         const extend = urlParams.get('extend');
         const iccid = urlParams.get('iccid');
         
+        console.log('[Plans] 🔍 Extracting extend parameters from URL:', {
+            extend: extend,
+            iccid: iccid,
+            hasExtend: extend === 'true',
+            hasIccid: !!iccid,
+            fullUrl: window.location.href
+        });
+        
         const checkoutParams = new URLSearchParams({
             type: 'country',
             code: countryData.code,
@@ -477,9 +485,21 @@ function setupNextButton() {
         if (extend === 'true' && iccid) {
             checkoutParams.append('extend', 'true');
             checkoutParams.append('iccid', iccid);
+            console.log('[Plans] 🔄 Extend mode: Adding extend parameters to checkout:', {
+                extend: 'true',
+                iccid: iccid,
+                checkoutParams: checkoutParams.toString()
+            });
+        } else {
+            console.log('[Plans] 📦 New eSIM mode (not extend):', {
+                extend: extend,
+                hasIccid: !!iccid,
+                reason: !extend ? 'extend not in URL' : (!iccid ? 'iccid not in URL' : 'unknown')
+            });
         }
         
         const checkoutUrl = `checkout.html?${checkoutParams.toString()}`;
+        console.log('[Plans] 🚀 Navigating to checkout:', checkoutUrl);
         window.location.href = checkoutUrl;
     });
 }
