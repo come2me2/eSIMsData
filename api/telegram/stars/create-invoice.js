@@ -269,8 +269,22 @@ module.exports = async function handler(req, res) {
             price,
             currency,
             telegram_user_id,
-            telegram_username
+            telegram_username,
+            iccid: iccid || 'NOT PROVIDED' // Логируем iccid для отладки Extend flow
         });
+        
+        // Детальное логирование iccid для Extend flow
+        if (iccid) {
+            console.log('[Create Invoice] 🔄 Extend mode detected - iccid received:', {
+                iccid: iccid,
+                iccidType: typeof iccid,
+                iccidLength: iccid.length,
+                isEmpty: iccid.trim() === '',
+                willBeAddedToPayload: true
+            });
+        } else {
+            console.log('[Create Invoice] 📦 New eSIM mode - no iccid provided');
+        }
 
         const costPrice = parsePrice(price);
         if (!costPrice) {
@@ -351,7 +365,8 @@ module.exports = async function handler(req, res) {
             verification: `${amountStars} Stars × ${STARS_RATE} = $${(amountStars * STARS_RATE).toFixed(2)}, after TG fee (${STARS_TELEGRAM_FEE * 100}%): $${(amountStars * STARS_RATE * (1 - STARS_TELEGRAM_FEE)).toFixed(2)}`
         });
 
-        const payloadStr = buildPayload({
+        // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Правильно передаем iccid только если он есть
+        const payloadData = {
             plan_id,
             plan_type,
             bundle_name,
@@ -359,9 +374,21 @@ module.exports = async function handler(req, res) {
             country_name,
             telegram_user_id,
             amountStars,
-            finalPrice: finalPrice.toFixed(2), // Передаем финальную цену с наценками
-            iccid: iccid || undefined // Добавляем iccid в payload для extend mode
-        });
+            finalPrice: finalPrice.toFixed(2) // Передаем финальную цену с наценками
+        };
+        
+        // Добавляем iccid только если он есть и не пустой
+        if (iccid && iccid.trim() !== '') {
+            payloadData.iccid = iccid.trim();
+            console.log('[Create Invoice] ✅ Adding iccid to payload data:', {
+                iccid: payloadData.iccid,
+                bundle_name: bundle_name
+            });
+        } else {
+            console.log('[Create Invoice] 📦 No iccid - creating new eSIM');
+        }
+        
+        const payloadStr = buildPayload(payloadData);
 
         const title = 'eSIM plan';
         const description = `${country_name || country_code} • ${plan_type}`;

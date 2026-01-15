@@ -97,14 +97,18 @@ if (tg) {
 
 // Get order data from URL
 const urlParams = new URLSearchParams(window.location.search);
+// ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Более строгое извлечение параметров
+const extendParam = urlParams.get('extend');
+const iccidParam = urlParams.get('iccid');
+
 const orderData = {
     type: urlParams.get('type') || 'country', // country, region, global
     name: urlParams.get('name') || '',
     code: urlParams.get('code') || '',
     planId: urlParams.get('plan') || '',
     planType: urlParams.get('planType') || 'standard',
-    extend: urlParams.get('extend') === 'true', // Флаг для добавления трафика к существующей eSIM
-    iccid: urlParams.get('iccid') || '' // ICCID существующей eSIM для extend
+    extend: extendParam === 'true', // Флаг для добавления трафика к существующей eSIM
+    iccid: (iccidParam && iccidParam.trim() !== '') ? iccidParam.trim() : '' // ICCID существующей eSIM для extend (убираем пробелы)
 };
 
 // Детальное логирование при инициализации
@@ -1897,11 +1901,14 @@ function setupPurchaseButton() {
                         fullOrderData: JSON.stringify(orderData, null, 2)
                     });
                     
-                    // Если это extend, добавляем iccid для добавления трафика к существующей eSIM
-                    if (orderData.extend && orderData.iccid) {
-                        invoicePayload.iccid = orderData.iccid;
+                    // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Более строгая проверка для Extend mode
+                    // Проверяем, что extend === true (не просто truthy) и iccid не пустой
+                    const isExtendMode = orderData.extend === true && orderData.iccid && orderData.iccid.trim() !== '';
+                    
+                    if (isExtendMode) {
+                        invoicePayload.iccid = orderData.iccid.trim(); // Убираем пробелы
                         console.log('[Stars] 🔄 Extend mode: Adding traffic to existing eSIM:', {
-                            iccid: orderData.iccid,
+                            iccid: invoicePayload.iccid,
                             bundle_name: bundleName,
                             country_code: countryCode,
                             country_name: countryName,
@@ -1911,9 +1918,14 @@ function setupPurchaseButton() {
                     } else {
                         console.warn('[Stars] ⚠️ Extend mode NOT activated:', {
                             orderData_extend: orderData.extend,
+                            orderData_extendType: typeof orderData.extend,
                             orderData_iccid: orderData.iccid,
-                            reason: !orderData.extend ? 'extend is false/undefined' : (!orderData.iccid ? 'iccid is empty/undefined' : 'unknown'),
-                            invoicePayloadKeys: Object.keys(invoicePayload)
+                            orderData_iccidType: typeof orderData.iccid,
+                            orderData_iccidLength: orderData.iccid ? orderData.iccid.length : 0,
+                            isExtendMode: isExtendMode,
+                            reason: !orderData.extend ? 'extend is false/undefined' : (!orderData.iccid || orderData.iccid.trim() === '' ? 'iccid is empty/undefined' : 'unknown'),
+                            invoicePayloadKeys: Object.keys(invoicePayload),
+                            fullOrderData: JSON.stringify(orderData, null, 2)
                         });
                     }
                     
