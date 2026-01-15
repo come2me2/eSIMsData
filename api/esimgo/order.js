@@ -68,18 +68,38 @@ module.exports = async function handler(req, res) {
             }]
         };
         
+        // ✅ КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ для Extend flow - видно на сервере
+        console.log('[eSIM Go Order] 🔍 EXTEND FLOW CHECK - Request analysis:', {
+            hasIccid: !!iccid,
+            iccid: iccid || 'NOT PROVIDED',
+            iccidType: typeof iccid,
+            iccidLength: iccid ? iccid.length : 0,
+            iccidTrimmed: iccid ? iccid.trim() : '',
+            isExtendMode: !!(iccid && iccid.trim() !== ''),
+            bundle_name: bundleName,
+            telegram_user_id: telegram_user_id || 'MISSING',
+            fullRequestBody: JSON.stringify(req.body, null, 2)
+        });
+        
         // Если уже есть eSIM (ICCID), добавляем в order для применения bundle к существующей eSIM
-        if (iccid) {
-            orderData.order[0].iccids = [iccid];
-            console.log('🔄 Extend mode: Applying bundle to existing eSIM:', {
-                iccid: iccid,
+        if (iccid && iccid.trim() !== '') {
+            orderData.order[0].iccids = [iccid.trim()];
+            console.log('[eSIM Go Order] 🔄 EXTEND MODE - Applying bundle to existing eSIM:', {
+                iccid: iccid.trim(),
+                iccidLength: iccid.trim().length,
                 bundle_name: bundleName,
-                orderData: JSON.stringify(orderData, null, 2)
+                telegram_user_id: telegram_user_id,
+                orderData: JSON.stringify(orderData, null, 2),
+                willApplyToExistingESim: true
             });
         } else {
-            console.log('📦 New eSIM: Creating new eSIM with bundle:', {
+            console.log('[eSIM Go Order] 📦 NEW ESIM MODE - Creating new eSIM with bundle:', {
+                receivedIccid: iccid || 'null/undefined',
+                iccidType: typeof iccid,
                 bundle_name: bundleName,
-                orderData: JSON.stringify(orderData, null, 2)
+                telegram_user_id: telegram_user_id,
+                orderData: JSON.stringify(orderData, null, 2),
+                willCreateNewESim: true
             });
         }
         
@@ -87,9 +107,21 @@ module.exports = async function handler(req, res) {
         
         // Проверяем, был ли bundle применен к существующей eSIM или создана новая
         const returnedIccid = order.order?.[0]?.esims?.[0]?.iccid || null;
-        const isExtendApplied = iccid && returnedIccid === iccid;
+        const requestedIccid = iccid ? iccid.trim() : null;
+        const isExtendApplied = requestedIccid && returnedIccid === requestedIccid;
         
-        console.log('Order ' + (isTestMode ? 'validated' : 'created') + ':', {
+        // ✅ КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ для Extend flow - видно на сервере
+        console.log('[eSIM Go Order] 🔍 EXTEND FLOW CHECK - Order result:', {
+            requestedIccid: requestedIccid || 'NOT REQUESTED',
+            returnedIccid: returnedIccid || 'NOT RETURNED',
+            isExtendApplied: isExtendApplied,
+            wasExtendRequested: !!requestedIccid,
+            bundleAppliedToExistingESim: isExtendApplied,
+            newESimCreated: !isExtendApplied && !!returnedIccid,
+            warning: requestedIccid && !isExtendApplied ? '⚠️ WARNING: Extend requested but new eSIM created!' : 'OK'
+        });
+        
+        console.log('[eSIM Go Order] Order ' + (isTestMode ? 'validated' : 'created') + ':', {
             mode: orderMode,
             orderReference: order.orderReference,
             status: order.status,

@@ -147,12 +147,19 @@ function safeParsePayload(payloadStr) {
             cur: raw.cur || 'XTR'
         };
         
-        console.log('[Webhook] 🔍 Parsed payload:', {
+        // ✅ КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ для Extend flow - видно на сервере
+        console.log('[Webhook] 🔍 EXTEND FLOW CHECK - Parsed payload:', {
             rawPayload: payloadStr,
-            parsedIccid: parsed.iccid,
+            parsedIccid: parsed.iccid || 'NOT FOUND',
             hasIccid: !!parsed.iccid,
             iccidSource: raw.iccid ? 'raw.iccid' : (raw.i ? 'raw.i' : 'null'),
-            fullParsed: JSON.stringify(parsed, null, 2)
+            rawHasIccid: !!raw.iccid,
+            rawHasI: !!raw.i,
+            rawIValue: raw.i || 'NOT FOUND',
+            rawIccidValue: raw.iccid || 'NOT FOUND',
+            isExtendMode: !!parsed.iccid,
+            fullParsed: JSON.stringify(parsed, null, 2),
+            fullRaw: JSON.stringify(raw, null, 2)
         });
         
         return parsed;
@@ -475,13 +482,17 @@ module.exports = async function handler(req, res) {
         // Если есть iccid в payload (extend mode), используем его
         const iccid = payloadObj.iccid || (existingOrder && existingOrder.iccid) || null;
         
-        console.log('[Webhook] 🔍 Extracting iccid for order creation:', {
-            iccidFromPayload: payloadObj.iccid,
-            iccidFromExistingOrder: existingOrder && existingOrder.iccid,
-            finalIccid: iccid,
+        // ✅ КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ для Extend flow - видно на сервере
+        console.log('[Webhook] 🔍 EXTEND FLOW CHECK - Extracting iccid for order creation:', {
+            iccidFromPayload: payloadObj.iccid || 'NOT FOUND IN PAYLOAD',
+            iccidFromExistingOrder: existingOrder && existingOrder.iccid || 'NOT FOUND IN EXISTING ORDER',
+            finalIccid: iccid || 'NULL - WILL CREATE NEW ESIM',
             isExtendMode: !!iccid,
-            bundle_name: payloadObj.bn,
-            payloadObj: JSON.stringify(payloadObj, null, 2)
+            willExtendExistingESim: !!iccid,
+            bundle_name: payloadObj.bn || 'MISSING',
+            telegram_user_id: telegramUserId,
+            fullPayloadObj: JSON.stringify(payloadObj, null, 2),
+            existingOrderIccid: existingOrder?.iccid || 'NO EXISTING ORDER'
         });
         
         const orderReq = createMockReq({

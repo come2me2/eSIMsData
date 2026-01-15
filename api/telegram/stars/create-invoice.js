@@ -168,7 +168,7 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        // ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ для отладки Region/Global планов
+        // ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ для отладки Region/Global планов и Extend flow
         console.log('[Stars] ========================================');
         console.log('[Stars] Request received:', {
             method: req.method,
@@ -193,6 +193,20 @@ module.exports = async function handler(req, res) {
             telegram_username,
             iccid // ICCID существующей eSIM для добавления трафика (extend mode)
         } = req.body || {};
+        
+        // ✅ КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ для Extend flow - видно на сервере
+        console.log('[Create Invoice] 🔍 EXTEND FLOW CHECK - Request body analysis:', {
+            hasIccid: !!iccid,
+            iccid: iccid || 'NOT PROVIDED',
+            iccidType: typeof iccid,
+            iccidLength: iccid ? iccid.length : 0,
+            iccidTrimmed: iccid ? iccid.trim() : '',
+            isExtendMode: !!(iccid && iccid.trim() !== ''),
+            plan_id: plan_id || 'MISSING',
+            bundle_name: bundle_name || 'MISSING',
+            telegram_user_id: telegram_user_id || 'MISSING',
+            fullRequestBody: JSON.stringify(req.body, null, 2)
+        });
 
         // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Если country_code пустой, генерируем его на сервере
         let finalCountryCode = (country_code && String(country_code).trim() !== '') ? String(country_code).trim() : null;
@@ -380,15 +394,41 @@ module.exports = async function handler(req, res) {
         // Добавляем iccid только если он есть и не пустой
         if (iccid && iccid.trim() !== '') {
             payloadData.iccid = iccid.trim();
-            console.log('[Create Invoice] ✅ Adding iccid to payload data:', {
+            console.log('[Create Invoice] ✅ EXTEND MODE - Adding iccid to payload data:', {
                 iccid: payloadData.iccid,
-                bundle_name: bundle_name
+                iccidLength: payloadData.iccid.length,
+                bundle_name: bundle_name,
+                telegram_user_id: telegram_user_id,
+                willBeInPayload: true
             });
         } else {
-            console.log('[Create Invoice] 📦 No iccid - creating new eSIM');
+            console.log('[Create Invoice] 📦 NEW ESIM MODE - No iccid provided:', {
+                receivedIccid: iccid || 'null/undefined',
+                iccidType: typeof iccid,
+                bundle_name: bundle_name,
+                telegram_user_id: telegram_user_id
+            });
         }
         
+        // ✅ КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ перед созданием payload
+        console.log('[Create Invoice] 🔍 Payload data before buildPayload:', {
+            hasIccid: !!payloadData.iccid,
+            iccid: payloadData.iccid || 'NOT IN PAYLOAD',
+            plan_id: payloadData.plan_id,
+            bundle_name: payloadData.bundle_name,
+            telegram_user_id: payloadData.telegram_user_id,
+            fullPayloadData: JSON.stringify(payloadData, null, 2)
+        });
+        
         const payloadStr = buildPayload(payloadData);
+        
+        // ✅ КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ после создания payload
+        console.log('[Create Invoice] 🔍 Payload string after buildPayload:', {
+            payloadString: payloadStr,
+            payloadLength: payloadStr.length,
+            containsIccid: payloadStr.includes('"i"') || payloadStr.includes('"iccid"'),
+            willBeSentToTelegram: true
+        });
 
         const title = 'eSIM plan';
         const description = `${country_name || country_code} • ${plan_type}`;
