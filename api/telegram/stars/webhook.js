@@ -134,7 +134,7 @@ function safeParsePayload(payloadStr) {
         // Нормализуем payload, чтобы поддерживать как старый, так и новый компактный формат
         // Старый формат: pid, pt, bn, cc, cn, uid, amt, fp, iccid, cur
         // Новый формат:  p,  t,  b,      ,    ,  u,  a, fp,  i
-        return {
+        const parsed = {
             pid: raw.pid || raw.p || null,
             pt: raw.pt || raw.t || null,
             bn: raw.bn || raw.b || null,
@@ -146,7 +146,21 @@ function safeParsePayload(payloadStr) {
             iccid: raw.iccid || raw.i || null,
             cur: raw.cur || 'XTR'
         };
+        
+        console.log('[Webhook] 🔍 Parsed payload:', {
+            rawPayload: payloadStr,
+            parsedIccid: parsed.iccid,
+            hasIccid: !!parsed.iccid,
+            iccidSource: raw.iccid ? 'raw.iccid' : (raw.i ? 'raw.i' : 'null'),
+            fullParsed: JSON.stringify(parsed, null, 2)
+        });
+        
+        return parsed;
     } catch (e) {
+        console.error('[Webhook] ❌ Error parsing payload:', {
+            payloadStr: payloadStr,
+            error: e.message
+        });
         return null;
     }
 }
