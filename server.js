@@ -96,6 +96,7 @@ const apiRoutes = {
     '/api/esimgo/status': require('./api/esimgo/status'),
     '/api/esimgo/assignments': require('./api/esimgo/assignments'),
     '/api/esimgo/bundles': require('./api/esimgo/bundles'),
+    '/api/esimgo/callback': require('./api/esimgo/callback'),
     '/api/esimgo/test-africa': require('./api/_lib/esimgo/test-africa'),
     '/api/esimgo/test-cyprus': require('./api/_lib/esimgo/test-cyprus'),
     '/api/validate-telegram': require('./api/validate-telegram'),

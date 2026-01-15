@@ -68,12 +68,26 @@ module.exports = async function handler(req, res) {
             }]
         };
         
-        // Если уже есть eSIM (ICCID), добавляем в order
+        // Если уже есть eSIM (ICCID), добавляем в order для применения bundle к существующей eSIM
         if (iccid) {
             orderData.order[0].iccids = [iccid];
+            console.log('🔄 Extend mode: Applying bundle to existing eSIM:', {
+                iccid: iccid,
+                bundle_name: bundleName,
+                orderData: JSON.stringify(orderData, null, 2)
+            });
+        } else {
+            console.log('📦 New eSIM: Creating new eSIM with bundle:', {
+                bundle_name: bundleName,
+                orderData: JSON.stringify(orderData, null, 2)
+            });
         }
         
         const order = await esimgoClient.createOrder(orderData);
+        
+        // Проверяем, был ли bundle применен к существующей eSIM или создана новая
+        const returnedIccid = order.order?.[0]?.esims?.[0]?.iccid || null;
+        const isExtendApplied = iccid && returnedIccid === iccid;
         
         console.log('Order ' + (isTestMode ? 'validated' : 'created') + ':', {
             mode: orderMode,
@@ -86,8 +100,21 @@ module.exports = async function handler(req, res) {
             telegram_user_id,
             bundle_name: bundleName,
             country_code,
-            hasEsims: !!order.order?.[0]?.esims
+            hasEsims: !!order.order?.[0]?.esims,
+            requestedIccid: iccid || null,
+            returnedIccid: returnedIccid,
+            isExtendApplied: isExtendApplied,
+            warning: iccid && !isExtendApplied ? '⚠️ Bundle may not have been applied to existing eSIM - new eSIM created instead' : null
         });
+        
+        if (iccid && !isExtendApplied) {
+            console.warn('⚠️ WARNING: Bundle was not applied to existing eSIM:', {
+                requestedIccid: iccid,
+                returnedIccid: returnedIccid,
+                orderReference: order.orderReference,
+                message: 'A new eSIM may have been created instead of adding traffic to the existing one'
+            });
+        }
         
         // В режиме validate не получаем assignments (заказ не создан)
         if (isTestMode) {
