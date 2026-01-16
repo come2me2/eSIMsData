@@ -153,6 +153,7 @@ module.exports = async function handler(req, res) {
                 plan_type,
                 bundle_name,
                 price,
+                finalPrice, // ✅ ИСПРАВЛЕНИЕ: Финальная цена с наценками
                 currency,
                 status = 'completed',
                 createdAt,
@@ -245,6 +246,7 @@ module.exports = async function handler(req, res) {
                 
                 // Цены
                 price: price || null,
+                finalPrice: finalPrice || null, // ✅ ИСПРАВЛЕНИЕ: Сохраняем finalPrice для отображения финальной цены с наценками
                 currency: currency || null,
                 
                 // Промокод
