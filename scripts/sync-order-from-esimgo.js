@@ -79,6 +79,17 @@ async function syncOrderFromESimGo(userId, tempOrderReference) {
         // Обновляем заказ с данными из eSIM Go
         console.log('\n💾 Обновляю заказ с данными из eSIM Go...');
         
+        // ✅ ИСПРАВЛЕНИЕ: Сохраняем оригинальную финальную цену (с наценками), не перезаписываем себестоимостью из eSIM Go
+        // eSIM Go возвращает себестоимость (total: 1.99), но мы должны сохранить финальную цену для пользователя (2.70)
+        const finalPrice = order.finalPrice || order.price || null;
+        const costPrice = esimgoOrder.total; // Себестоимость из eSIM Go (для справки)
+        
+        console.log('💰 Цены:', {
+            originalFinalPrice: finalPrice,
+            costPriceFromESimGo: costPrice,
+            willKeepFinalPrice: finalPrice ? 'YES' : 'NO'
+        });
+        
         const updatedOrder = {
             ...order,
             orderReference: esimgoOrder.orderReference, // Обновляем на реальный orderReference
@@ -89,13 +100,27 @@ async function syncOrderFromESimGo(userId, tempOrderReference) {
             rspUrl: assignments?.smdpAddress || esimgoOrder.order?.[0]?.esims?.[0]?.smdpAddress || null,
             qrCode: assignments?.qrCode || assignments?.qr_code || null,
             qr_code: assignments?.qrCode || assignments?.qr_code || null,
+            // ✅ ИСПРАВЛЕНИЕ: Сохраняем финальную цену (с наценками), не перезаписываем себестоимостью
+            price: finalPrice || order.price, // Финальная цена для пользователя
+            finalPrice: finalPrice || order.finalPrice || order.price, // Финальная цена с наценками
+            cost: costPrice, // Себестоимость из eSIM Go (для справки, не для отображения)
+            total: costPrice, // Себестоимость (для совместимости, но не используется для отображения)
             updatedAt: new Date().toISOString()
         };
         
         // Обновляем заказ в массиве
-        const orderIndex = allOrders[userId].findIndex(o => o.orderReference === tempOrderReference);
+        // ✅ ИСПРАВЛЕНИЕ: Ищем по временному или реальному orderReference
+        let orderIndex = allOrders[userId].findIndex(o => o.orderReference === tempOrderReference);
+        if (orderIndex === -1) {
+            // Если не найден по временному, ищем по реальному (заказ уже был обновлен ранее)
+            orderIndex = allOrders[userId].findIndex(o => o.orderReference === esimgoOrder.orderReference);
+        }
+        
         if (orderIndex !== -1) {
             allOrders[userId][orderIndex] = updatedOrder;
+            console.log('✅ Заказ обновлен в массиве (индекс:', orderIndex + ')');
+        } else {
+            console.warn('⚠️ Заказ не найден в массиве для обновления');
         }
         
         // Сохраняем обновленные заказы
