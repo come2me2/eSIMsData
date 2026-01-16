@@ -113,8 +113,10 @@ async function loadCurrentESim() {
                     const data = await response.json();
                     if (data.success && data.orders && data.orders.length > 0) {
                         // Find active eSIM (has iccid and status is completed)
+                        // ✅ ИСПРАВЛЕНИЕ: Берем самый новый заказ с ICCID (они уже отсортированы по дате, новые первыми)
                         const activeOrder = data.orders.find(order => 
                             order.iccid && 
+                            order.iccid.trim() !== '' &&
                             (order.status === 'completed' || order.status === 'on_hold')
                         );
                         
