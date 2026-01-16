@@ -329,9 +329,8 @@ module.exports = async function handler(req, res) {
             });
         }
         
-        // Находим активный bundle (Active, Queued, Processing, или любой с данными о трафике)
-        // Проверяем разные возможные структуры ответа
-        // Сначала логируем все bundles для диагностики
+        // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: После Extend нужно суммировать все активные bundles
+        // Находим ВСЕ активные bundles и суммируем их трафик
         console.log('🔍 Analyzing all bundles:', bundlesResponse.bundles.map((b, idx) => ({
             index: idx,
             name: b.name,
@@ -343,46 +342,48 @@ module.exports = async function handler(req, res) {
             keys: Object.keys(b)
         })));
         
-        const activeBundle = bundlesResponse.bundles.find(bundle => {
+        // Функция для извлечения assignment из bundle
+        const extractAssignments = (bundle) => {
+            const assignments = [];
+            
             // Вариант 1: bundle.assignments (массив assignments внутри bundle)
             if (bundle.assignments && Array.isArray(bundle.assignments) && bundle.assignments.length > 0) {
-                const activeAssignment = bundle.assignments.find(assignment => {
+                bundle.assignments.forEach(assignment => {
                     const state = (assignment.bundleState || '').toLowerCase();
-                    return state === 'active' || state === 'queued' || state === 'processing';
+                    if (state === 'active' || state === 'queued' || state === 'processing' || 
+                        assignment.initialQuantity !== undefined || assignment.remainingQuantity !== undefined) {
+                        assignments.push(assignment);
+                    }
                 });
-                if (activeAssignment) {
-                    console.log('✅ Found active assignment in bundle.assignments');
-                    return true;
-                }
             }
             
             // Вариант 2: bundle сам по себе является assignment (прямая структура)
             if (bundle.bundleState) {
                 const state = (bundle.bundleState || '').toLowerCase();
                 if (state === 'active' || state === 'queued' || state === 'processing') {
-                    console.log('✅ Found active bundle with direct bundleState');
-                    return true;
+                    assignments.push(bundle);
                 }
             }
             
             // Вариант 3: bundle имеет поля assignment напрямую
             if (bundle.initialQuantity !== undefined || bundle.remainingQuantity !== undefined) {
-                console.log('✅ Found bundle with direct assignment fields');
-                return true;
+                if (!assignments.find(a => a === bundle)) {
+                    assignments.push(bundle);
+                }
             }
             
-            // Вариант 4: bundle может быть в любом состоянии, но имеет данные
-            // Проверяем наличие любых данных о трафике
-            if (bundle.remainingQuantity !== undefined || bundle.usedQuantity !== undefined) {
-                console.log('✅ Found bundle with traffic data (any state)');
-                return true;
-            }
-            
-            return false;
+            return assignments;
+        };
+        
+        // Собираем все активные assignments из всех bundles
+        const allActiveAssignments = [];
+        bundlesResponse.bundles.forEach(bundle => {
+            const assignments = extractAssignments(bundle);
+            allActiveAssignments.push(...assignments);
         });
         
-        if (!activeBundle) {
-            console.log('❌ No active bundle found. Available bundles:', bundlesResponse.bundles.map(b => ({
+        if (allActiveAssignments.length === 0) {
+            console.log('❌ No active assignments found. Available bundles:', bundlesResponse.bundles.map(b => ({
                 name: b.name,
                 hasAssignments: !!b.assignments,
                 assignmentsCount: b.assignments?.length || 0,
@@ -396,65 +397,54 @@ module.exports = async function handler(req, res) {
             });
         }
         
-        // Извлекаем данные assignment в зависимости от структуры
-        let activeAssignment = null;
+        console.log(`✅ Found ${allActiveAssignments.length} active assignment(s) across all bundles`);
         
-        // Вариант 1: bundle.assignments (массив assignments внутри bundle)
-        if (activeBundle.assignments && Array.isArray(activeBundle.assignments) && activeBundle.assignments.length > 0) {
-            activeAssignment = activeBundle.assignments
-                .filter(assignment => {
-                    const state = (assignment.bundleState || '').toLowerCase();
-                    return state === 'active' || state === 'queued' || state === 'processing';
-                })
-                .sort((a, b) => {
-                    const priority = { 'active': 1, 'queued': 2, 'processing': 3 };
-                    const aState = (a.bundleState || '').toLowerCase();
-                    const bState = (b.bundleState || '').toLowerCase();
-                    return (priority[aState] || 99) - (priority[bState] || 99);
-                })[0];
+        // ✅ СУММИРУЕМ все активные bundles для получения общего объема трафика
+        let totalInitialQuantityBytes = 0;
+        let totalRemainingQuantityBytes = 0;
+        let latestAssignmentDate = null;
+        let latestBundleName = '';
+        let latestBundleState = '';
+        
+        allActiveAssignments.forEach((assignment, idx) => {
+            const initialQty = assignment.initialQuantity || 0;
+            const remainingQty = assignment.remainingQuantity || 0;
             
-            if (activeAssignment) {
-                console.log('✅ Using assignment from bundle.assignments array');
+            totalInitialQuantityBytes += initialQty;
+            totalRemainingQuantityBytes += remainingQty;
+            
+            // Находим самую позднюю дату assignment для расчета дней
+            const assignmentDate = assignment.assignmentDateTime 
+                ? new Date(assignment.assignmentDateTime) 
+                : (assignment.assignmentDate ? new Date(assignment.assignmentDate) : null);
+            
+            if (assignmentDate && (!latestAssignmentDate || assignmentDate > latestAssignmentDate)) {
+                latestAssignmentDate = assignmentDate;
+                latestBundleName = assignment.name || assignment.bundleName || '';
+                latestBundleState = assignment.bundleState || '';
             }
-        }
-        
-        // Вариант 2: bundle сам по себе является assignment (прямая структура)
-        if (!activeAssignment && activeBundle.bundleState) {
-            const state = (activeBundle.bundleState || '').toLowerCase();
-            if (state === 'active' || state === 'queued' || state === 'processing') {
-                activeAssignment = activeBundle;
-                console.log('✅ Using bundle as direct assignment');
-            }
-        }
-        
-        // Вариант 3: bundle имеет поля assignment напрямую (без bundleState, но с данными)
-        if (!activeAssignment && (activeBundle.initialQuantity !== undefined || activeBundle.remainingQuantity !== undefined)) {
-            activeAssignment = activeBundle;
-            console.log('✅ Using bundle with direct assignment fields');
-        }
-        
-        // Вариант 4: bundle в любом состоянии, но с данными о трафике
-        if (!activeAssignment && (activeBundle.remainingQuantity !== undefined || activeBundle.usedQuantity !== undefined)) {
-            activeAssignment = activeBundle;
-            console.log('✅ Using bundle with traffic data (any state)');
-        }
-        
-        if (!activeAssignment) {
-            console.log('❌ No active assignment found in bundle:', {
-                bundleName: activeBundle.name,
-                bundleKeys: Object.keys(activeBundle),
-                hasAssignments: !!activeBundle.assignments,
-                assignmentsCount: activeBundle.assignments?.length || 0
+            
+            console.log(`📦 Assignment ${idx + 1}:`, {
+                name: assignment.name || assignment.bundleName || 'N/A',
+                initialQuantity: initialQty,
+                remainingQuantity: remainingQty,
+                bundleState: assignment.bundleState || 'N/A'
             });
-            return res.status(404).json({
-                success: false,
-                error: 'No active assignment found'
-            });
-        }
+        });
+        
+        console.log('✅ Total traffic across all active bundles:', {
+            totalInitialQuantityBytes: totalInitialQuantityBytes,
+            totalRemainingQuantityBytes: totalRemainingQuantityBytes,
+            totalUsedBytes: totalInitialQuantityBytes - totalRemainingQuantityBytes,
+            assignmentsCount: allActiveAssignments.length
+        });
+        
+        // Используем первый assignment для дополнительных данных (имя, описание и т.д.)
+        const primaryAssignment = allActiveAssignments[0];
         
         // Конвертируем байты в MB
-        const initialQuantityBytes = activeAssignment.initialQuantity || 0;
-        const remainingQuantityBytes = activeAssignment.remainingQuantity || 0;
+        const initialQuantityBytes = totalInitialQuantityBytes;
+        const remainingQuantityBytes = totalRemainingQuantityBytes;
         const usedQuantityBytes = initialQuantityBytes - remainingQuantityBytes;
         
         const initialQuantityMB = initialQuantityBytes / (1024 * 1024);
@@ -493,18 +483,19 @@ module.exports = async function handler(req, res) {
         const result = {
             success: true,
             data: {
-                bundleName: activeBundle.name || activeAssignment.name || '',
-                bundleDescription: activeBundle.description || activeAssignment.description || '',
-                bundleState: activeAssignment.bundleState || 'Unknown',
-                totalData: Math.round(initialQuantityMB * 100) / 100, // MB, rounded to 2 decimals
+                bundleName: latestBundleName || primaryAssignment?.name || primaryAssignment?.bundleName || '',
+                bundleDescription: primaryAssignment?.description || '',
+                bundleState: latestBundleState || primaryAssignment?.bundleState || 'Unknown',
+                totalData: Math.round(initialQuantityMB * 100) / 100, // MB, rounded to 2 decimals (сумма всех bundles)
                 usedData: Math.round(usedQuantityMB * 100) / 100, // MB, rounded to 2 decimals
-                remainingData: Math.round(remainingQuantityMB * 100) / 100, // MB, rounded to 2 decimals
+                remainingData: Math.round(remainingQuantityMB * 100) / 100, // MB, rounded to 2 decimals (сумма всех bundles)
                 bundleDuration: bundleDuration, // days
                 daysRemaining: daysRemaining, // days
                 assignmentDate: assignmentDate ? assignmentDate.toISOString() : null,
                 expiresDate: expiresDate,
-                assignmentReference: activeAssignment.assignmentReference || activeAssignment.reference || null,
-                unlimited: activeAssignment.unlimited || false
+                assignmentReference: primaryAssignment?.assignmentReference || primaryAssignment?.reference || null,
+                unlimited: primaryAssignment?.unlimited || false,
+                bundlesCount: allActiveAssignments.length // ✅ Добавляем количество активных bundles
             }
         };
         
