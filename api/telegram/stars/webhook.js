@@ -157,6 +157,10 @@ function safeParsePayload(payloadStr) {
             rawHasI: !!raw.i,
             rawIValue: raw.i || 'NOT FOUND',
             rawIccidValue: raw.iccid || 'NOT FOUND',
+            parsedCountryCode: parsed.cc || 'NOT FOUND',
+            parsedCountryName: parsed.cn || 'NOT FOUND',
+            hasCountryCode: !!parsed.cc,
+            hasCountryName: !!parsed.cn,
             isExtendMode: !!parsed.iccid,
             fullParsed: JSON.stringify(parsed, null, 2),
             fullRaw: JSON.stringify(raw, null, 2)

@@ -107,6 +107,8 @@ function buildPayload(data) {
     // u  - telegram_user_id
     // a  - amountStars
     // i  - iccid (для extend)
+    // cc - country_code
+    // cn - country_name
     const payload = {
         p: data.plan_id,
         t: data.plan_type,
@@ -115,6 +117,14 @@ function buildPayload(data) {
         u: data.telegram_user_id,
         a: data.amountStars
     };
+    
+    // ✅ ИСПРАВЛЕНИЕ: Добавляем country_code и country_name в payload
+    if (data.country_code) {
+        payload.cc = data.country_code;
+    }
+    if (data.country_name) {
+        payload.cn = data.country_name;
+    }
     
     // Если есть iccid (для extend), добавляем его в payload
     if (data.iccid) {
@@ -131,12 +141,27 @@ function buildPayload(data) {
             hasIccid: !!data.iccid
         });
     }
+    
+    console.log('[Create Invoice] ✅ Payload includes country data:', {
+        hasCountryCode: !!payload.cc,
+        countryCode: payload.cc || 'NOT INCLUDED',
+        hasCountryName: !!payload.cn,
+        countryName: payload.cn || 'NOT INCLUDED'
+    });
 
     let payloadStr = JSON.stringify(payload);
 
-    // Если payload все еще слишком длинный (маловероятно), убираем bundle_name
+    // Если payload все еще слишком длинный, убираем bundle_name (но оставляем country_code и country_name)
     if (payloadStr.length > 120) {
+        console.warn('[Create Invoice] ⚠️ Payload too long, removing bundle_name:', payloadStr.length);
         delete payload.b;
+        payloadStr = JSON.stringify(payload);
+    }
+    
+    // Если все еще слишком длинный, убираем country_name (оставляем только country_code)
+    if (payloadStr.length > 120) {
+        console.warn('[Create Invoice] ⚠️ Payload still too long, removing country_name:', payloadStr.length);
+        delete payload.cn;
         payloadStr = JSON.stringify(payload);
     }
 
