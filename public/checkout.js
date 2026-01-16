@@ -1910,8 +1910,8 @@ function setupPurchaseButton() {
                         console.log('[Stars] 🔄 Extend mode: Adding traffic to existing eSIM:', {
                             iccid: invoicePayload.iccid,
                             bundle_name: bundleName,
-                            country_code: countryCode,
-                            country_name: countryName,
+                            country_code: orderData.code || invoicePayload.country_code,
+                            country_name: orderData.name || invoicePayload.country_name,
                             plan_id: plan.id || plan.bundle_name,
                             fullInvoicePayload: JSON.stringify(invoicePayload, null, 2)
                         });
