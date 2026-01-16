@@ -694,7 +694,21 @@ module.exports = async function handler(req, res) {
                         iccid: assignments?.iccid || finalOrderData.order?.[0]?.esims?.[0]?.iccid || null,
                         matchingId: assignments?.matchingId || null,
                         smdpAddress: assignments?.smdpAddress || null,
-                        qrCode: assignments?.qrCode || assignments?.qr_code || finalOrderData.order?.[0]?.esims?.[0]?.qrCode || null,
+                        // ✅ ИСПРАВЛЕНИЕ: Генерируем QR код, если его нет, но есть matchingId и smdpAddress
+                        qrCode: (() => {
+                            const providedQrCode = assignments?.qrCode || assignments?.qr_code || finalOrderData.order?.[0]?.esims?.[0]?.qrCode;
+                            if (providedQrCode) {
+                                return providedQrCode;
+                            }
+                            // Генерируем QR код из matchingId и smdpAddress
+                            const matchingId = assignments?.matchingId || finalOrderData.order?.[0]?.esims?.[0]?.matchingId;
+                            const smdpAddress = assignments?.smdpAddress || finalOrderData.order?.[0]?.esims?.[0]?.smdpAddress;
+                            if (matchingId && smdpAddress) {
+                                const lpaString = `LPA:1$${smdpAddress}$${matchingId}`;
+                                return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(lpaString)}`;
+                            }
+                            return null;
+                        })(),
                         country_code: payloadObj.cc || null,
                         country_name: payloadObj.cn || null,
                         plan_id: payloadObj.pid || null,
@@ -830,11 +844,26 @@ module.exports = async function handler(req, res) {
                     }
                 }
                 
+                // ✅ ИСПРАВЛЕНИЕ: Генерируем QR код, если его нет, но есть matchingId и smdpAddress
+                if (finalAssignments && !finalAssignments.qrCode && !finalAssignments.qr_code) {
+                    if (finalAssignments.matchingId && finalAssignments.smdpAddress) {
+                        const lpaString = `LPA:1$${finalAssignments.smdpAddress}$${finalAssignments.matchingId}`;
+                        finalAssignments.qrCode = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(lpaString)}`;
+                        finalAssignments.qr_code = finalAssignments.qrCode; // Для обратной совместимости
+                        console.log('✅ Generated QR code from matchingId and smdpAddress:', {
+                            hasQrCode: !!finalAssignments.qrCode,
+                            matchingId: finalAssignments.matchingId,
+                            smdpAddress: finalAssignments.smdpAddress
+                        });
+                    }
+                }
+                
                 console.log('📱 Final assignments for message:', {
                     hasFinalAssignments: !!finalAssignments,
                     hasIccid: !!finalAssignments?.iccid,
                     hasMatchingId: !!finalAssignments?.matchingId,
                     hasQrCode: !!(finalAssignments?.qrCode || finalAssignments?.qr_code),
+                    qrCodeSource: finalAssignments?.qrCode ? 'provided' : (finalAssignments?.qr_code ? 'provided (qr_code)' : 'generated'),
                     chatId: message.chat.id
                 });
                 

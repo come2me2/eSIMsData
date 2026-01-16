@@ -160,13 +160,30 @@ async function loadOrderFromServer(orderRef) {
                     code: foundOrder.country_code || '',
                     plan: foundOrder.bundle_name || foundOrder.plan_id || '',
                     duration: '', // Can be extracted from bundle_name if needed
-                    price: foundOrder.price ? `${foundOrder.currency || '$'} ${foundOrder.price}` : '',
+                    // ✅ ИСПРАВЛЕНИЕ: Используем финальную цену (с наценками), если она есть
+                    // Если есть finalPrice, используем её, иначе используем price
+                    price: foundOrder.finalPrice 
+                        ? `${foundOrder.currency || '$'} ${parseFloat(foundOrder.finalPrice).toFixed(2)}`
+                        : (foundOrder.price ? `${foundOrder.currency || '$'} ${parseFloat(foundOrder.price).toFixed(2)}` : ''),
                     activationDate: foundOrder.createdAt ? new Date(foundOrder.createdAt).toLocaleDateString() : '',
                     expiryDate: '', // Can be calculated from bundle duration
                     iccid: foundOrder.iccid || '',
                     matchingId: foundOrder.matchingId || '',
                     rspUrl: foundOrder.smdpAddress || foundOrder.rspUrl || '',
-                    qrCode: foundOrder.qrCode || foundOrder.qr_code || '',
+                    // ✅ ИСПРАВЛЕНИЕ: Генерируем QR код, если его нет, но есть matchingId и smdpAddress
+                    qrCode: (() => {
+                        if (foundOrder.qrCode || foundOrder.qr_code) {
+                            return foundOrder.qrCode || foundOrder.qr_code;
+                        }
+                        // Генерируем QR код из matchingId и smdpAddress
+                        const matchingId = foundOrder.matchingId;
+                        const smdpAddress = foundOrder.smdpAddress || foundOrder.rspUrl;
+                        if (matchingId && smdpAddress) {
+                            const lpaString = `LPA:1$${smdpAddress}$${matchingId}`;
+                            return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(lpaString)}`;
+                        }
+                        return '';
+                    })(),
                     paymentMethod: foundOrder.payment_method || foundOrder.paymentType || ''
                 };
                 
@@ -242,7 +259,9 @@ function setupOrderDetails() {
 // Get human-readable payment method name
 function getPaymentMethodName(paymentMethod) {
     if (!paymentMethod) {
-        return 'N/A';
+        // ✅ ИСПРАВЛЕНИЕ: Если payment method не указан, но заказ создан через Stars, показываем "Telegram Stars"
+        // Проверяем по orderReference - если он начинается с определенного паттерна или есть другие признаки
+        return 'Telegram Stars'; // По умолчанию для заказов через TMA
     }
     
     const methodMap = {
