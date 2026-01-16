@@ -38,37 +38,54 @@ let currentESimOrder = null; // Store the order data for extend functionality
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadCurrentESim();
-    
-    // Сначала скрываем данные о трафике, чтобы не показывать мокап
-    hideESimData();
-    
-    // Всегда настраиваем базовые данные (план, заказ, дата начала)
-    setupESimDetails();
-    
-    setupExtendButton();
-    setupNavigation();
-    
-    // Загружаем реальные данные о расходе трафика из API
-    if (esimData && esimData.iccid) {
-        await loadBundleUsageData(esimData.iccid);
+    try {
+        console.log('[Current eSIM] Initializing...');
         
-        // Автоматическое обновление данных о трафике каждые 30 секунд
-        const autoRefreshInterval = setInterval(async () => {
-            if (esimData && esimData.iccid) {
-                console.log('🔄 Auto-refreshing bundle usage data...');
-                await loadBundleUsageData(esimData.iccid);
-            } else {
-                clearInterval(autoRefreshInterval);
-            }
-        }, 30000); // 30 секунд
+        // Сначала скрываем данные о трафике, чтобы не показывать мокап
+        hideESimData();
         
-        // Очищаем интервал при уходе со страницы
-        window.addEventListener('beforeunload', () => {
-            clearInterval(autoRefreshInterval);
+        // Загружаем данные eSIM
+        await loadCurrentESim();
+        
+        console.log('[Current eSIM] Loaded data:', {
+            hasESimData: !!esimData,
+            hasOrder: !!currentESimOrder,
+            iccid: esimData?.iccid || 'N/A'
         });
-    } else {
-        // Если нет ICCID, показываем базовые данные (без данных о трафике)
+        
+        // Всегда настраиваем базовые данные (план, заказ, дата начала)
+        setupESimDetails();
+        
+        setupExtendButton();
+        setupNavigation();
+        
+        // Загружаем реальные данные о расходе трафика из API
+        if (esimData && esimData.iccid) {
+            console.log('[Current eSIM] Loading bundle usage data for ICCID:', esimData.iccid);
+            await loadBundleUsageData(esimData.iccid);
+            
+            // Автоматическое обновление данных о трафике каждые 30 секунд
+            const autoRefreshInterval = setInterval(async () => {
+                if (esimData && esimData.iccid) {
+                    console.log('🔄 Auto-refreshing bundle usage data...');
+                    await loadBundleUsageData(esimData.iccid);
+                } else {
+                    clearInterval(autoRefreshInterval);
+                }
+            }, 30000); // 30 секунд
+            
+            // Очищаем интервал при уходе со страницы
+            window.addEventListener('beforeunload', () => {
+                clearInterval(autoRefreshInterval);
+            });
+        } else {
+            console.log('[Current eSIM] No ICCID found, showing basic data');
+            // Если нет ICCID, показываем базовые данные (без данных о трафике)
+            showESimData();
+        }
+    } catch (error) {
+        console.error('[Current eSIM] Error during initialization:', error);
+        // Показываем данные даже при ошибке
         showESimData();
     }
 });

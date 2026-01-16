@@ -530,14 +530,30 @@ function renderCountries(filteredCountries = countries) {
 function setupSegmentedControl() {
     const segmentButtons = document.querySelectorAll('.segment-btn');
     
+    // Удаляем старые обработчики, если они есть
     segmentButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+    });
+    
+    // Получаем обновленные элементы
+    const updatedSegmentButtons = document.querySelectorAll('.segment-btn');
+    
+    updatedSegmentButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
             // Remove active class from all buttons
-            segmentButtons.forEach(b => b.classList.remove('active'));
+            updatedSegmentButtons.forEach(b => b.classList.remove('active'));
             // Add active class to clicked button
             btn.classList.add('active');
             
-            currentSegment = btn.dataset.segment;
+            const segment = btn.dataset.segment;
+            currentSegment = segment;
+            
+            console.log('[Segmented Control] Clicked:', segment);
+            
             updateContent();
         });
     });
