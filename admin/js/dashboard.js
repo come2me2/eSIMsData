@@ -130,7 +130,7 @@ const Dashboard = {
                         ${order.telegram_username ? `@${order.telegram_username}` : order.telegram_user_id || 'N/A'}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${order.country_name || order.country_code || 'N/A'}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$${order.price || '0.00'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$${(order.finalPrice || order.price || '0.00').toFixed(2)}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="status-badge ${statusClass}">${this.getStatusText(order.status)}</span>
                     </td>

@@ -206,7 +206,7 @@ const Users = {
                                                     </div>
                                                 </div>
                                                 <div class="text-right ml-4">
-                                                    <div class="text-sm font-bold text-gray-900">$${order.price || '0.00'}</div>
+                                                    <div class="text-sm font-bold text-gray-900">$${(order.finalPrice || order.price || '0.00').toFixed(2)}</div>
                                                     ${orderId ? `<button onclick="Users.openOrderDetails('${orderIdEscaped}', '${userIdEscaped}')" class="text-xs text-blue-600 hover:text-blue-800 cursor-pointer">${t('viewDetails')}</button>` : '<span class="text-xs text-gray-400">N/A</span>'}
                                                 </div>
                                             </div>
