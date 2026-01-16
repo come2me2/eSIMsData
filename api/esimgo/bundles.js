@@ -451,10 +451,8 @@ module.exports = async function handler(req, res) {
         const remainingQuantityMB = remainingQuantityBytes / (1024 * 1024);
         const usedQuantityMB = usedQuantityBytes / (1024 * 1024);
         
-        // Вычисляем дни
-        const assignmentDate = activeAssignment.assignmentDateTime 
-            ? new Date(activeAssignment.assignmentDateTime) 
-            : (activeAssignment.assignmentDate ? new Date(activeAssignment.assignmentDate) : null);
+        // Вычисляем дни (используем самую позднюю дату assignment)
+        const assignmentDate = latestAssignmentDate;
         
         // Пытаемся извлечь длительность из bundle name (например, "esim_1GB_7D_GB_V2" -> 7 дней)
         // Используем имя самого позднего bundle
