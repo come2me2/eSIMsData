@@ -2351,6 +2351,23 @@ function setupStarsButton() {
                 telegram_username: auth.getUsername()
             };
             
+            // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Добавляем iccid для Extend mode
+            const isExtendMode = orderData.extend === true && orderData.iccid && orderData.iccid.trim() !== '';
+            if (isExtendMode) {
+                requestPayload.iccid = orderData.iccid.trim();
+                console.log('[Stars] 🔄 EXTEND MODE - Adding iccid to requestPayload:', {
+                    iccid: requestPayload.iccid,
+                    bundle_name: bundleName,
+                    country_code: countryCode
+                });
+            } else {
+                console.log('[Stars] 📦 NEW ESIM MODE - No iccid in requestPayload:', {
+                    extend: orderData.extend,
+                    iccid: orderData.iccid,
+                    hasIccid: !!orderData.iccid
+                });
+            }
+            
             // ✅ ФИНАЛЬНАЯ ПРОВЕРКА после создания payload
             if (!requestPayload.country_code || requestPayload.country_code.trim() === '' || requestPayload.country_code === 'null') {
                 console.error('[Stars] ❌ country_code is STILL empty in payload!', {
