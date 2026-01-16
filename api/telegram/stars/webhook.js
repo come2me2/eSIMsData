@@ -368,12 +368,27 @@ module.exports = async function handler(req, res) {
         const payment = message.successful_payment;
         const payloadObj = safeParsePayload(payment.invoice_payload);
 
-        if (!payloadObj || !payloadObj.bn || !payloadObj.pid) {
+        // ✅ ИСПРАВЛЕНИЕ: Если bn отсутствует (был удален из-за длинного payload),
+        // используем pid как bundle_name (они обычно одинаковые)
+        if (payloadObj && payloadObj.pid && !payloadObj.bn) {
+            payloadObj.bn = payloadObj.pid;
+            console.log('✅ Using pid as bundle_name (bn was removed from payload):', {
+                pid: payloadObj.pid,
+                bn: payloadObj.bn
+            });
+        }
+
+        if (!payloadObj || !payloadObj.pid) {
             console.error('❌ Invalid payload in successful_payment:', {
                 payload: payment.invoice_payload,
                 parsed: payloadObj
             });
             return;
+        }
+        
+        // Убеждаемся, что bn установлен (используем pid если нет)
+        if (!payloadObj.bn) {
+            payloadObj.bn = payloadObj.pid;
         }
 
         // 🔍 Проверка на тестовый платеж
