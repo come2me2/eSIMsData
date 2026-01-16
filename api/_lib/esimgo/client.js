@@ -134,6 +134,15 @@ async function makeRequest(endpoint, options = {}) {
             const headers = lines[0].split(',').map(h => h.trim());
             const dataLine = lines[1].split(',').map(d => d.trim());
             
+            // ✅ ИСПРАВЛЕНИЕ: Извлекаем additionalFields из endpoint, если он есть
+            let requestedAdditionalFields = null;
+            if (endpoint.includes('additionalFields=')) {
+                const match = endpoint.match(/additionalFields=([^&]+)/);
+                if (match) {
+                    requestedAdditionalFields = match[1];
+                }
+            }
+            
             // Создаем объект из CSV
             const csvData = {};
             headers.forEach((header, index) => {
@@ -144,13 +153,37 @@ async function makeRequest(endpoint, options = {}) {
                 else if (header === 'RSP URL') csvData.smdpAddress = value;
                 else if (header === 'Bundle') csvData.bundle = value;
                 else if (header === 'Reference') csvData.reference = value;
+                else if (header === 'QR Code' || header === 'QRCode' || header === 'qrCode') {
+                    csvData.qrCode = value;
+                    csvData.qr_code = value; // Для обратной совместимости
+                }
                 else csvData[header.toLowerCase().replace(/\s+/g, '')] = value;
             });
+            
+            // ✅ ИСПРАВЛЕНИЕ: Если запрашивали qrCode через additionalFields, но его нет в CSV,
+            // генерируем QR код из matchingId и smdpAddress
+            if (requestedAdditionalFields && requestedAdditionalFields.includes('qrCode') && !csvData.qrCode) {
+                if (csvData.matchingId && csvData.smdpAddress) {
+                    const lpaString = `LPA:1$${csvData.smdpAddress}$${csvData.matchingId}`;
+                    csvData.qrCode = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(lpaString)}`;
+                    csvData.qr_code = csvData.qrCode; // Для обратной совместимости
+                    console.log('✅ Generated QR code from matchingId and smdpAddress (CSV response):', {
+                        hasQrCode: !!csvData.qrCode,
+                        matchingId: csvData.matchingId,
+                        smdpAddress: csvData.smdpAddress,
+                        requestedAdditionalFields: requestedAdditionalFields
+                    });
+                }
+            }
             
             console.log('✅ CSV assignments parsed:', {
                 hasIccid: !!csvData.iccid,
                 hasMatchingId: !!csvData.matchingId,
-                hasSmdpAddress: !!csvData.smdpAddress
+                hasSmdpAddress: !!csvData.smdpAddress,
+                hasQrCode: !!(csvData.qrCode || csvData.qr_code),
+                qrCodeSource: csvData.qrCode ? (csvData.qrCode.includes('api.qrserver.com') ? 'generated' : 'from CSV') : 'not found',
+                headers: headers,
+                requestedAdditionalFields: requestedAdditionalFields
             });
             
             data = csvData;
@@ -354,7 +387,25 @@ async function getESIMAssignments(reference, additionalFields = null) {
     }
     
     const endpoint = `/esims/assignments?${params.toString()}`;
-    return makeRequest(endpoint);
+    const result = await makeRequest(endpoint);
+    
+    // ✅ ИСПРАВЛЕНИЕ: Если запрашивали qrCode через additionalFields, но его нет в результате,
+    // генерируем QR код из matchingId и smdpAddress
+    if (additionalFields && additionalFields.includes('qrCode') && !result.qrCode && !result.qr_code) {
+        if (result.matchingId && result.smdpAddress) {
+            const lpaString = `LPA:1$${result.smdpAddress}$${result.matchingId}`;
+            result.qrCode = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(lpaString)}`;
+            result.qr_code = result.qrCode; // Для обратной совместимости
+            console.log('✅ Generated QR code from matchingId and smdpAddress (after getESIMAssignments):', {
+                hasQrCode: !!result.qrCode,
+                matchingId: result.matchingId,
+                smdpAddress: result.smdpAddress,
+                requestedAdditionalFields: additionalFields
+            });
+        }
+    }
+    
+    return result;
 }
 
 module.exports = {
