@@ -161,6 +161,10 @@ function safeParsePayload(payloadStr) {
             parsedCountryName: parsed.cn || 'NOT FOUND',
             hasCountryCode: !!parsed.cc,
             hasCountryName: !!parsed.cn,
+            parsedFinalPrice: parsed.fp || 'NOT FOUND',
+            hasFinalPrice: !!parsed.fp,
+            rawFinalPrice: raw.fp || 'NOT FOUND',
+            rawHasFinalPrice: !!raw.fp,
             isExtendMode: !!parsed.iccid,
             fullParsed: JSON.stringify(parsed, null, 2),
             fullRaw: JSON.stringify(raw, null, 2)
@@ -719,24 +723,41 @@ module.exports = async function handler(req, res) {
                         plan_type: payloadObj.pt || null,
                         bundle_name: payloadObj.bn || null,
                         type: orderType, // Сохраняем тип заказа для правильной навигации при Extend
-                        // Используем финальную цену из payload (с наценками), если она есть
+                        // ✅ ИСПРАВЛЕНИЕ: Используем финальную цену из payload (с наценками), если она есть
                         // Если нет в payload, проверяем existingOrder (on_hold заказ уже имеет правильную цену)
                         // Иначе используем цену из eSIM Go (себестоимость) как fallback
                         price: (() => {
+                            // Проверяем fp в payload (финальная цена с наценками)
                             if (payloadObj.fp) {
                                 const finalPrice = parseFloat(payloadObj.fp);
-                                console.log('✅ Using final price from payload (with markups):', finalPrice);
+                                console.log('✅ Using final price from payload (with markups):', {
+                                    finalPrice: finalPrice,
+                                    source: 'payloadObj.fp',
+                                    payloadObjFp: payloadObj.fp,
+                                    payloadObjKeys: Object.keys(payloadObj)
+                                });
                                 return finalPrice;
                             } else if (existingOrder && existingOrder.price) {
                                 const existingPrice = parseFloat(existingOrder.price);
-                                console.log('✅ Using price from existing on_hold order:', existingPrice);
+                                console.log('✅ Using price from existing on_hold order:', {
+                                    existingPrice: existingPrice,
+                                    source: 'existingOrder.price'
+                                });
                                 return existingPrice;
                             } else {
                                 const costPrice = finalOrderData.total || orderData.total || null;
-                                console.warn('⚠️ Using cost price from eSIM Go (no final price in payload):', costPrice);
+                                console.warn('⚠️ Using cost price from eSIM Go (no final price in payload):', {
+                                    costPrice: costPrice,
+                                    source: 'eSIM Go API',
+                                    payloadObjFp: payloadObj.fp || 'NOT FOUND',
+                                    payloadObjKeys: Object.keys(payloadObj),
+                                    hasPayloadObjFp: !!payloadObj.fp
+                                });
                                 return costPrice;
                             }
                         })(),
+                        // ✅ ИСПРАВЛЕНИЕ: Сохраняем finalPrice отдельно для отображения в админке
+                        finalPrice: payloadObj.fp ? parseFloat(payloadObj.fp) : (existingOrder?.finalPrice || existingOrder?.price || null),
                         currency: finalOrderData.currency || orderData.currency || 'USD',
                         status: finalStatus, // Используем определенный статус
                         createdAt: existingOrder?.createdAt || new Date().toISOString(), // Сохраняем оригинальную дату создания

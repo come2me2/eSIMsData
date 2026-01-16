@@ -109,7 +109,7 @@ const Orders = {
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${username}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${order.country_name || order.country_code || 'N/A'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${planName}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">$${order.price || '0.00'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">$${(order.finalPrice || order.price || '0.00').toFixed(2)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${paymentType}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="status-badge ${statusClass}">${this.getStatusText(order.status)}</span>
@@ -217,7 +217,7 @@ const Orders = {
                             </div>
                             <div class="flex items-start justify-between pt-3 border-t border-gray-200">
                                 <span class="text-sm text-gray-600">${t('amount')}</span>
-                                <span class="ml-4 font-bold text-xl text-blue-600">$${order.price || '0.00'}</span>
+                                <span class="ml-4 font-bold text-xl text-blue-600">$${(order.finalPrice || order.price || '0.00').toFixed(2)}</span>
                             </div>
                             <div class="flex items-start justify-between">
                                 <span class="text-sm text-gray-600">${t('paymentMethod')}</span>
