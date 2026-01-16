@@ -246,66 +246,11 @@ module.exports = async function handler(req, res) {
         
         console.log('📦 Getting bundles for eSIM:', iccid);
         
-        // Сначала проверяем данные из заказа (из callback'а)
-        const orderUsageData = await findOrderUsageByICCID(iccid);
-        if (orderUsageData && orderUsageData.usage && orderUsageData.usage.remainingQuantity !== undefined) {
-            console.log('✅ Using usage data from order (callback data)');
-            
-            const orderUsage = orderUsageData.usage;
-            
-            // Конвертируем байты в MB
-            const initialQuantityMB = (orderUsage.initialQuantity || 0) / (1024 * 1024);
-            const remainingQuantityMB = (orderUsage.remainingQuantity || 0) / (1024 * 1024);
-            const usedQuantityMB = initialQuantityMB - remainingQuantityMB;
-            
-            // Проверяем пороги и отправляем SMS при необходимости (fallback, если callback не пришел)
-            await checkUsageThresholdsAndSendSMS(
-                iccid,
-                orderUsage.initialQuantity,
-                orderUsage.remainingQuantity,
-                orderUsage.unlimited || false
-            );
-            
-            // Вычисляем дни
-            let bundleDuration = 7; // Default
-            if (orderUsage.bundle) {
-                const durationMatch = orderUsage.bundle.match(/(\d+)D/i);
-                if (durationMatch) {
-                    bundleDuration = parseInt(durationMatch[1]);
-                }
-            }
-            
-            let daysRemaining = bundleDuration;
-            let expiresDate = null;
-            
-            if (orderUsage.endTime) {
-                expiresDate = orderUsage.endTime;
-                const expirationDate = new Date(orderUsage.endTime);
-                const now = new Date();
-                const diffTime = expirationDate - now;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                daysRemaining = Math.max(0, diffDays);
-            }
-            
-            return res.status(200).json({
-                success: true,
-                data: {
-                    bundleName: orderUsage.bundle || '',
-                    bundleDescription: '',
-                    bundleState: 'Active',
-                    totalData: Math.round(initialQuantityMB * 100) / 100,
-                    usedData: Math.round(usedQuantityMB * 100) / 100,
-                    remainingData: Math.round(remainingQuantityMB * 100) / 100,
-                    bundleDuration: bundleDuration,
-                    daysRemaining: daysRemaining,
-                    assignmentDate: orderUsage.startTime || null,
-                    expiresDate: expiresDate,
-                    assignmentReference: null,
-                    unlimited: false,
-                    source: 'callback' // Указываем источник данных
-                }
-            });
-        }
+        // ✅ ИСПРАВЛЕНИЕ: После Extend данные из order.usage могут быть устаревшими
+        // (только для первого bundle). Всегда используем eSIM Go API для получения
+        // актуальных данных, которые суммируют все активные bundles.
+        // Пропускаем проверку order.usage, чтобы всегда получать свежие данные из API
+        console.log('📡 Fetching bundle data from eSIM Go API (skipping order cache to get all active bundles)...');
         
         // Если данных из заказа нет, делаем запрос к eSIM Go API
         console.log('📡 Fetching bundle data from eSIM Go API...');
