@@ -457,9 +457,15 @@ module.exports = async function handler(req, res) {
             : (activeAssignment.assignmentDate ? new Date(activeAssignment.assignmentDate) : null);
         
         // Пытаемся извлечь длительность из bundle name (например, "esim_1GB_7D_GB_V2" -> 7 дней)
+        // Используем имя самого позднего bundle
         let bundleDuration = 7; // Default
-        if (activeBundle.name) {
-            const durationMatch = activeBundle.name.match(/(\d+)D/i);
+        if (latestBundleName) {
+            const durationMatch = latestBundleName.match(/(\d+)D/i);
+            if (durationMatch) {
+                bundleDuration = parseInt(durationMatch[1]);
+            }
+        } else if (primaryAssignment && primaryAssignment.name) {
+            const durationMatch = primaryAssignment.name.match(/(\d+)D/i);
             if (durationMatch) {
                 bundleDuration = parseInt(durationMatch[1]);
             }
