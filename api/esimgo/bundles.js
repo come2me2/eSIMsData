@@ -252,9 +252,6 @@ module.exports = async function handler(req, res) {
         // Пропускаем проверку order.usage, чтобы всегда получать свежие данные из API
         console.log('📡 Fetching bundle data from eSIM Go API (skipping order cache to get all active bundles)...');
         
-        // Если данных из заказа нет, делаем запрос к eSIM Go API
-        console.log('📡 Fetching bundle data from eSIM Go API...');
-        
         // Получаем список bundles для eSIM
         const bundlesResponse = await esimgoClient.getESIMBundles(iccid);
         
