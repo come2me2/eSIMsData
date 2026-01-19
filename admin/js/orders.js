@@ -192,7 +192,7 @@ const Orders = {
         const rspUrl = order.rspUrl || order.smdpAddress || order.assignments?.smdpAddress || order.esimData?.smdpAddress || t('notSpecified');
         const qrCode = order.qrCode || order.assignments?.qrCode || order.esimData?.qrCode || order.qr_code || null;
         
-        container.innerHTML = `
+        const html = `
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Order Information -->
                 <div class="space-y-5">
