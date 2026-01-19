@@ -451,12 +451,6 @@ const Orders = {
         
         html += '</div>';
         container.innerHTML = html;
-        
-        // Generate QR codes after rendering
-        // Используем несколько попыток, чтобы убедиться, что библиотека загружена
-        setTimeout(() => this.generateQRCodes(), 100);
-        setTimeout(() => this.generateQRCodes(), 500);
-        setTimeout(() => this.generateQRCodes(), 1000);
     },
     
     // Generate QR codes for all containers
