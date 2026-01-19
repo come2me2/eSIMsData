@@ -330,7 +330,7 @@ const Orders = {
                             <div class="pt-3 border-t border-gray-200">
                                 <span class="text-sm text-gray-600 block mb-3">${t('qrCode')}</span>
                                 <div class="flex flex-col items-center gap-3">
-                                    <div id="qr-code-${order.orderReference || order.id}" class="w-28 h-28 border-2 border-gray-200 rounded-xl bg-white shadow-sm flex items-center justify-center" data-qr-text="${qrCode.replace(/"/g, '&quot;')}">
+                                    <div id="qr-code-${order.orderReference || order.id}" class="w-28 h-28 border-2 border-gray-200 rounded-xl bg-white shadow-sm flex items-center justify-center" data-qr-text="${qrCode.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}">
                                         <div class="text-xs text-gray-400">Loading QR...</div>
                                     </div>
                                     <button onclick="Orders.downloadQR('${qrCode.replace(/'/g, "\\'")}', '${order.orderReference || order.id || 'order'}')" class="btn btn-secondary text-sm px-4 py-2">
