@@ -461,8 +461,12 @@ const Orders = {
     
     // Generate QR codes for all containers
     generateQRCodes() {
-        const qrContainers = document.querySelectorAll('[id^="qr-code-"]');
-        console.log('[Orders] Generating QR codes, found containers:', qrContainers.length);
+        // Ищем контейнеры внутри orderDetails, чтобы не находить старые элементы
+        const orderDetailsContainer = document.getElementById('orderDetails');
+        const qrContainers = orderDetailsContainer 
+            ? orderDetailsContainer.querySelectorAll('[id^="qr-code-"]')
+            : document.querySelectorAll('[id^="qr-code-"]');
+        console.log('[Orders] Generating QR codes, found containers:', qrContainers.length, 'in orderDetails:', !!orderDetailsContainer);
         
         if (qrContainers.length === 0) {
             console.warn('[Orders] No QR code containers found');
