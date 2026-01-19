@@ -480,28 +480,38 @@ const Orders = {
             if (qrText.startsWith('LPA:')) {
                 // Проверяем, загружена ли библиотека, с повторными попытками
                 const tryGenerateQR = (attempt = 0) => {
+                    console.log(`[Orders] Attempt ${attempt + 1} to generate QR code, QRCode available:`, typeof QRCode !== 'undefined');
+                    
                     if (typeof QRCode !== 'undefined' && typeof QRCode.toCanvas === 'function') {
                         console.log(`[Orders] Generating QR code for container ${index}, attempt ${attempt + 1}`);
                         container.innerHTML = '';
-                        QRCode.toCanvas(container, qrText, {
-                            width: 112,
-                            height: 112,
-                            margin: 1
-                        }, (error) => {
-                            if (error) {
-                                console.error('[Orders] QR Code generation error:', error);
-                                container.innerHTML = '<div class="text-xs text-red-500 p-2">QR Error</div>';
-                            } else {
-                                console.log(`[Orders] QR code generated successfully for container ${index}`);
-                            }
-                        });
+                        
+                        try {
+                            QRCode.toCanvas(container, qrText, {
+                                width: 112,
+                                height: 112,
+                                margin: 1
+                            }, (error) => {
+                                if (error) {
+                                    console.error('[Orders] QR Code generation error:', error);
+                                    container.innerHTML = '<div class="text-xs text-red-500 p-2">QR Error: ' + error.message + '</div>';
+                                } else {
+                                    console.log(`[Orders] QR code generated successfully for container ${index}`);
+                                }
+                            });
+                        } catch (err) {
+                            console.error('[Orders] Exception during QR generation:', err);
+                            container.innerHTML = '<div class="text-xs text-red-500 p-2">QR Exception: ' + err.message + '</div>';
+                        }
                     } else {
                         // Если библиотека еще не загружена, пробуем еще раз
-                        if (attempt < 10) {
+                        if (attempt < 20) {
                             setTimeout(() => tryGenerateQR(attempt + 1), 200);
                         } else {
-                            console.error('[Orders] QRCode library not loaded after 10 attempts');
-                            container.innerHTML = `<div class="text-xs text-gray-500 p-2 break-all">${qrText.substring(0, 30)}...</div>`;
+                            console.error('[Orders] QRCode library not loaded after 20 attempts');
+                            // Используем онлайн API как fallback
+                            const encodedText = encodeURIComponent(qrText);
+                            container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=112x112&data=${encodedText}" alt="QR Code" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<div class=\\'text-xs text-red-500 p-2\\'>QR API Error</div>'">`;
                         }
                     }
                 };
