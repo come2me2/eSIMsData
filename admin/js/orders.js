@@ -457,13 +457,22 @@ const Orders = {
     generateQRCodes() {
         // Ищем контейнеры внутри orderDetails, чтобы не находить старые элементы
         const orderDetailsContainer = document.getElementById('orderDetails');
-        const qrContainers = orderDetailsContainer 
-            ? orderDetailsContainer.querySelectorAll('[id^="qr-code-"]')
-            : document.querySelectorAll('[id^="qr-code-"]');
+        if (!orderDetailsContainer) {
+            console.warn('[Orders] orderDetails container not found');
+            return;
+        }
+        
+        const qrContainers = orderDetailsContainer.querySelectorAll('[id^="qr-code-"]');
         console.log('[Orders] Generating QR codes, found containers:', qrContainers.length, 'in orderDetails:', !!orderDetailsContainer);
         
         if (qrContainers.length === 0) {
-            console.warn('[Orders] No QR code containers found');
+            console.warn('[Orders] No QR code containers found in orderDetails');
+            // Проверяем, есть ли вообще элементы с data-qr-text
+            const allWithData = orderDetailsContainer.querySelectorAll('[data-qr-text]');
+            console.log('[Orders] Elements with data-qr-text:', allWithData.length);
+            if (allWithData.length > 0) {
+                console.log('[Orders] Found elements with data-qr-text but wrong id format:', Array.from(allWithData).map(el => el.id || 'no-id'));
+            }
             return;
         }
         
