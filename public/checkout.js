@@ -1828,6 +1828,119 @@ function setupPurchaseButton() {
         // Для Telegram Stars валидация не критична, можно пропустить
         console.log('💳 Selected payment method:', selectedPaymentMethod);
         
+        if (selectedPaymentMethod === 'cryptomus') {
+            // Если выбран Cryptomus, обрабатываем Cryptomus payment
+            console.log('💳 Cryptomus payment selected');
+            
+            const plan = getSelectedPlan();
+            if (!plan) {
+                purchaseBtn.textContent = originalText;
+                purchaseBtn.disabled = false;
+                throw new Error('Plan not found. Please refresh the page.');
+            }
+            
+            purchaseBtn.textContent = 'Creating invoice...';
+            
+            try {
+                const priceValue = getPriceValueFromPlan(plan);
+                const currency = plan.currency || 'USD';
+                const bundleName = plan.bundle_name || plan.id;
+                
+                // ✅ ВАЖНО: Вычисляем себестоимость (cost), разделив цену на базовую маржу
+                const baseMarkup = publicSettings?.markup?.base || publicSettings?.markup?.defaultMultiplier || 1.29;
+                const costPrice = priceValue / baseMarkup;
+                
+                console.log('[Cryptomus] Price calculation:', {
+                    priceWithMarkup: priceValue,
+                    baseMarkup: baseMarkup,
+                    costPrice: costPrice.toFixed(2)
+                });
+                
+                const invoicePayload = {
+                    plan_id: plan.id,
+                    plan_type: orderData.planType,
+                    bundle_name: bundleName,
+                    country_code: orderData.code,
+                    country_name: orderData.name,
+                    price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
+                    currency,
+                    telegram_user_id: auth.getUserId(),
+                    telegram_username: auth.getUsername()
+                };
+                
+                // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Более строгая проверка для Extend mode
+                const isExtendMode = orderData.extend === true && orderData.iccid && orderData.iccid.trim() !== '';
+                
+                if (isExtendMode) {
+                    invoicePayload.iccid = orderData.iccid.trim(); // Убираем пробелы
+                    console.log('[Cryptomus] 🔄 Extend mode: Adding traffic to existing eSIM:', {
+                        iccid: invoicePayload.iccid,
+                        bundle_name: bundleName
+                    });
+                }
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
+                
+                const response = await fetch('/api/cryptomus/create-invoice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(invoicePayload),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        purchaseBtn.textContent = originalText;
+                        purchaseBtn.disabled = false;
+                        throw new Error(errorText || `Server error: ${response.status}`);
+                    }
+                    purchaseBtn.textContent = originalText;
+                    purchaseBtn.disabled = false;
+                    throw new Error(errorData.error || errorData.message || `Server error: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('💳 Cryptomus invoice creation result:', {
+                    success: result.success,
+                    hasInvoiceUrl: !!result.invoiceUrl,
+                    error: result.error
+                });
+                
+                if (!result.success || !result.invoiceUrl) {
+                    purchaseBtn.textContent = originalText;
+                    purchaseBtn.disabled = false;
+                    throw new Error(result.error || 'Failed to create invoice');
+                }
+                
+                // Перенаправляем пользователя на страницу оплаты Cryptomus
+                console.log('💳 Redirecting to Cryptomus payment page...');
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+                window.location.href = result.invoiceUrl;
+                return; // Выходим, не показывая обычное подтверждение
+                
+            } catch (cryptomusError) {
+                console.error('❌ Cryptomus payment error:', cryptomusError);
+                purchaseBtn.textContent = originalText;
+                purchaseBtn.disabled = false;
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                    tg.showAlert('Payment with Cryptomus error: ' + cryptomusError.message);
+                } else {
+                    alert('Payment with Cryptomus error: ' + cryptomusError.message);
+                }
+                return;
+            }
+        }
+        
         if (selectedPaymentMethod === 'stars') {
             // Если выбран Telegram Stars, обрабатываем Stars payment БЕЗ валидации
             console.log('💫 Telegram Stars payment selected - skipping validation');

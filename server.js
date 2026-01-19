@@ -106,6 +106,9 @@ const apiRoutes = {
     '/api/telegram/stars/create-invoice': require('./api/telegram/stars/create-invoice'),
     '/api/telegram/stars/webhook': require('./api/telegram/stars/webhook'),
     '/api/telegram/bot/webhook': require('./api/telegram/bot/webhook'),
+    // Cryptomus payment API
+    '/api/cryptomus/create-invoice': require('./api/cryptomus/create-invoice'),
+    '/api/cryptomus/webhook': require('./api/cryptomus/webhook'),
     '/api/orders': require('./api/orders'),
     // Promocode validation API
     '/api/promocode/validate': require('./api/promocode/validate'),
