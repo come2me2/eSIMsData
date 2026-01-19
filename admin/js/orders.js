@@ -330,14 +330,39 @@ const Orders = {
                             <div class="pt-3 border-t border-gray-200">
                                 <span class="text-sm text-gray-600 block mb-3">${t('qrCode')}</span>
                                 <div class="flex flex-col items-center gap-3">
-                                    <img src="${qrCode}" alt="QR Code" class="w-28 h-28 border-2 border-gray-200 rounded-xl object-contain bg-white shadow-sm">
-                                    <button onclick="Orders.downloadQR('${qrCode}', '${order.orderReference || order.id || 'order'}')" class="btn btn-secondary text-sm px-4 py-2">
+                                    <div id="qr-code-${order.orderReference || order.id}" class="w-28 h-28 border-2 border-gray-200 rounded-xl bg-white shadow-sm flex items-center justify-center">
+                                        <div class="text-xs text-gray-400">Loading QR...</div>
+                                    </div>
+                                    <button onclick="Orders.downloadQR('${qrCode.replace(/'/g, "\\'")}', '${order.orderReference || order.id || 'order'}')" class="btn btn-secondary text-sm px-4 py-2">
                                         <svg class="w-4 h-4 inline mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                                         </svg>
                                         ${t('downloadQR')}
                                     </button>
                                 </div>
+                                <script>
+                                    (function() {
+                                        const qrText = '${qrCode.replace(/'/g, "\\'")}';
+                                        const containerId = 'qr-code-${order.orderReference || order.id}';
+                                        const container = document.getElementById(containerId);
+                                        if (container && typeof QRCode !== 'undefined') {
+                                            container.innerHTML = '';
+                                            QRCode.toCanvas(container, qrText, {
+                                                width: 112,
+                                                height: 112,
+                                                margin: 1
+                                            }, function (error) {
+                                                if (error) {
+                                                    console.error('QR Code generation error:', error);
+                                                    container.innerHTML = '<div class="text-xs text-red-500 p-2">QR Error</div>';
+                                                }
+                                            });
+                                        } else if (container) {
+                                            // Fallback: если QRCode не загружен, показываем текст
+                                            container.innerHTML = '<div class="text-xs text-gray-500 p-2 break-all">' + qrText.substring(0, 30) + '...</div>';
+                                        }
+                                    })();
+                                </script>
                             </div>
                             ` : `<div class="text-sm text-gray-500 text-center py-4">${t('qrCodeNotAvailable')}</div>`}
                         </div>
@@ -575,16 +600,51 @@ const Orders = {
     },
     
     // Download QR code
-    downloadQR(qrCodeUrl, orderId) {
+    downloadQR(qrCodeText, orderId) {
         const t = (key) => window.i18n ? window.i18n.t(key) : key;
         try {
-            const link = document.createElement('a');
-            link.href = qrCodeUrl;
-            link.download = `qr-code-${orderId}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            this.showSuccess(t('qrCodeDownloaded'));
+            // Если это LPA строка, генерируем QR код
+            if (qrCodeText && qrCodeText.startsWith('LPA:')) {
+                if (typeof QRCode === 'undefined') {
+                    this.showError('QR Code library not loaded');
+                    return;
+                }
+                
+                const canvas = document.createElement('canvas');
+                QRCode.toCanvas(canvas, qrCodeText, {
+                    width: 400,
+                    height: 400,
+                    margin: 2
+                }, (error) => {
+                    if (error) {
+                        console.error('QR Code generation error:', error);
+                        this.showError('Failed to generate QR code');
+                        return;
+                    }
+                    
+                    // Конвертируем canvas в blob и скачиваем
+                    canvas.toBlob((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `qr-code-${orderId}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                        this.showSuccess(t('qrCodeDownloaded'));
+                    });
+                });
+            } else {
+                // Если это URL изображения, скачиваем напрямую
+                const link = document.createElement('a');
+                link.href = qrCodeText;
+                link.download = `qr-code-${orderId}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                this.showSuccess(t('qrCodeDownloaded'));
+            }
         } catch (error) {
             console.error('Error downloading QR:', error);
             this.showError(t('errorDownloadingQR'));
