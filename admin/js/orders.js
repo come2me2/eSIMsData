@@ -330,7 +330,7 @@ const Orders = {
                             <div class="pt-3 border-t border-gray-200">
                                 <span class="text-sm text-gray-600 block mb-3">${t('qrCode')}</span>
                                 <div class="flex flex-col items-center gap-3">
-                                    <div id="qr-code-${order.orderReference || order.id}" class="w-28 h-28 border-2 border-gray-200 rounded-xl bg-white shadow-sm flex items-center justify-center">
+                                    <div id="qr-code-${order.orderReference || order.id}" class="w-28 h-28 border-2 border-gray-200 rounded-xl bg-white shadow-sm flex items-center justify-center" data-qr-text="${qrCode.replace(/"/g, '&quot;')}">
                                         <div class="text-xs text-gray-400">Loading QR...</div>
                                     </div>
                                     <button onclick="Orders.downloadQR('${qrCode.replace(/'/g, "\\'")}', '${order.orderReference || order.id || 'order'}')" class="btn btn-secondary text-sm px-4 py-2">
@@ -340,29 +340,6 @@ const Orders = {
                                         ${t('downloadQR')}
                                     </button>
                                 </div>
-                                <script>
-                                    (function() {
-                                        const qrText = '${qrCode.replace(/'/g, "\\'")}';
-                                        const containerId = 'qr-code-${order.orderReference || order.id}';
-                                        const container = document.getElementById(containerId);
-                                        if (container && typeof QRCode !== 'undefined') {
-                                            container.innerHTML = '';
-                                            QRCode.toCanvas(container, qrText, {
-                                                width: 112,
-                                                height: 112,
-                                                margin: 1
-                                            }, function (error) {
-                                                if (error) {
-                                                    console.error('QR Code generation error:', error);
-                                                    container.innerHTML = '<div class="text-xs text-red-500 p-2">QR Error</div>';
-                                                }
-                                            });
-                                        } else if (container) {
-                                            // Fallback: если QRCode не загружен, показываем текст
-                                            container.innerHTML = '<div class="text-xs text-gray-500 p-2 break-all">' + qrText.substring(0, 30) + '...</div>';
-                                        }
-                                    })();
-                                </script>
                             </div>
                             ` : `<div class="text-sm text-gray-500 text-center py-4">${t('qrCodeNotAvailable')}</div>`}
                         </div>
