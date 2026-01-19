@@ -154,6 +154,11 @@ const Orders = {
                 const orderModal = document.getElementById('orderModal');
                 if (orderModal) {
                     orderModal.classList.remove('hidden');
+                    // Генерируем QR коды после того, как модальное окно стало видимым
+                    // Используем несколько попыток с задержками
+                    setTimeout(() => this.generateQRCodes(), 100);
+                    setTimeout(() => this.generateQRCodes(), 300);
+                    setTimeout(() => this.generateQRCodes(), 600);
                 } else {
                     // If orderModal doesn't exist, show error
                     const t = (key) => window.i18n ? window.i18n.t(key) : key;
