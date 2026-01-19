@@ -361,6 +361,8 @@ const Orders = {
             </div>
         `;
         
+        container.innerHTML = html;
+        
         // Generate QR codes after rendering HTML
         // Используем requestAnimationFrame для гарантии, что DOM обновлен
         requestAnimationFrame(() => {
