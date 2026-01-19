@@ -41,10 +41,17 @@ class CryptomusClient {
             order_id: data.order_id,
             url_callback: data.url_callback,
             url_return: data.url_return || data.url_callback,
-            to_currency: data.to_currency || process.env.CRYPTOMUS_DEFAULT_CURRENCY || 'USDT',
-            network: data.network || process.env.CRYPTOMUS_DEFAULT_NETWORK || 'tron',
             lifetime: data.lifetime || parseInt(process.env.CRYPTOMUS_INVOICE_LIFETIME || '3600')
         };
+
+        // Добавляем to_currency и network только если они явно указаны
+        // Если не указаны, Cryptomus покажет все доступные криптовалюты
+        if (data.to_currency || process.env.CRYPTOMUS_DEFAULT_CURRENCY) {
+            payload.to_currency = data.to_currency || process.env.CRYPTOMUS_DEFAULT_CURRENCY;
+        }
+        if (data.network || process.env.CRYPTOMUS_DEFAULT_NETWORK) {
+            payload.network = data.network || process.env.CRYPTOMUS_DEFAULT_NETWORK;
+        }
 
         const sign = this.generateSign(payload);
 

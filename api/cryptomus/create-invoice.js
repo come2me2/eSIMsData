@@ -248,16 +248,26 @@ module.exports = async function handler(req, res) {
         });
 
         // Создаем invoice в Cryptomus
-        const invoice = await cryptomusClient.createInvoice({
+        // Не передаем to_currency и network, чтобы Cryptomus показывал все доступные криптовалюты
+        const invoiceData = {
             amount: finalPrice.toFixed(2),
             currency: currency,
             order_id: orderId,
             url_callback: `${baseUrl}/api/cryptomus/webhook`,
             url_return: `${baseUrl}/checkout?order_id=${orderId}&payment_method=cryptomus`,
-            to_currency: process.env.CRYPTOMUS_DEFAULT_CURRENCY || 'USDT',
-            network: process.env.CRYPTOMUS_DEFAULT_NETWORK || 'tron',
             lifetime: parseInt(process.env.CRYPTOMUS_INVOICE_LIFETIME || '3600')
-        });
+        };
+
+        // Добавляем to_currency и network только если они явно заданы в env
+        // Если не заданы, Cryptomus покажет все доступные криптовалюты из аккаунта
+        if (process.env.CRYPTOMUS_DEFAULT_CURRENCY) {
+            invoiceData.to_currency = process.env.CRYPTOMUS_DEFAULT_CURRENCY;
+        }
+        if (process.env.CRYPTOMUS_DEFAULT_NETWORK) {
+            invoiceData.network = process.env.CRYPTOMUS_DEFAULT_NETWORK;
+        }
+
+        const invoice = await cryptomusClient.createInvoice(invoiceData);
 
         console.log('✅ Cryptomus invoice created successfully:', {
             orderId,
