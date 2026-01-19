@@ -449,9 +449,23 @@ const Orders = {
     // Generate QR codes for all containers
     generateQRCodes() {
         const qrContainers = document.querySelectorAll('[id^="qr-code-"]');
-        qrContainers.forEach(container => {
-            const qrText = container.getAttribute('data-qr-text');
-            if (!qrText) return;
+        console.log('[Orders] Generating QR codes, found containers:', qrContainers.length);
+        
+        if (qrContainers.length === 0) {
+            console.warn('[Orders] No QR code containers found');
+            return;
+        }
+        
+        qrContainers.forEach((container, index) => {
+            let qrText = container.getAttribute('data-qr-text');
+            if (!qrText) {
+                console.warn(`[Orders] No data-qr-text for container ${index}`);
+                return;
+            }
+            
+            // Декодируем HTML entities
+            qrText = qrText.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+            console.log(`[Orders] Processing QR code ${index}:`, qrText.substring(0, 50));
             
             // Если это URL изображения, используем напрямую
             if (qrText.startsWith('http://') || qrText.startsWith('https://') || qrText.startsWith('data:')) {
@@ -461,22 +475,35 @@ const Orders = {
             
             // Если это LPA строка, генерируем QR код
             if (qrText.startsWith('LPA:')) {
-                if (typeof QRCode !== 'undefined') {
-                    container.innerHTML = '';
-                    QRCode.toCanvas(container, qrText, {
-                        width: 112,
-                        height: 112,
-                        margin: 1
-                    }, (error) => {
-                        if (error) {
-                            console.error('QR Code generation error:', error);
-                            container.innerHTML = '<div class="text-xs text-red-500 p-2">QR Error</div>';
+                // Проверяем, загружена ли библиотека, с повторными попытками
+                const tryGenerateQR = (attempt = 0) => {
+                    if (typeof QRCode !== 'undefined' && typeof QRCode.toCanvas === 'function') {
+                        console.log(`[Orders] Generating QR code for container ${index}, attempt ${attempt + 1}`);
+                        container.innerHTML = '';
+                        QRCode.toCanvas(container, qrText, {
+                            width: 112,
+                            height: 112,
+                            margin: 1
+                        }, (error) => {
+                            if (error) {
+                                console.error('[Orders] QR Code generation error:', error);
+                                container.innerHTML = '<div class="text-xs text-red-500 p-2">QR Error</div>';
+                            } else {
+                                console.log(`[Orders] QR code generated successfully for container ${index}`);
+                            }
+                        });
+                    } else {
+                        // Если библиотека еще не загружена, пробуем еще раз
+                        if (attempt < 10) {
+                            setTimeout(() => tryGenerateQR(attempt + 1), 200);
+                        } else {
+                            console.error('[Orders] QRCode library not loaded after 10 attempts');
+                            container.innerHTML = `<div class="text-xs text-gray-500 p-2 break-all">${qrText.substring(0, 30)}...</div>`;
                         }
-                    });
-                } else {
-                    // Fallback: если QRCode не загружен, показываем текст
-                    container.innerHTML = `<div class="text-xs text-gray-500 p-2 break-all">${qrText.substring(0, 30)}...</div>`;
-                }
+                    }
+                };
+                
+                tryGenerateQR();
             } else {
                 // Для других форматов пытаемся использовать как URL
                 container.innerHTML = `<img src="${qrText}" alt="QR Code" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<div class=\\'text-xs text-red-500 p-2\\'>Invalid QR</div>'">`;
