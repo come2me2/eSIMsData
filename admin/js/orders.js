@@ -441,6 +441,47 @@ const Orders = {
         
         html += '</div>';
         container.innerHTML = html;
+        
+        // Generate QR codes after rendering
+        setTimeout(() => this.generateQRCodes(), 100);
+    },
+    
+    // Generate QR codes for all containers
+    generateQRCodes() {
+        const qrContainers = document.querySelectorAll('[id^="qr-code-"]');
+        qrContainers.forEach(container => {
+            const qrText = container.getAttribute('data-qr-text');
+            if (!qrText) return;
+            
+            // Если это URL изображения, используем напрямую
+            if (qrText.startsWith('http://') || qrText.startsWith('https://') || qrText.startsWith('data:')) {
+                container.innerHTML = `<img src="${qrText}" alt="QR Code" class="w-full h-full object-contain">`;
+                return;
+            }
+            
+            // Если это LPA строка, генерируем QR код
+            if (qrText.startsWith('LPA:')) {
+                if (typeof QRCode !== 'undefined') {
+                    container.innerHTML = '';
+                    QRCode.toCanvas(container, qrText, {
+                        width: 112,
+                        height: 112,
+                        margin: 1
+                    }, (error) => {
+                        if (error) {
+                            console.error('QR Code generation error:', error);
+                            container.innerHTML = '<div class="text-xs text-red-500 p-2">QR Error</div>';
+                        }
+                    });
+                } else {
+                    // Fallback: если QRCode не загружен, показываем текст
+                    container.innerHTML = `<div class="text-xs text-gray-500 p-2 break-all">${qrText.substring(0, 30)}...</div>`;
+                }
+            } else {
+                // Для других форматов пытаемся использовать как URL
+                container.innerHTML = `<img src="${qrText}" alt="QR Code" class="w-full h-full object-contain" onerror="this.parentElement.innerHTML='<div class=\\'text-xs text-red-500 p-2\\'>Invalid QR</div>'">`;
+            }
+        });
     },
     
     // Get status CSS class
