@@ -360,6 +360,14 @@ const Orders = {
                 </div>
             </div>
         `;
+        
+        // Generate QR codes after rendering HTML
+        // Используем requestAnimationFrame для гарантии, что DOM обновлен
+        requestAnimationFrame(() => {
+            setTimeout(() => this.generateQRCodes(), 50);
+            setTimeout(() => this.generateQRCodes(), 200);
+            setTimeout(() => this.generateQRCodes(), 500);
+        });
     },
     
     // Update order status
