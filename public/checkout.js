@@ -1831,8 +1831,13 @@ function setupPurchaseButton() {
         // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Если метод оплаты не выбран, но доступны Cryptomus/Stripe,
         // не позволяем создавать заказ напрямую (требуем выбрать метод оплаты)
         if (!selectedPaymentMethod || selectedPaymentMethod === '') {
-            const availableMethods = filterAvailablePaymentMethods();
-            if (availableMethods.includes('cryptomus') || availableMethods.includes('stripe')) {
+            // Проверяем, есть ли видимые элементы для Cryptomus или Stripe
+            const cryptomusItem = document.querySelector('.sheet-item[data-payment-method="cryptomus"]');
+            const stripeItem = document.querySelector('.sheet-item[data-payment-method="stripe"]');
+            const isCryptomusAvailable = cryptomusItem && window.getComputedStyle(cryptomusItem).display !== 'none';
+            const isStripeAvailable = stripeItem && window.getComputedStyle(stripeItem).display !== 'none';
+            
+            if (isCryptomusAvailable || isStripeAvailable) {
                 console.warn('⚠️ Payment method not selected, but Cryptomus/Stripe are available. Requiring payment method selection.');
                 purchaseBtn.textContent = originalText;
                 purchaseBtn.disabled = false;
