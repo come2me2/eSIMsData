@@ -1809,19 +1809,8 @@ function setupPurchaseButton() {
         return;
     }
     
-    // Добавляем визуальное логирование
-    const showDebugMessage = (message, isError = false) => {
-        console.log(isError ? '❌' : 'ℹ️', message);
-        if (tg && tg.showAlert) {
-            tg.showAlert(message);
-        } else {
-            alert(message);
-        }
-    };
-    
     purchaseBtn.addEventListener('click', async () => {
         console.log('🔵 Purchase button clicked!');
-        showDebugMessage('Purchase button clicked');
         
         const auth = window.telegramAuth;
         let userId = null;
@@ -1844,17 +1833,6 @@ function setupPurchaseButton() {
             console.error('❌ Error while resolving Telegram user:', e);
         }
         
-        // Если так и не смогли получить пользователя – не продолжаем
-        if (!userId) {
-            const msg = 'Cannot get Telegram user. Please close and reopen the mini app.';
-            console.error('❌', msg);
-            showDebugMessage(msg, true);
-            if (tg) {
-                tg.HapticFeedback.notificationOccurred('error');
-            }
-            return;
-        }
-        
         if (tg) {
             tg.HapticFeedback.impactOccurred('medium');
         }
@@ -1866,7 +1844,6 @@ function setupPurchaseButton() {
         // ✅ ВАЖНО: Проверяем метод оплаты ПЕРЕД валидацией
         // Для Telegram Stars валидация не критична, можно пропустить
         console.log('💳 Selected payment method:', selectedPaymentMethod);
-        showDebugMessage(`Payment method: ${selectedPaymentMethod || 'NOT SELECTED'}`);
         
         // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Если метод оплаты не выбран, но доступны Cryptomus/Stripe,
         // не позволяем создавать заказ напрямую (требуем выбрать метод оплаты)
@@ -1878,13 +1855,14 @@ function setupPurchaseButton() {
             const isStripeAvailable = stripeItem && window.getComputedStyle(stripeItem).display !== 'none';
             
             if (isCryptomusAvailable || isStripeAvailable) {
-                const msg = 'Please select a payment method first.';
                 console.warn('⚠️ Payment method not selected, but Cryptomus/Stripe are available. Requiring payment method selection.');
                 purchaseBtn.textContent = originalText;
                 purchaseBtn.disabled = false;
-                showDebugMessage(msg, true);
                 if (tg) {
                     tg.HapticFeedback.notificationOccurred('error');
+                    tg.showAlert('Please select a payment method first.');
+                } else {
+                    alert('Please select a payment method first.');
                 }
                 return;
             }
@@ -1993,10 +1971,11 @@ function setupPurchaseButton() {
                 console.error('❌ Cryptomus payment error:', cryptomusError);
                 purchaseBtn.textContent = originalText;
                 purchaseBtn.disabled = false;
-                const errorMsg = 'Payment with Cryptomus error: ' + cryptomusError.message;
-                showDebugMessage(errorMsg, true);
                 if (tg) {
                     tg.HapticFeedback.notificationOccurred('error');
+                    tg.showAlert('Payment with Cryptomus error: ' + cryptomusError.message);
+                } else {
+                    alert('Payment with Cryptomus error: ' + cryptomusError.message);
                 }
                 return;
             }
@@ -2359,9 +2338,11 @@ function setupPurchaseButton() {
             console.error('❌ Payment method is Cryptomus or Stripe, but invoice/checkout was not created. This should not happen.');
             purchaseBtn.textContent = originalText;
             purchaseBtn.disabled = false;
-            showDebugMessage(msg, true);
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
+                tg.showAlert(msg);
+            } else {
+                alert(msg);
             }
             return;
         }
@@ -2414,10 +2395,11 @@ function setupPurchaseButton() {
             purchaseBtn.textContent = originalText;
             purchaseBtn.disabled = false;
             
-            const errorMsg = 'Data validation error: ' + error.message;
-            showDebugMessage(errorMsg, true);
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
+                tg.showAlert('Data validation error: ' + error.message);
+            } else {
+                alert('Data validation error: ' + error.message);
             }
         }
     });
