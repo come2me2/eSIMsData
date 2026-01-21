@@ -1794,6 +1794,11 @@ function setupPromoCode() {
 function setupPurchaseButton() {
     const purchaseBtn = document.getElementById('purchaseBtn');
     
+    if (!purchaseBtn) {
+        console.error('❌ Purchase button not found!');
+        return;
+    }
+    
     // Деактивируем кнопку в режиме разработки
     if (DEV_MODE) {
         purchaseBtn.disabled = true;
@@ -1804,17 +1809,44 @@ function setupPurchaseButton() {
         return;
     }
     
+    // Добавляем визуальное логирование
+    const showDebugMessage = (message, isError = false) => {
+        console.log(isError ? '❌' : 'ℹ️', message);
+        if (tg && tg.showAlert) {
+            tg.showAlert(message);
+        } else {
+            alert(message);
+        }
+    };
+    
     purchaseBtn.addEventListener('click', async () => {
+        console.log('🔵 Purchase button clicked!');
+        showDebugMessage('Purchase button clicked');
+        
         const auth = window.telegramAuth;
         
         // Проверка авторизации
-        if (!auth || !auth.isAuthenticated()) {
-            alert('Please authorize through Telegram to place an order');
+        if (!auth) {
+            const msg = 'Auth not found. Please refresh the page.';
+            console.error('❌', msg);
+            showDebugMessage(msg, true);
+            return;
+        }
+        
+        if (!auth.isAuthenticated()) {
+            const msg = 'Please authorize through Telegram to place an order';
+            console.warn('⚠️', msg);
+            showDebugMessage(msg, true);
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
             }
             return;
         }
+        
+        console.log('✅ User authenticated:', {
+            userId: auth.getUserId(),
+            username: auth.getUsername()
+        });
         
         if (tg) {
             tg.HapticFeedback.impactOccurred('medium');
@@ -1827,6 +1859,7 @@ function setupPurchaseButton() {
         // ✅ ВАЖНО: Проверяем метод оплаты ПЕРЕД валидацией
         // Для Telegram Stars валидация не критична, можно пропустить
         console.log('💳 Selected payment method:', selectedPaymentMethod);
+        showDebugMessage(`Payment method: ${selectedPaymentMethod || 'NOT SELECTED'}`);
         
         // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Если метод оплаты не выбран, но доступны Cryptomus/Stripe,
         // не позволяем создавать заказ напрямую (требуем выбрать метод оплаты)
@@ -1838,14 +1871,13 @@ function setupPurchaseButton() {
             const isStripeAvailable = stripeItem && window.getComputedStyle(stripeItem).display !== 'none';
             
             if (isCryptomusAvailable || isStripeAvailable) {
+                const msg = 'Please select a payment method first.';
                 console.warn('⚠️ Payment method not selected, but Cryptomus/Stripe are available. Requiring payment method selection.');
                 purchaseBtn.textContent = originalText;
                 purchaseBtn.disabled = false;
+                showDebugMessage(msg, true);
                 if (tg) {
                     tg.HapticFeedback.notificationOccurred('error');
-                    tg.showAlert('Please select a payment method first.');
-                } else {
-                    alert('Please select a payment method first.');
                 }
                 return;
             }
@@ -1954,11 +1986,10 @@ function setupPurchaseButton() {
                 console.error('❌ Cryptomus payment error:', cryptomusError);
                 purchaseBtn.textContent = originalText;
                 purchaseBtn.disabled = false;
+                const errorMsg = 'Payment with Cryptomus error: ' + cryptomusError.message;
+                showDebugMessage(errorMsg, true);
                 if (tg) {
                     tg.HapticFeedback.notificationOccurred('error');
-                    tg.showAlert('Payment with Cryptomus error: ' + cryptomusError.message);
-                } else {
-                    alert('Payment with Cryptomus error: ' + cryptomusError.message);
                 }
                 return;
             }
@@ -2317,14 +2348,13 @@ function setupPurchaseButton() {
         // Если выбран Cryptomus или Stripe, но код не попал в соответствующие блоки,
         // значит что-то пошло не так, и мы не должны создавать заказ напрямую
         if (selectedPaymentMethod === 'cryptomus' || selectedPaymentMethod === 'stripe') {
+            const msg = 'Payment method error. Please refresh the page and try again.';
             console.error('❌ Payment method is Cryptomus or Stripe, but invoice/checkout was not created. This should not happen.');
             purchaseBtn.textContent = originalText;
             purchaseBtn.disabled = false;
+            showDebugMessage(msg, true);
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
-                tg.showAlert('Payment method error. Please refresh the page and try again.');
-            } else {
-                alert('Payment method error. Please refresh the page and try again.');
             }
             return;
         }
@@ -2377,14 +2407,15 @@ function setupPurchaseButton() {
             purchaseBtn.textContent = originalText;
             purchaseBtn.disabled = false;
             
+            const errorMsg = 'Data validation error: ' + error.message;
+            showDebugMessage(errorMsg, true);
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
-                tg.showAlert('Data validation error: ' + error.message);
-            } else {
-                alert('Data validation error: ' + error.message);
             }
         }
     });
+    
+    console.log('✅ Purchase button handler attached');
 }
 
 // Setup Stars payment button
