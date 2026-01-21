@@ -254,7 +254,9 @@ module.exports = async function handler(req, res) {
             currency: currency,
             order_id: orderId,
             url_callback: `${baseUrl}/api/cryptomus/webhook`,
-            url_return: `${baseUrl}/checkout?order_id=${orderId}&payment_method=cryptomus`,
+            // После оплаты (или нажатия "Back" внутри Cryptomus) сразу отправляем
+            // пользователя в список его eSIM — My eSIMs
+            url_return: `${baseUrl}/my-esims.html?order_id=${orderId}&payment_method=cryptomus`,
             lifetime: parseInt(process.env.CRYPTOMUS_INVOICE_LIFETIME || '3600')
         };
 
