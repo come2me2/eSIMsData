@@ -1824,29 +1824,36 @@ function setupPurchaseButton() {
         showDebugMessage('Purchase button clicked');
         
         const auth = window.telegramAuth;
+        let userId = null;
+        let username = null;
         
-        // Проверка авторизации
-        if (!auth) {
-            const msg = 'Auth not found. Please refresh the page.';
-            console.error('❌', msg);
-            showDebugMessage(msg, true);
-            return;
+        try {
+            // Пытаемся взять пользователя из нашего हेलпер-класса
+            if (auth && typeof auth.isAuthenticated === 'function' && auth.isAuthenticated()) {
+                userId = auth.getUserId();
+                username = auth.getUsername();
+                console.log('✅ User from TelegramAuth:', { userId, username });
+            } else if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+                // Фолбэк: напрямую из Telegram WebApp initDataUnsafe
+                const u = tg.initDataUnsafe.user;
+                userId = u.id;
+                username = u.username || u.first_name || `User ${u.id}`;
+                console.log('✅ User from tg.initDataUnsafe:', { userId, username });
+            }
+        } catch (e) {
+            console.error('❌ Error while resolving Telegram user:', e);
         }
         
-        if (!auth.isAuthenticated()) {
-            const msg = 'Please authorize through Telegram to place an order';
-            console.warn('⚠️', msg);
+        // Если так и не смогли получить пользователя – не продолжаем
+        if (!userId) {
+            const msg = 'Cannot get Telegram user. Please close and reopen the mini app.';
+            console.error('❌', msg);
             showDebugMessage(msg, true);
             if (tg) {
                 tg.HapticFeedback.notificationOccurred('error');
             }
             return;
         }
-        
-        console.log('✅ User authenticated:', {
-            userId: auth.getUserId(),
-            username: auth.getUsername()
-        });
         
         if (tg) {
             tg.HapticFeedback.impactOccurred('medium');
@@ -1919,8 +1926,8 @@ function setupPurchaseButton() {
                     country_name: orderData.name,
                     price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
                     currency,
-                    telegram_user_id: auth.getUserId(),
-                    telegram_username: auth.getUsername()
+                    telegram_user_id: userId,
+                    telegram_username: username
                 };
                 
                 // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Более строгая проверка для Extend mode
@@ -2031,8 +2038,8 @@ function setupPurchaseButton() {
                     country_name: orderData.name,
                     price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
                     currency,
-                    telegram_user_id: auth.getUserId(),
-                    telegram_username: auth.getUsername()
+                    telegram_user_id: userId,
+                    telegram_username: username
                 };
                 
                 // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Более строгая проверка для Extend mode
