@@ -310,8 +310,6 @@ module.exports = async function handler(req, res) {
 
         try {
             if (success) {
-
-            if (success) {
                 console.log('✅ [Cryptomus Webhook] eSIM Go order created successfully:', {
                     statusCode: orderRes.statusCode,
                     hasData: !!orderRes.data,
