@@ -270,10 +270,46 @@ module.exports = async function handler(req, res) {
 
         const orderRes = createMockRes();
 
-        try {
-            await Promise.resolve(createOrderHandler(orderReq, orderRes));
+        // ✅ RETRY ЛОГИКА: Пытаемся создать заказ в eSIM Go с повторными попытками
+        let success = false;
+        let lastError = null;
+        const maxRetries = 3;
+        const retryDelays = [2000, 5000, 10000]; // Экспоненциальная задержка: 2s, 5s, 10s
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`🔄 [Cryptomus Webhook] Attempt ${attempt}/${maxRetries} to create eSIM Go order...`);
+                
+                // Сбрасываем response перед каждой попыткой
+                orderRes.statusCode = 200;
+                orderRes.data = null;
+                
+                await Promise.resolve(createOrderHandler(orderReq, orderRes));
+                
+                success = orderRes.statusCode === 200 && orderRes.data && orderRes.data.success;
+                
+                if (success) {
+                    console.log(`✅ [Cryptomus Webhook] eSIM Go order created successfully on attempt ${attempt}`);
+                    break;
+                } else {
+                    lastError = new Error(`eSIM Go returned non-success: ${orderRes.statusCode} - ${JSON.stringify(orderRes.data)}`);
+                    console.warn(`⚠️ [Cryptomus Webhook] Attempt ${attempt} failed:`, lastError.message);
+                }
+            } catch (error) {
+                lastError = error;
+                console.warn(`⚠️ [Cryptomus Webhook] Attempt ${attempt} error:`, error.message);
+                
+                // Если это не последняя попытка, ждем перед повтором
+                if (attempt < maxRetries) {
+                    const delay = retryDelays[attempt - 1] || 5000;
+                    console.log(`⏳ [Cryptomus Webhook] Waiting ${delay}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
 
-            const success = orderRes.statusCode === 200 && orderRes.data && orderRes.data.success;
+        try {
+            if (success) {
 
             if (success) {
                 console.log('✅ [Cryptomus Webhook] eSIM Go order created successfully:', {
@@ -535,10 +571,12 @@ module.exports = async function handler(req, res) {
                     await sendStatusMessage(telegramUserId, 'eSIM is being processed. Please check back in a few minutes.');
                 }
             } else {
-                // Ошибка при создании заказа в eSIM Go (например, timeout или недоступность API)
-                console.error('❌ [Cryptomus Webhook] Failed to create order in eSIM Go. Response:', {
+                // Ошибка при создании заказа в eSIM Go после всех попыток (например, timeout или недоступность API)
+                console.error('❌ [Cryptomus Webhook] Failed to create order in eSIM Go after all retries. Response:', {
                     statusCode: orderRes.statusCode,
-                    data: orderRes.data
+                    data: orderRes.data,
+                    lastError: lastError?.message,
+                    attempts: maxRetries
                 });
 
                 // Обновляем существующий заказ как оплаченный, но оставляем в on_hold
@@ -556,7 +594,7 @@ module.exports = async function handler(req, res) {
                             payment_confirmed: true,
                             updatedAt: new Date().toISOString(),
                             esim_issued: false,
-                            esim_error: (orderRes.data && orderRes.data.error) || 'eSIM Go order creation failed'
+                            esim_error: (orderRes.data && orderRes.data.error) || lastError?.message || 'eSIM Go order creation failed after retries'
                         };
                         userOrders[idx] = updated;
                         allOrders[telegramUserId] = userOrders;
