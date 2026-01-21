@@ -58,46 +58,81 @@ async function makeRequest(endpoint, options = {}) {
             timeout: esimgoConfig.timeout
         });
         
-        // В Node.js 18+ fetch доступен глобально
-        // Для Vercel Serverless Functions это работает из коробки
-        // Если fetch недоступен, используем node-fetch
-        let fetchFunction = fetch;
+        // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Используем встроенный https модуль вместо fetch
+        // fetch в Node.js использует HTTP/2, который eSIM Go API не поддерживает должным образом
+        // https модуль работает стабильно с eSIM Go API
+        const https = require('https');
+        const { URL } = require('url');
+        const parsedUrl = new URL(url);
         
-        if (typeof fetch === 'undefined') {
-            // Fallback для старых версий Node.js
-            try {
-                fetchFunction = require('node-fetch');
-            } catch (e) {
-                throw new Error('fetch is not available and node-fetch is not installed');
-            }
-        }
-        
-        // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Добавляем таймаут через AbortController
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), esimgoConfig.timeout || 60000);
-        
-        let response;
-        try {
-            response = await fetchFunction(url, {
-                ...config,
-                signal: controller.signal
+        const response = await new Promise((resolve, reject) => {
+            const timeout = esimgoConfig.timeout || 60000;
+            let timeoutId;
+            let req;
+            
+            const requestData = config.body || '';
+            req = https.request({
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port || 443,
+                path: parsedUrl.pathname + parsedUrl.search,
+                method: config.method || 'GET',
+                headers: config.headers || {},
+                timeout: timeout
+            }, (res) => {
+                clearTimeout(timeoutId);
+                
+                let data = '';
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+                
+                res.on('end', () => {
+                    // Создаем объект response, похожий на fetch Response
+                    const response = {
+                        status: res.statusCode,
+                        statusText: res.statusMessage,
+                        ok: res.statusCode >= 200 && res.statusCode < 300,
+                        headers: {
+                            get: (name) => res.headers[name.toLowerCase()] || null
+                        },
+                        text: async () => data,
+                        json: async () => {
+                            try {
+                                return JSON.parse(data);
+                            } catch (e) {
+                                throw new Error(`Invalid JSON response: ${data.substring(0, 100)}`);
+                            }
+                        }
+                    };
+                    
+                    resolve(response);
+                });
             });
             
-            clearTimeout(timeoutId);
-        } catch (fetchError) {
-            clearTimeout(timeoutId);
+            req.on('error', (error) => {
+                clearTimeout(timeoutId);
+                reject(error);
+            });
             
-            // Обрабатываем ошибку таймаута
-            if (fetchError.name === 'AbortError' || fetchError.message.includes('aborted') || fetchError.cause?.code === 'UND_ERR_CONNECT_TIMEOUT') {
-                const timeoutSeconds = (esimgoConfig.timeout || 60000) / 1000;
-                const timeoutMsg = `Request to eSIM Go API timed out after ${timeoutSeconds}s. Endpoint: ${endpoint}. This may indicate network issues or eSIM Go API is slow.`;
-                console.error('⏱️', timeoutMsg);
-                throw new Error(timeoutMsg);
+            timeoutId = setTimeout(() => {
+                req.destroy();
+                const timeoutSeconds = timeout / 1000;
+                reject(new Error(`Request to eSIM Go API timed out after ${timeoutSeconds}s. Endpoint: ${endpoint}. This may indicate network issues or eSIM Go API is slow.`));
+            }, timeout);
+            
+            req.on('timeout', () => {
+                req.destroy();
+                clearTimeout(timeoutId);
+                const timeoutSeconds = timeout / 1000;
+                reject(new Error(`Request to eSIM Go API timed out after ${timeoutSeconds}s. Endpoint: ${endpoint}.`));
+            });
+            
+            if (requestData) {
+                req.write(requestData);
             }
             
-            // Пробрасываем другие ошибки
-            throw fetchError;
-        }
+            req.end();
+        });
         
         console.log('eSIM Go API response:', {
             status: response.status,
