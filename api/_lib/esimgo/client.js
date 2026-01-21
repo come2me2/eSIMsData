@@ -10,7 +10,8 @@ const esimgoConfig = {
     // Используем версию v2.4 - последняя версия API
     // Можно переопределить через переменную окружения ESIMGO_API_URL
     apiUrl: process.env.ESIMGO_API_URL || 'https://api.esim-go.com/v2.4',
-    timeout: 30000
+    // ✅ Увеличен таймаут до 60 секунд для более надежной работы с медленными ответами eSIM Go API
+    timeout: parseInt(process.env.ESIMGO_API_TIMEOUT || '60000', 10)
 };
 
 if (!esimgoConfig.apiKey) {
@@ -53,7 +54,8 @@ async function makeRequest(endpoint, options = {}) {
         console.log('Making request to eSIM Go:', {
             url,
             method: config.method,
-            hasApiKey: !!esimgoConfig.apiKey
+            hasApiKey: !!esimgoConfig.apiKey,
+            timeout: esimgoConfig.timeout
         });
         
         // В Node.js 18+ fetch доступен глобально
@@ -70,7 +72,32 @@ async function makeRequest(endpoint, options = {}) {
             }
         }
         
-        const response = await fetchFunction(url, config);
+        // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Добавляем таймаут через AbortController
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), esimgoConfig.timeout || 60000);
+        
+        let response;
+        try {
+            response = await fetchFunction(url, {
+                ...config,
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            
+            // Обрабатываем ошибку таймаута
+            if (fetchError.name === 'AbortError' || fetchError.message.includes('aborted') || fetchError.cause?.code === 'UND_ERR_CONNECT_TIMEOUT') {
+                const timeoutSeconds = (esimgoConfig.timeout || 60000) / 1000;
+                const timeoutMsg = `Request to eSIM Go API timed out after ${timeoutSeconds}s. Endpoint: ${endpoint}. This may indicate network issues or eSIM Go API is slow.`;
+                console.error('⏱️', timeoutMsg);
+                throw new Error(timeoutMsg);
+            }
+            
+            // Пробрасываем другие ошибки
+            throw fetchError;
+        }
         
         console.log('eSIM Go API response:', {
             status: response.status,
