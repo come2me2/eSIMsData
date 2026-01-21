@@ -535,21 +535,84 @@ module.exports = async function handler(req, res) {
                     await sendStatusMessage(telegramUserId, 'eSIM is being processed. Please check back in a few minutes.');
                 }
             } else {
+                // Ошибка при создании заказа в eSIM Go (например, timeout или недоступность API)
                 console.error('❌ [Cryptomus Webhook] Failed to create order in eSIM Go. Response:', {
                     statusCode: orderRes.statusCode,
                     data: orderRes.data
                 });
+
+                // Обновляем существующий заказ как оплаченный, но оставляем в on_hold
+                try {
+                    const userOrders = allOrders[telegramUserId] || [];
+                    const idx = userOrders.findIndex(o =>
+                        o.orderReference === existingOrder.orderReference ||
+                        o.payment_session_id === orderId
+                    );
+                    if (idx !== -1) {
+                        const updated = {
+                            ...userOrders[idx],
+                            status: 'on_hold',
+                            payment_status: 'succeeded',
+                            payment_confirmed: true,
+                            updatedAt: new Date().toISOString(),
+                            esim_issued: false,
+                            esim_error: (orderRes.data && orderRes.data.error) || 'eSIM Go order creation failed'
+                        };
+                        userOrders[idx] = updated;
+                        allOrders[telegramUserId] = userOrders;
+                        await fs.writeFile(ORDERS_FILE, JSON.stringify(allOrders, null, 2), 'utf8');
+                        console.log('✅ [Cryptomus Webhook] Marked order as paid but on_hold due to eSIM error:', {
+                            orderReference: updated.orderReference,
+                            payment_status: updated.payment_status,
+                            status: updated.status
+                        });
+                    }
+                } catch (updateError) {
+                    console.error('❌ [Cryptomus Webhook] Failed to update order status after eSIM Go error:', updateError);
+                }
+
                 await sendStatusMessage(telegramUserId, [
-                    '⚠️ Payment received, but order was not created.',
-                    'We are already investigating. Please contact support.',
+                    '⚠️ Payment with Cryptomus received, but there was a technical issue creating your eSIM.',
+                    'Our system will retry automatically or support will process your eSIM manually.',
                     `Payment ID: <code>${paymentId}</code>`
                 ].join('\n'));
             }
         } catch (error) {
             console.error('❌ [Cryptomus Webhook] Error creating order after payment:', error);
+
+            // В случае критической ошибки также помечаем заказ как оплаченный, но on_hold
+            try {
+                const userOrders = allOrders[telegramUserId] || [];
+                const idx = userOrders.findIndex(o =>
+                    o.orderReference === existingOrder.orderReference ||
+                    o.payment_session_id === orderId
+                );
+                if (idx !== -1) {
+                    const updated = {
+                        ...userOrders[idx],
+                        status: 'on_hold',
+                        payment_status: 'succeeded',
+                        payment_confirmed: true,
+                        updatedAt: new Date().toISOString(),
+                        esim_issued: false,
+                        esim_error: error.message || 'Unknown error while creating eSIM'
+                    };
+                    userOrders[idx] = updated;
+                    allOrders[telegramUserId] = userOrders;
+                    await fs.writeFile(ORDERS_FILE, JSON.stringify(allOrders, null, 2), 'utf8');
+                    console.log('✅ [Cryptomus Webhook] Marked order as paid but on_hold due to critical error:', {
+                        orderReference: updated.orderReference,
+                        payment_status: updated.payment_status,
+                        status: updated.status
+                    });
+                }
+            } catch (updateError) {
+                console.error('❌ [Cryptomus Webhook] Failed to update order status after critical error:', updateError);
+            }
+
             await sendStatusMessage(telegramUserId, [
-                '⚠️ Payment received, but an error occurred during order creation.',
-                'We are already investigating. Please contact support.',
+                '⚠️ Payment with Cryptomus received, but an error occurred while creating your eSIM.',
+                'Our system will retry automatically or support will process your eSIM manually.',
                 `Payment ID: <code>${paymentId}</code>`
             ].join('\n'));
         }
