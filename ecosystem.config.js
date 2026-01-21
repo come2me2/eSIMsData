@@ -16,6 +16,7 @@ module.exports = {
         env: {
             NODE_ENV: 'production',
             PORT: process.env.PORT || 3000,
+            BASE_URL: process.env.BASE_URL || 'https://esimsdata.app',
             TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
             ESIMGO_API_KEY: process.env.ESIMGO_API_KEY,
             STARS_RATE: process.env.STARS_RATE || '0.013',

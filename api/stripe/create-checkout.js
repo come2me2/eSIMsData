@@ -1,14 +1,14 @@
 /**
- * Cryptomus - Create Invoice endpoint
- * Endpoint: POST /api/cryptomus/create-invoice
+ * Stripe - Create Checkout Session endpoint
+ * Endpoint: POST /api/stripe/create-checkout
  *
- * Создает invoice в Cryptomus для оплаты eSIM или Extend
- * Учитывает все наценки (базовая маржа + наценка по стране + наценка Cryptomus)
+ * Создает Checkout Session в Stripe для оплаты eSIM или Extend
+ * Учитывает все наценки (базовая маржа + наценка по стране + наценка Stripe)
  */
 
 const path = require('path');
 const fs = require('fs').promises;
-const cryptomusClient = require('../_lib/cryptomus/client');
+const stripeClient = require('../_lib/stripe/client');
 
 // Файл с настройками админки
 const SETTINGS_FILE = path.join(__dirname, '..', '..', 'data', 'admin-settings.json');
@@ -21,7 +21,7 @@ async function loadMarkupSettings() {
     } catch (error) {
         if (error.code === 'ENOENT') {
             // Настройки по умолчанию
-            console.log('[Cryptomus] Using default markup settings');
+            console.log('[Stripe] Using default markup settings');
             return {
                 markup: {
                     enabled: true,
@@ -29,15 +29,15 @@ async function loadMarkupSettings() {
                     defaultMultiplier: 1.29
                 },
                 paymentMethods: {
-                    crypto: { 
+                    bankCard: { 
                         enabled: true,
-                        markup: 1.0,
-                        markupMultiplier: 1.0
+                        markup: 1.1,
+                        markupMultiplier: 1.1
                     }
                 }
             };
         }
-        console.error('[Cryptomus] Error loading markup settings:', error);
+        console.error('[Stripe] Error loading markup settings:', error);
         throw error;
     }
 }
@@ -71,13 +71,13 @@ module.exports = async function handler(req, res) {
     }
 
     try {
-        console.log('[Cryptomus] ========================================');
-        console.log('[Cryptomus] Create invoice request received:', {
+        console.log('[Stripe] ========================================');
+        console.log('[Stripe] Create checkout request received:', {
             method: req.method,
             url: req.url,
             body: req.body
         });
-        console.log('[Cryptomus] ========================================');
+        console.log('[Stripe] ========================================');
         
         const {
             plan_id,
@@ -93,7 +93,7 @@ module.exports = async function handler(req, res) {
         } = req.body || {};
 
         // ✅ КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ для Extend flow
-        console.log('[Cryptomus] 🔍 EXTEND FLOW CHECK - Request body analysis:', {
+        console.log('[Stripe] 🔍 EXTEND FLOW CHECK - Request body analysis:', {
             hasIccid: !!iccid,
             iccid: iccid || 'NOT PROVIDED',
             iccidType: typeof iccid,
@@ -137,7 +137,7 @@ module.exports = async function handler(req, res) {
         if (!telegram_user_id) missingFields.push('telegram_user_id');
         
         if (missingFields.length > 0) {
-            console.error('[Cryptomus] ❌ Missing required fields:', missingFields);
+            console.error('[Stripe] ❌ Missing required fields:', missingFields);
             return res.status(400).json({
                 success: false,
                 error: `Missing required fields: ${missingFields.join(', ')}`
@@ -156,7 +156,7 @@ module.exports = async function handler(req, res) {
         
         // Если наценка отключена, используем цену без наценки
         if (!markup.enabled) {
-            console.log('[Cryptomus] Markup is disabled, using cost price without markup');
+            console.log('[Stripe] Markup is disabled, using cost price without markup');
         }
         
         // Получаем базовую маржу (например, 1.29 = +29%)
@@ -167,33 +167,62 @@ module.exports = async function handler(req, res) {
         if (finalCountryCode && markup.countryMarkups && markup.countryMarkups[finalCountryCode]) {
             const countryPercent = markup.countryMarkups[finalCountryCode];
             countryMarkup = 1 + (countryPercent / 100);
-            console.log(`[Cryptomus] Country markup found for ${finalCountryCode}: ${countryPercent}% (multiplier: ${countryMarkup})`);
+            console.log(`[Stripe] Country markup found for ${finalCountryCode}: ${countryPercent}% (multiplier: ${countryMarkup})`);
         }
         
-        // Получаем маржу для Cryptomus (например, 1.0 = без дополнительной наценки)
-        const cryptoMethod = paymentMethods.crypto || {};
-        const cryptomusMarkup = cryptoMethod.enabled ? (cryptoMethod.markupMultiplier || cryptoMethod.markup || 1.0) : 1.0;
+        // Получаем маржу для Stripe (например, 1.1 = +10%)
+        const bankCardMethod = paymentMethods.bankCard || {};
+        const stripeMarkup = bankCardMethod.enabled ? (bankCardMethod.markupMultiplier || bankCardMethod.markup || 1.0) : 1.0;
         
         // ✅ Рассчитываем финальную цену со всеми наценками
-        const finalPrice = costPrice * baseMarkup * countryMarkup * cryptomusMarkup;
+        const finalPrice = costPrice * baseMarkup * countryMarkup * stripeMarkup;
         
-        console.log('[Cryptomus] Price calculation:', {
+        console.log('[Stripe] Price calculation:', {
             cost: costPrice,
             baseMarkup: baseMarkup,
             countryMarkup: countryMarkup,
             countryCode: finalCountryCode,
-            cryptomusMarkup: cryptomusMarkup,
+            stripeMarkup: stripeMarkup,
             finalPrice: finalPrice.toFixed(2),
-            formula: `${costPrice} × ${baseMarkup} × ${countryMarkup} × ${cryptomusMarkup} = ${finalPrice.toFixed(2)}`
+            formula: `${costPrice} × ${baseMarkup} × ${countryMarkup} × ${stripeMarkup} = ${finalPrice.toFixed(2)}`
         });
 
         // Генерируем уникальный order_id
-        const orderId = `cryptomus_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const orderId = `stripe_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // Определяем base URL для callback и return URLs
+        // Определяем base URL для success и cancel URLs
         const baseUrl = process.env.VERCEL_URL 
             ? `https://${process.env.VERCEL_URL}`
             : process.env.BASE_URL || 'https://esimsdata.app';
+
+        // Формируем metadata (компактный формат для экономии места, ограничение 500 символов на значение)
+        // Используем короткие ключи как в Telegram Stars
+        const metadata = {
+            p: plan_id, // plan_id
+            t: plan_type, // plan_type
+            b: bundle_name, // bundle_name
+            cc: finalCountryCode, // country_code
+            cn: country_name || '', // country_name
+            fp: finalPrice.toFixed(2), // finalPrice
+            u: telegram_user_id // telegram_user_id
+        };
+
+        // Добавляем iccid только если он есть (для extend mode)
+        if (iccid && iccid.trim() !== '') {
+            metadata.i = iccid.trim();
+            console.log('[Stripe] 🔄 Extend mode: Adding iccid to metadata:', {
+                iccid: metadata.i,
+                bundle_name: bundle_name
+            });
+        }
+
+        // Проверяем длину metadata значений (ограничение 500 символов)
+        for (const [key, value] of Object.entries(metadata)) {
+            if (String(value).length > 500) {
+                console.warn(`[Stripe] ⚠️ Metadata value for ${key} exceeds 500 characters, truncating`);
+                metadata[key] = String(value).substring(0, 497) + '...';
+            }
+        }
 
         // Создаем заказ со статусом on_hold (асинхронно, не блокируем ответ)
         setImmediate(async () => {
@@ -207,7 +236,7 @@ module.exports = async function handler(req, res) {
                         telegram_user_id: telegram_user_id,
                         orderReference: `pending_${orderId}`,
                         status: 'on_hold',
-                        payment_method: 'cryptomus',
+                        payment_method: 'stripe',
                         payment_session_id: orderId,
                         payment_status: 'pending',
                         country_code: finalCountryCode,
@@ -223,7 +252,7 @@ module.exports = async function handler(req, res) {
                         source: 'telegram_mini_app',
                         customer: telegram_user_id,
                         iccid: iccid && iccid.trim() !== '' ? iccid.trim() : undefined,
-                        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 60 минут
+                        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 часа
                         createdAt: new Date().toISOString()
                     }
                 };
@@ -236,7 +265,7 @@ module.exports = async function handler(req, res) {
                 
                 await ordersHandler(orderReq, orderRes);
                 
-                console.log('✅ Cryptomus order created with status on_hold (async):', {
+                console.log('✅ Stripe order created with status on_hold (async):', {
                     orderId,
                     telegram_user_id,
                     bundle_name,
@@ -247,58 +276,47 @@ module.exports = async function handler(req, res) {
             }
         });
 
-        // Создаем invoice в Cryptomus
-        // Не передаем to_currency и network, чтобы Cryptomus показывал все доступные криптовалюты
-        const invoiceData = {
-            amount: finalPrice.toFixed(2),
-            currency: currency,
-            order_id: orderId,
-            url_callback: `${baseUrl}/api/cryptomus/webhook`,
-            url_return: `${baseUrl}/checkout?order_id=${orderId}&payment_method=cryptomus`,
-            lifetime: parseInt(process.env.CRYPTOMUS_INVOICE_LIFETIME || '3600')
-        };
+        // Создаем Checkout Session в Stripe
+        const session = await stripeClient.createCheckoutSession({
+            amount: finalPrice,
+            currency: currency.toLowerCase(),
+            productName: 'eSIM plan',
+            description: `${country_name || country_code} • ${plan_type}`,
+            successUrl: `${baseUrl}/checkout?session_id={CHECKOUT_SESSION_ID}&payment_method=stripe&success=true`,
+            cancelUrl: `${baseUrl}/checkout?payment_method=stripe&canceled=true`,
+            metadata: metadata
+        });
 
-        // Добавляем to_currency и network только если они явно заданы в env
-        // Если не заданы, Cryptomus покажет все доступные криптовалюты из аккаунта
-        if (process.env.CRYPTOMUS_DEFAULT_CURRENCY) {
-            invoiceData.to_currency = process.env.CRYPTOMUS_DEFAULT_CURRENCY;
-        }
-        if (process.env.CRYPTOMUS_DEFAULT_NETWORK) {
-            invoiceData.network = process.env.CRYPTOMUS_DEFAULT_NETWORK;
-        }
-
-        const invoice = await cryptomusClient.createInvoice(invoiceData);
-
-        console.log('✅ Cryptomus invoice created successfully:', {
+        console.log('✅ Stripe Checkout Session created successfully:', {
             orderId,
-            invoiceUuid: invoice.uuid,
+            sessionId: session.id,
             amount: finalPrice,
             telegram_user_id,
-            invoiceUrl: invoice.url
+            checkoutUrl: session.url
         });
 
         return res.status(200).json({
             success: true,
-            invoiceUrl: invoice.url,
-            invoiceUuid: invoice.uuid,
+            checkoutUrl: session.url,
+            sessionId: session.id,
             orderId: orderId,
             amount: finalPrice,
             currency: currency,
-            expiresAt: invoice.expired_at,
+            expiresAt: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
             details: {
                 cost: costPrice,
                 baseMarkup,
                 countryMarkup,
-                cryptomusMarkup,
+                stripeMarkup,
                 finalPrice: finalPrice.toFixed(2)
             }
         });
 
     } catch (error) {
-        console.error('❌ Error creating Cryptomus invoice:', error);
+        console.error('❌ Error creating Stripe Checkout Session:', error);
         return res.status(500).json({
             success: false,
-            error: error.message || 'Failed to create invoice'
+            error: error.message || 'Failed to create checkout session'
         });
     }
 };
