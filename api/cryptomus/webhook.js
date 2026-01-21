@@ -88,40 +88,72 @@ module.exports = async function handler(req, res) {
         return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
 
-    // Сразу отвечаем Cryptomus, чтобы не было таймаута
-    res.status(200).json({ success: true });
-
     try {
         const webhookData = req.body;
 
-        console.log('📥 Cryptomus webhook received:', {
+        // Базовое логирование всего входящего webhook
+        console.log('📥 [Cryptomus Webhook] Raw payload:', JSON.stringify(webhookData, null, 2));
+        console.log('📥 [Cryptomus Webhook] Meta:', {
+            method: req.method,
+            url: req.url,
+            headers: {
+                'user-agent': req.headers['user-agent'],
+                'x-forwarded-for': req.headers['x-forwarded-for'],
+                'content-type': req.headers['content-type']
+            }
+        });
+
+        console.log('📥 [Cryptomus Webhook] Parsed summary:', {
             type: webhookData.type,
+            uuid: webhookData.uuid,
             order_id: webhookData.order_id,
             status: webhookData.status,
             is_final: webhookData.is_final,
-            amount: webhookData.amount
+            amount: webhookData.amount,
+            currency: webhookData.currency
         });
 
         // Проверяем подпись
         const signature = webhookData.sign;
         if (!cryptomusClient.verifyWebhookSignature(webhookData, signature)) {
-            console.error('❌ Invalid webhook signature');
+            console.error('❌ [Cryptomus Webhook] Invalid webhook signature. Webhook will be ignored.');
+            // Сразу отвечаем успехом, чтобы Cryptomus не спамил повторами,
+            // но явно логируем, что вебхук проигнорирован
+            if (!res.headersSent) {
+                res.status(200).json({ success: false, ignored: true, reason: 'invalid_signature' });
+            }
             return;
         }
 
-        // Проверяем, что это финальный статус и платеж оплачен
-        if (webhookData.status !== 'paid' || !webhookData.is_final) {
-            console.log('ℹ️ Payment not final or not paid yet:', {
+        // Проверяем, что это успешный и финальный статус платежа
+        const SUCCESS_STATUSES = ['paid', 'paid_over'];
+        const isSuccessStatus = SUCCESS_STATUSES.includes(webhookData.status);
+
+        if (!isSuccessStatus || webhookData.is_final === false) {
+            console.log('ℹ️ [Cryptomus Webhook] Payment not final or not in success status yet, skipping processing:', {
                 status: webhookData.status,
-                is_final: webhookData.is_final
+                is_final: webhookData.is_final,
+                successStatuses: SUCCESS_STATUSES
             });
+            if (!res.headersSent) {
+                res.status(200).json({
+                    success: true,
+                    processed: false,
+                    reason: 'not_final_or_not_success_status',
+                    status: webhookData.status,
+                    is_final: webhookData.is_final
+                });
+            }
             return;
         }
 
         // Проверяем на дубликаты
         const paymentId = webhookData.uuid || webhookData.order_id;
         if (processedPayments.has(paymentId)) {
-            console.log('⚠️ Duplicate payment detected:', paymentId);
+            console.log('⚠️ [Cryptomus Webhook] Duplicate payment detected, skipping:', paymentId);
+            if (!res.headersSent) {
+                res.status(200).json({ success: true, processed: false, reason: 'duplicate', paymentId });
+            }
             return;
         }
         processedPayments.add(paymentId);
@@ -129,7 +161,15 @@ module.exports = async function handler(req, res) {
         // Извлекаем order_id и находим заказ on_hold
         const orderId = webhookData.order_id;
         if (!orderId || !orderId.startsWith('cryptomus_')) {
-            console.error('❌ Invalid order_id in webhook:', orderId);
+            console.error('❌ [Cryptomus Webhook] Invalid order_id in webhook, expected cryptomus_* format:', orderId);
+            if (!res.headersSent) {
+                res.status(200).json({
+                    success: false,
+                    processed: false,
+                    reason: 'invalid_order_id',
+                    order_id: orderId
+                });
+            }
             return;
         }
 
@@ -143,7 +183,10 @@ module.exports = async function handler(req, res) {
             const ordersData = await fs.readFile(ORDERS_FILE, 'utf8');
             allOrders = JSON.parse(ordersData);
         } catch (error) {
-            console.error('❌ Error loading orders:', error);
+            console.error('❌ [Cryptomus Webhook] Error loading orders.json:', error);
+            if (!res.headersSent) {
+                res.status(500).json({ success: false, error: 'orders_load_failed' });
+            }
             return;
         }
 
@@ -151,6 +194,11 @@ module.exports = async function handler(req, res) {
         let telegramUserId = null;
 
         // Ищем заказ по payment_session_id
+        console.log('🔍 [Cryptomus Webhook] Searching existing order in orders.json by payment_session_id / pending reference...', {
+            search_payment_session_id: orderId,
+            search_pending_reference: `pending_${orderId}`
+        });
+
         for (const userId in allOrders) {
             if (!Array.isArray(allOrders[userId])) continue;
             
@@ -166,11 +214,23 @@ module.exports = async function handler(req, res) {
         }
 
         if (!existingOrder) {
-            console.error('❌ Order not found:', orderId);
+            console.error('❌ [Cryptomus Webhook] Order not found in orders.json for payment:', {
+                order_id: orderId,
+                paymentId
+            });
+            if (!res.headersSent) {
+                res.status(200).json({
+                    success: false,
+                    processed: false,
+                    reason: 'order_not_found',
+                    order_id: orderId,
+                    paymentId
+                });
+            }
             return;
         }
 
-        console.log('✅ Found existing order:', {
+        console.log('✅ [Cryptomus Webhook] Found existing pending order:', {
             orderReference: existingOrder.orderReference,
             telegram_user_id: telegramUserId,
             iccid: existingOrder.iccid || 'NEW ESIM',
@@ -200,7 +260,7 @@ module.exports = async function handler(req, res) {
             test_mode: false
         });
 
-        console.log('[Cryptomus Webhook] 📤 Creating order with data:', {
+        console.log('[Cryptomus Webhook] 📤 Creating eSIM Go order with data:', {
             bundle_name: existingOrder.bundle_name,
             iccid: existingOrder.iccid,
             hasIccid: !!existingOrder.iccid,
@@ -216,6 +276,12 @@ module.exports = async function handler(req, res) {
             const success = orderRes.statusCode === 200 && orderRes.data && orderRes.data.success;
 
             if (success) {
+                console.log('✅ [Cryptomus Webhook] eSIM Go order created successfully:', {
+                    statusCode: orderRes.statusCode,
+                    hasData: !!orderRes.data,
+                    response: orderRes.data
+                });
+
                 const orderData = orderRes.data.data;
                 const orderRef = orderData.orderReference || orderData.reference || 'order created';
                 let assignments = orderData.assignments || null;
@@ -230,7 +296,7 @@ module.exports = async function handler(req, res) {
                         
                         // Получаем полный статус заказа из eSIMgo
                         fullOrderData = await esimgoClient.getOrderStatus(orderRef);
-                        console.log('✅ Full order data retrieved from eSIMgo:', {
+                        console.log('✅ [Cryptomus Webhook] Full order data retrieved from eSIMgo:', {
                             orderReference: fullOrderData.orderReference,
                             status: fullOrderData.status,
                             total: fullOrderData.total,
@@ -249,7 +315,7 @@ module.exports = async function handler(req, res) {
                                         await new Promise(resolve => setTimeout(resolve, 2000));
                                     }
                                     assignments = await esimgoClient.getESIMAssignments(orderRef, 'qrCode');
-                                    console.log('✅ Assignments retrieved from API:', {
+                                    console.log('✅ [Cryptomus Webhook] Assignments retrieved from eSIMgo API:', {
                                         hasIccid: !!assignments?.iccid,
                                         hasMatchingId: !!assignments?.matchingId,
                                         hasQrCode: !!(assignments?.qrCode || assignments?.qr_code),
@@ -265,7 +331,7 @@ module.exports = async function handler(req, res) {
                             }
                         }
                     } catch (orderStatusError) {
-                        console.warn('⚠️ Failed to get full order data from eSIMgo:', orderStatusError.message);
+                        console.warn('⚠️ [Cryptomus Webhook] Failed to get full order data from eSIMgo:', orderStatusError.message);
                     }
                 }
                 
@@ -288,10 +354,10 @@ module.exports = async function handler(req, res) {
                                 smdpAddress: savedOrder.smdpAddress,
                                 qrCode: savedOrder.qrCode || savedOrder.qr_code
                             };
-                            console.log('✅ Assignments retrieved from saved order');
+                            console.log('✅ [Cryptomus Webhook] Assignments retrieved from previously saved order');
                         }
                     } catch (loadError) {
-                        console.warn('⚠️ Failed to load assignments from saved order:', loadError.message);
+                        console.warn('⚠️ [Cryptomus Webhook] Failed to load assignments from saved order:', loadError.message);
                     }
                 }
                 
@@ -305,7 +371,11 @@ module.exports = async function handler(req, res) {
                     finalStatus = 'completed';
                 } else if (success && !hasEsim) {
                     finalStatus = 'on_hold';
-                    console.warn('⚠️ Payment confirmed but eSIM not issued yet. Keeping status on_hold.');
+                    console.warn('⚠️ [Cryptomus Webhook] Payment confirmed but eSIM not issued yet. Keeping status on_hold.', {
+                        orderRef,
+                        hasEsim,
+                        assignmentsPresent: !!assignments
+                    });
                 }
                 
                 // Сохраняем заказ через API
@@ -376,7 +446,7 @@ module.exports = async function handler(req, res) {
                                 console.log('✅ Removed old pending order:', existingOrder.orderReference);
                             }
                         } catch (removeError) {
-                            console.warn('⚠️ Failed to remove old pending order:', removeError.message);
+                            console.warn('⚠️ [Cryptomus Webhook] Failed to remove old pending order:', removeError.message);
                         }
                     }
                     
@@ -385,16 +455,19 @@ module.exports = async function handler(req, res) {
                     await Promise.resolve(ordersHandler(createMockReq(saveOrderReq), saveOrderRes));
                     
                     if (saveOrderRes.statusCode === 200) {
-                        console.log('✅ Order updated in database:', {
+                        console.log('✅ [Cryptomus Webhook] Order updated in database:', {
                             orderReference: orderRef,
                             status: finalStatus,
                             hasEsim: hasEsim
                         });
                     } else {
-                        console.warn('⚠️ Failed to save order to database:', saveOrderRes.data);
+                        console.warn('⚠️ [Cryptomus Webhook] Failed to save order to database:', {
+                            statusCode: saveOrderRes.statusCode,
+                            data: saveOrderRes.data
+                        });
                     }
                 } catch (saveError) {
-                    console.error('❌ Error saving order to database:', saveError);
+                    console.error('❌ [Cryptomus Webhook] Error saving order to database:', saveError);
                 }
                 
                 // Отправляем сообщение об успешной оплате
@@ -405,6 +478,10 @@ module.exports = async function handler(req, res) {
                     `Order: <code>${orderRef}</code>`
                 ].join('\n');
                 
+                console.log('📨 [Cryptomus Webhook] Sending payment success message to Telegram:', {
+                    telegramUserId,
+                    orderRef
+                });
                 await sendStatusMessage(telegramUserId, paymentMessage);
                 
                 // Если есть данные eSIM, отправляем отдельное сообщение с данными eSIM/QR
@@ -450,15 +527,18 @@ module.exports = async function handler(req, res) {
                                 });
                             }
                         } catch (esimError) {
-                            console.error('❌ Error sending eSIM data message:', esimError);
+                            console.error('❌ [Cryptomus Webhook] Error sending eSIM data / QR to Telegram:', esimError);
                         }
                     }
                 } else {
-                    console.log('⚠️ eSIM data not ready, sending processing message');
+                    console.log('⚠️ [Cryptomus Webhook] eSIM data not ready, sending processing message to user');
                     await sendStatusMessage(telegramUserId, 'eSIM is being processed. Please check back in a few minutes.');
                 }
             } else {
-                console.error('❌ Failed to create order in eSIM Go');
+                console.error('❌ [Cryptomus Webhook] Failed to create order in eSIM Go. Response:', {
+                    statusCode: orderRes.statusCode,
+                    data: orderRes.data
+                });
                 await sendStatusMessage(telegramUserId, [
                     '⚠️ Payment received, but order was not created.',
                     'We are already investigating. Please contact support.',
@@ -466,7 +546,7 @@ module.exports = async function handler(req, res) {
                 ].join('\n'));
             }
         } catch (error) {
-            console.error('❌ Error creating order after payment:', error);
+            console.error('❌ [Cryptomus Webhook] Error creating order after payment:', error);
             await sendStatusMessage(telegramUserId, [
                 '⚠️ Payment received, but an error occurred during order creation.',
                 'We are already investigating. Please contact support.',
@@ -475,6 +555,15 @@ module.exports = async function handler(req, res) {
         }
 
     } catch (error) {
-        console.error('❌ Error processing Cryptomus webhook:', error);
+        console.error('❌ [Cryptomus Webhook] Critical error while processing webhook:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, error: 'webhook_processing_failed' });
+        }
+    }
+
+    // Если к этому моменту мы ещё не отправили ответ — отправляем OK по умолчанию,
+    // чтобы Cryptomus не делал лишние ретраи
+    if (!res.headersSent) {
+        res.status(200).json({ success: true, processed: true });
     }
 };
