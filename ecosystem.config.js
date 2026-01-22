@@ -22,7 +22,10 @@ module.exports = {
             STARS_RATE: process.env.STARS_RATE || '0.013',
             STARS_MARGIN: process.env.STARS_MARGIN || '0.29',
             STARS_TELEGRAM_FEE: process.env.STARS_TELEGRAM_FEE || '0.25',
-            TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET
+            TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
+            STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+            STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
+            STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET
         },
         error_file: '/var/www/esimsdata/logs/pm2-error.log',
         out_file: '/var/www/esimsdata/logs/pm2-out.log',
