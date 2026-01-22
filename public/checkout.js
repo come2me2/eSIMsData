@@ -1902,6 +1902,7 @@ function setupPurchaseButton() {
                     bundle_name: bundleName,
                     country_code: orderData.code,
                     country_name: orderData.name,
+                    order_type: orderData.type, // ✅ Добавляем type для url_return (country, region, global)
                     price: costPrice, // ✅ Передаем СЕБЕСТОИМОСТЬ, а не цену с маржой!
                     currency,
                     telegram_user_id: userId,

@@ -85,6 +85,7 @@ module.exports = async function handler(req, res) {
             bundle_name,
             country_code,
             country_name,
+            order_type, // ✅ Тип заказа (country, region, global) для url_return
             price, // себестоимость от eSIM Go
             currency = 'USD',
             telegram_user_id,
@@ -247,6 +248,24 @@ module.exports = async function handler(req, res) {
             }
         });
 
+        // Формируем URL для возврата на checkout с параметрами тарифа
+        // При нажатии "Back" в Cryptomus пользователь вернется на checkout с выбранным тарифом
+        const returnParams = new URLSearchParams({
+            type: order_type || 'country',
+            name: country_name || '',
+            code: finalCountryCode || '',
+            plan: plan_id || '',
+            planType: plan_type || 'standard'
+        });
+        
+        // Если это extend mode, добавляем параметры extend
+        if (iccid && iccid.trim() !== '') {
+            returnParams.append('extend', 'true');
+            returnParams.append('iccid', iccid.trim());
+        }
+        
+        const returnUrl = `${baseUrl}/checkout.html?${returnParams.toString()}`;
+        
         // Создаем invoice в Cryptomus
         // Не передаем to_currency и network, чтобы Cryptomus показывал все доступные криптовалюты
         const invoiceData = {
@@ -254,9 +273,9 @@ module.exports = async function handler(req, res) {
             currency: currency,
             order_id: orderId,
             url_callback: `${baseUrl}/api/cryptomus/webhook`,
-            // После оплаты (или нажатия "Back" внутри Cryptomus) сразу отправляем
-            // пользователя в список его eSIM — My eSIMs
-            url_return: `${baseUrl}/my-esims.html?order_id=${orderId}&payment_method=cryptomus`,
+            // При нажатии "Back" возвращаем на checkout с выбранным тарифом
+            // После успешной оплаты webhook обработает заказ и пользователь получит уведомление
+            url_return: returnUrl,
             lifetime: parseInt(process.env.CRYPTOMUS_INVOICE_LIFETIME || '3600')
         };
 
